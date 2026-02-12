@@ -22,7 +22,6 @@ export class FileParseValidationError extends Error {
 function normalizeText(text: string): string {
   return text
     .replace(/\r\n/g, "\n")
-    .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
@@ -32,30 +31,16 @@ function getFileExtension(fileName: string): string {
   return index >= 0 ? fileName.slice(index).toLowerCase() : "";
 }
 
-function isPdf(file: File): boolean {
-  return (
-    file.type === "application/pdf" ||
-    getFileExtension(file.name) === ".pdf"
-  );
-}
-
-function isDocx(file: File): boolean {
-  return (
-    file.type ===
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-    getFileExtension(file.name) === ".docx"
-  );
-}
-
 export async function parseFile(file: File): Promise<string> {
   if (file.size === 0) {
     throw new FileParseValidationError(`File is empty: ${file.name || "unnamed"}`);
   }
 
+  const extension = getFileExtension(file.name);
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  if (isPdf(file)) {
+  if (extension === ".pdf") {
     try {
       const pdfParse = loadPdfParse();
       const result = await pdfParse(buffer);
@@ -65,7 +50,7 @@ export async function parseFile(file: File): Promise<string> {
     }
   }
 
-  if (isDocx(file)) {
+  if (extension === ".docx") {
     try {
       const result = await mammoth.extractRawText({ buffer });
       return normalizeText(result.value ?? "");
@@ -74,7 +59,9 @@ export async function parseFile(file: File): Promise<string> {
     }
   }
 
-  throw new FileParseValidationError(
-    `Unsupported file type: ${file.type || "unknown"} (${file.name || "unnamed"})`,
-  );
+  if (extension === ".txt") {
+    return normalizeText(buffer.toString("utf-8"));
+  }
+
+  throw new Error(`Unsupported file type: ${file.type || "unknown"} (${file.name})`);
 }
