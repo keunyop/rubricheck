@@ -95,5 +95,5 @@ export async function parseFile(file: File): Promise<string> {
     return normalizeText(buffer.toString("utf-8"));
   }
 
-  throw new Error(`Unsupported file extension (${file.name})`);
+  throw new Error("UNSUPPORTED_FILE_TYPE");
 }

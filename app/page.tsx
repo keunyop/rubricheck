@@ -3,14 +3,17 @@
 import { FormEvent, useMemo, useState } from "react";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_TYPES_LABEL = ".pdf, .docx, .txt";
 
 type LoadingStep = "idle" | "uploading" | "parsing";
 
 export default function Home() {
   const [rubricFile, setRubricFile] = useState<File | null>(null);
-  const [essayFile, setEssayFile] = useState<File | null>(null);
+  const [assignmentFile, setAssignmentFile] = useState<File | null>(null);
   const [rubricText, setRubricText] = useState("");
-  const [essayText, setEssayText] = useState("");
+  const [assignmentText, setAssignmentText] = useState("");
+  const [showRubricText, setShowRubricText] = useState(false);
+  const [showAssignmentText, setShowAssignmentText] = useState(false);
   const [loadingStep, setLoadingStep] = useState<LoadingStep>("idle");
   const [error, setError] = useState<string>("");
 
@@ -33,15 +36,15 @@ export default function Home() {
     setError("");
 
     const hasRubricText = rubricText.trim().length > 0;
-    const hasEssayText = essayText.trim().length > 0;
+    const hasAssignmentText = assignmentText.trim().length > 0;
 
     if (!hasRubricText && !rubricFile) {
       setError("Please provide a rubric file or paste rubric text.");
       return;
     }
 
-    if (!hasEssayText && !essayFile) {
-      setError("Please provide an essay file or paste essay text.");
+    if (!hasAssignmentText && !assignmentFile) {
+      setError("Please provide an assignment file or paste assignment text.");
       return;
     }
 
@@ -50,8 +53,8 @@ export default function Home() {
       return;
     }
 
-    if (essayFile && essayFile.size > MAX_FILE_SIZE_BYTES) {
-      setError("Essay file must be 5MB or smaller.");
+    if (assignmentFile && assignmentFile.size > MAX_FILE_SIZE_BYTES) {
+      setError("Assignment file must be 5MB or smaller.");
       return;
     }
 
@@ -59,17 +62,18 @@ export default function Home() {
       setLoadingStep("uploading");
 
       const formData = new FormData();
-      if (rubricFile) {
+      // Pasted text takes precedence over files for each field.
+      if (!hasRubricText && rubricFile) {
         formData.append("rubric", rubricFile);
       }
-      if (essayFile) {
-        formData.append("essay", essayFile);
+      if (!hasAssignmentText && assignmentFile) {
+        formData.append("assignment", assignmentFile);
       }
       if (hasRubricText) {
         formData.append("rubricText", rubricText);
       }
-      if (hasEssayText) {
-        formData.append("essayText", essayText);
+      if (hasAssignmentText) {
+        formData.append("assignmentText", assignmentText);
       }
 
       const requestPromise = fetch("/api/grade", {
@@ -89,6 +93,19 @@ export default function Home() {
           typeof data?.error === "string" ? data.error : "Failed to process files.";
 
         if (message === "TEXT_EXTRACTION_FAILED") {
+          const field = data?.field;
+          if (field === "rubric") {
+            setError(
+              "Text extraction failed for Rubric. Please upload a text-based PDF/DOCX or paste the text.",
+            );
+            return;
+          }
+          if (field === "assignment" || field === "essay") {
+            setError(
+              "Text extraction failed for Assignment. Please upload a text-based PDF/DOCX or paste the text.",
+            );
+            return;
+          }
           setError(
             "Text extraction failed. Please upload a text-based PDF/DOCX or paste the text.",
           );
@@ -96,7 +113,7 @@ export default function Home() {
         }
 
         if (message === "UNSUPPORTED_FILE_TYPE") {
-          setError("Unsupported file type. Allowed types: .pdf, .docx, .txt");
+          setError(`Unsupported file type. Allowed types: ${ALLOWED_TYPES_LABEL}`);
           return;
         }
 
@@ -133,7 +150,7 @@ export default function Home() {
                 htmlFor="rubric"
                 className="mb-2 block text-sm font-medium text-slate-700"
               >
-                Rubric File
+                Rubric file
               </label>
               <input
                 id="rubric"
@@ -143,60 +160,78 @@ export default function Home() {
                 onChange={(event) => setRubricFile(event.target.files?.[0] ?? null)}
                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
               />
+              <button
+                type="button"
+                onClick={() => setShowRubricText((current) => !current)}
+                className="mt-2 text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900"
+              >
+                Paste text instead
+              </button>
             </div>
+
+            {showRubricText ? (
+              <div>
+                <label
+                  htmlFor="rubricText"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
+                  Rubric text
+                </label>
+                <textarea
+                  id="rubricText"
+                  name="rubricText"
+                  rows={6}
+                  value={rubricText}
+                  onChange={(event) => setRubricText(event.target.value)}
+                  placeholder="Paste rubric text here"
+                  className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                />
+              </div>
+            ) : null}
 
             <div>
               <label
-                htmlFor="rubricText"
+                htmlFor="assignment"
                 className="mb-2 block text-sm font-medium text-slate-700"
               >
-                Rubric Text (Paste)
-              </label>
-              <textarea
-                id="rubricText"
-                name="rubricText"
-                rows={6}
-                value={rubricText}
-                onChange={(event) => setRubricText(event.target.value)}
-                placeholder="Paste rubric text here"
-                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="essay"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Essay File
+                Assignment file
               </label>
               <input
-                id="essay"
-                name="essay"
+                id="assignment"
+                name="assignment"
                 type="file"
                 accept=".pdf,.docx,.txt"
-                onChange={(event) => setEssayFile(event.target.files?.[0] ?? null)}
+                onChange={(event) => setAssignmentFile(event.target.files?.[0] ?? null)}
                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
               />
+              <button
+                type="button"
+                onClick={() => setShowAssignmentText((current) => !current)}
+                className="mt-2 text-sm font-medium text-slate-700 underline underline-offset-2 hover:text-slate-900"
+              >
+                Paste text instead
+              </button>
             </div>
 
-            <div>
-              <label
-                htmlFor="essayText"
-                className="mb-2 block text-sm font-medium text-slate-700"
-              >
-                Essay Text (Paste)
-              </label>
-              <textarea
-                id="essayText"
-                name="essayText"
-                rows={10}
-                value={essayText}
-                onChange={(event) => setEssayText(event.target.value)}
-                placeholder="Paste essay text here"
-                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300"
-              />
-            </div>
+            {showAssignmentText ? (
+              <div>
+                <label
+                  htmlFor="assignmentText"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
+                  Assignment text
+                </label>
+                <textarea
+                  id="assignmentText"
+                  name="assignmentText"
+                  rows={10}
+                  value={assignmentText}
+                  onChange={(event) => setAssignmentText(event.target.value)}
+                  placeholder="Paste assignment text here"
+                  className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                />
+              </div>
+            ) : null}
 
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             {isLoading ? <p className="text-sm text-slate-600">{loadingMessage}</p> : null}
