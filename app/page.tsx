@@ -9,6 +9,8 @@ type LoadingStep = "idle" | "uploading" | "parsing";
 export default function Home() {
   const [rubricFile, setRubricFile] = useState<File | null>(null);
   const [essayFile, setEssayFile] = useState<File | null>(null);
+  const [rubricText, setRubricText] = useState("");
+  const [essayText, setEssayText] = useState("");
   const [loadingStep, setLoadingStep] = useState<LoadingStep>("idle");
   const [error, setError] = useState<string>("");
 
@@ -30,13 +32,26 @@ export default function Home() {
     event.preventDefault();
     setError("");
 
-    if (!rubricFile || !essayFile) {
-      setError("Please upload both rubric and essay files.");
+    const hasRubricText = rubricText.trim().length > 0;
+    const hasEssayText = essayText.trim().length > 0;
+
+    if (!hasRubricText && !rubricFile) {
+      setError("Please provide a rubric file or paste rubric text.");
       return;
     }
 
-    if (rubricFile.size > MAX_FILE_SIZE_BYTES || essayFile.size > MAX_FILE_SIZE_BYTES) {
-      setError("Each file must be smaller than 5MB.");
+    if (!hasEssayText && !essayFile) {
+      setError("Please provide an essay file or paste essay text.");
+      return;
+    }
+
+    if (rubricFile && rubricFile.size > MAX_FILE_SIZE_BYTES) {
+      setError("Rubric file must be 5MB or smaller.");
+      return;
+    }
+
+    if (essayFile && essayFile.size > MAX_FILE_SIZE_BYTES) {
+      setError("Essay file must be 5MB or smaller.");
       return;
     }
 
@@ -44,27 +59,52 @@ export default function Home() {
       setLoadingStep("uploading");
 
       const formData = new FormData();
-      formData.append("rubric", rubricFile);
-      formData.append("essay", essayFile);
+      if (rubricFile) {
+        formData.append("rubric", rubricFile);
+      }
+      if (essayFile) {
+        formData.append("essay", essayFile);
+      }
+      if (hasRubricText) {
+        formData.append("rubricText", rubricText);
+      }
+      if (hasEssayText) {
+        formData.append("essayText", essayText);
+      }
 
-      const response = await fetch("/api/grade", {
+      const requestPromise = fetch("/api/grade", {
         method: "POST",
         body: formData,
       });
-
       setLoadingStep("parsing");
+      const response = await requestPromise;
 
       const contentType = response.headers.get("content-type") ?? "";
       const data = contentType.includes("application/json")
         ? await response.json()
         : { error: await response.text() };
-      console.log("/api/grade response:", data);
 
       if (!response.ok) {
         const message =
           typeof data?.error === "string" ? data.error : "Failed to process files.";
+
+        if (message === "TEXT_EXTRACTION_FAILED") {
+          setError(
+            "Text extraction failed. Please upload a text-based PDF/DOCX or paste the text.",
+          );
+          return;
+        }
+
+        if (message === "UNSUPPORTED_FILE_TYPE") {
+          setError("Unsupported file type. Allowed types: .pdf, .docx, .txt");
+          return;
+        }
+
         setError(message);
+        return;
       }
+
+      console.log("/api/grade response:", data);
     } catch (submitError) {
       const message =
         submitError instanceof Error ? submitError.message : "Request failed.";
@@ -83,7 +123,7 @@ export default function Home() {
               RubriCheck Upload
             </h1>
             <p className="mt-2 text-sm text-slate-600">
-              Upload your rubric and essay files to begin grading.
+              Upload files or paste text. Pasted text takes precedence per field.
             </p>
           </div>
 
@@ -99,8 +139,27 @@ export default function Home() {
                 id="rubric"
                 name="rubric"
                 type="file"
+                accept=".pdf,.docx,.txt"
                 onChange={(event) => setRubricFile(event.target.files?.[0] ?? null)}
                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="rubricText"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Rubric Text (Paste)
+              </label>
+              <textarea
+                id="rubricText"
+                name="rubricText"
+                rows={6}
+                value={rubricText}
+                onChange={(event) => setRubricText(event.target.value)}
+                placeholder="Paste rubric text here"
+                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300"
               />
             </div>
 
@@ -115,8 +174,27 @@ export default function Home() {
                 id="essay"
                 name="essay"
                 type="file"
+                accept=".pdf,.docx,.txt"
                 onChange={(event) => setEssayFile(event.target.files?.[0] ?? null)}
                 className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 file:mr-4 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="essayText"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Essay Text (Paste)
+              </label>
+              <textarea
+                id="essayText"
+                name="essayText"
+                rows={10}
+                value={essayText}
+                onChange={(event) => setEssayText(event.target.value)}
+                placeholder="Paste essay text here"
+                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-300"
               />
             </div>
 

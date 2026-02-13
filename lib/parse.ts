@@ -31,37 +31,69 @@ function getFileExtension(fileName: string): string {
   return index >= 0 ? fileName.slice(index).toLowerCase() : "";
 }
 
+export function ensureMeaningfulText(text: string, fileName: string): string {
+  void fileName;
+  const trimmedText = text.trim();
+
+  if (trimmedText.length < 200) {
+    throw new Error("TEXT_EXTRACTION_FAILED");
+  }
+
+  const alphanumericMatches = trimmedText.match(/[\p{L}\p{N}]/gu) ?? [];
+  const alphanumericRatio = alphanumericMatches.length / trimmedText.length;
+
+  if (alphanumericRatio < 0.05) {
+    throw new Error("TEXT_EXTRACTION_FAILED");
+  }
+
+  return text;
+}
+
 export async function parseFile(file: File): Promise<string> {
   if (file.size === 0) {
     throw new FileParseValidationError(`File is empty: ${file.name || "unnamed"}`);
   }
 
   const extension = getFileExtension(file.name);
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
 
   if (extension === ".pdf") {
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
     try {
       const pdfParse = loadPdfParse();
       const result = await pdfParse(buffer);
-      return normalizeText(result.text ?? "");
-    } catch {
+      const normalizedText = normalizeText(result.text ?? "");
+      return ensureMeaningfulText(normalizedText, file.name);
+    } catch (error) {
+      if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED") {
+        throw error;
+      }
       throw new FileParseValidationError(`Invalid or unreadable PDF file: ${file.name}`);
     }
   }
 
   if (extension === ".docx") {
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
     try {
       const result = await mammoth.extractRawText({ buffer });
-      return normalizeText(result.value ?? "");
-    } catch {
+      const normalizedText = normalizeText(result.value ?? "");
+      return ensureMeaningfulText(normalizedText, file.name);
+    } catch (error) {
+      if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED") {
+        throw error;
+      }
       throw new FileParseValidationError(`Invalid or unreadable DOCX file: ${file.name}`);
     }
   }
 
   if (extension === ".txt") {
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
     return normalizeText(buffer.toString("utf-8"));
   }
 
-  throw new Error(`Unsupported file type: ${file.type || "unknown"} (${file.name})`);
+  throw new Error(`Unsupported file extension (${file.name})`);
 }

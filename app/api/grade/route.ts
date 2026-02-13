@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const UNSUPPORTED_FILE_EXTENSION_PREFIX = "Unsupported file extension";
 
 function getUploadedFile(
   formData: FormData,
@@ -17,12 +18,60 @@ function getUploadedFile(
   return value;
 }
 
-function validateFileSize(file: File, fieldName: "rubric" | "essay"): string | null {
+function getTextInput(
+  formData: FormData,
+  fieldName: "rubricText" | "essayText",
+): string | null {
+  const value = formData.get(fieldName);
+
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  if (value.trim().length === 0) {
+    return null;
+  }
+
+  return value;
+}
+
+function validateFileSize(file: File, fieldName: "rubric" | "essay"): NextResponse | null {
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    return `${fieldName} file size must be 5MB or less`;
+    return NextResponse.json({ error: "FILE_TOO_LARGE", field: fieldName }, { status: 400 });
   }
 
   return null;
+}
+
+async function resolveFieldText(
+  field: "rubric" | "essay",
+  textValue: string | null,
+  file: File | null,
+): Promise<string> {
+  if (textValue !== null) {
+    return textValue;
+  }
+
+  if (!file) {
+    throw new Error("MISSING_INPUT");
+  }
+
+  try {
+    return await parseFile(file);
+  } catch (error) {
+    if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED") {
+      throw new Error(`TEXT_EXTRACTION_FAILED:${field}`);
+    }
+
+    if (
+      error instanceof Error &&
+      error.message.startsWith(UNSUPPORTED_FILE_EXTENSION_PREFIX)
+    ) {
+      throw new Error("UNSUPPORTED_FILE_TYPE");
+    }
+
+    throw error;
+  }
 }
 
 export async function POST(request: Request) {
@@ -31,36 +80,53 @@ export async function POST(request: Request) {
 
     const rubricFile = getUploadedFile(formData, "rubric");
     const essayFile = getUploadedFile(formData, "essay");
+    const rubricTextInput = getTextInput(formData, "rubricText");
+    const essayTextInput = getTextInput(formData, "essayText");
 
-    if (!rubricFile || !essayFile) {
-      return NextResponse.json(
-        { error: "Both rubric and essay files are required" },
-        { status: 400 },
-      );
+    if (rubricFile) {
+      const rubricSizeError = validateFileSize(rubricFile, "rubric");
+      if (rubricSizeError) {
+        return rubricSizeError;
+      }
     }
 
-    const rubricSizeError = validateFileSize(rubricFile, "rubric");
-    if (rubricSizeError) {
-      return NextResponse.json({ error: rubricSizeError }, { status: 400 });
+    if (essayFile) {
+      const essaySizeError = validateFileSize(essayFile, "essay");
+      if (essaySizeError) {
+        return essaySizeError;
+      }
     }
 
-    const essaySizeError = validateFileSize(essayFile, "essay");
-    if (essaySizeError) {
-      return NextResponse.json({ error: essaySizeError }, { status: 400 });
+    if (!rubricTextInput && !rubricFile) {
+      return NextResponse.json({ error: "MISSING_INPUT" }, { status: 400 });
     }
 
-    const [rubricText, essayText] = await Promise.all([
-      parseFile(rubricFile),
-      parseFile(essayFile),
-    ]);
+    if (!essayTextInput && !essayFile) {
+      return NextResponse.json({ error: "MISSING_INPUT" }, { status: 400 });
+    }
+
+    const rubricText = await resolveFieldText("rubric", rubricTextInput, rubricFile);
+    const essayText = await resolveFieldText("essay", essayTextInput, essayFile);
 
     return NextResponse.json({ rubricText, essayText });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to process uploaded files";
+    if (error instanceof Error && error.message === "MISSING_INPUT") {
+      return NextResponse.json({ error: "MISSING_INPUT" }, { status: 400 });
+    }
 
-    const status = error instanceof FileParseValidationError ? 400 : 500;
+    if (error instanceof Error && error.message === "UNSUPPORTED_FILE_TYPE") {
+      return NextResponse.json({ error: "UNSUPPORTED_FILE_TYPE" }, { status: 400 });
+    }
 
-    return NextResponse.json({ error: message }, { status });
+    if (error instanceof Error && error.message.startsWith("TEXT_EXTRACTION_FAILED:")) {
+      const field = error.message.split(":")[1] as "rubric" | "essay";
+      return NextResponse.json({ error: "TEXT_EXTRACTION_FAILED", field }, { status: 400 });
+    }
+
+    if (error instanceof FileParseValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ error: "Failed to process uploaded files" }, { status: 500 });
   }
 }
