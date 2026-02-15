@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { evaluateAssignment } from "../../../lib/evaluation";
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
+import { structureRubric } from "../../../lib/rubricStructuring";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -111,7 +113,19 @@ export async function POST(request: Request) {
       assignmentFile,
     );
 
-    return NextResponse.json({ rubricText, assignmentText });
+    let structuredRubric;
+    try {
+      structuredRubric = await structureRubric(rubricText);
+    } catch {
+      return NextResponse.json({ error: "RUBRIC_STRUCTURE_FAILED" }, { status: 400 });
+    }
+
+    try {
+      const evaluation = await evaluateAssignment(structuredRubric, assignmentText);
+      return NextResponse.json(evaluation);
+    } catch {
+      return NextResponse.json({ error: "EVALUATION_FAILED" }, { status: 500 });
+    }
   } catch (error) {
     if (error instanceof Error && error.message === "MISSING_INPUT") {
       return NextResponse.json({ error: "MISSING_INPUT" }, { status: 400 });
