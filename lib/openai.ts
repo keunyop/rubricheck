@@ -8,51 +8,80 @@ if (!apiKey) {
 
 const client = new OpenAI({ apiKey });
 
-function extractJsonCandidate(text: string): string | null {
+function collectResponseTextCandidates(response: any): string[] {
+  const candidates: string[] = [];
+
+  if (typeof response?.output_text === "string" && response.output_text.length > 0) {
+    candidates.push(response.output_text);
+  }
+
+  const outputs = Array.isArray(response?.output) ? response.output : [];
+
+  for (const output of outputs) {
+    const contentItems = Array.isArray(output?.content) ? output.content : [];
+
+    for (const content of contentItems) {
+      if (typeof content?.text === "string" && content.text.length > 0) {
+        candidates.push(content.text);
+      }
+      if (typeof content?.text?.value === "string" && content.text.value.length > 0) {
+        candidates.push(content.text.value);
+      }
+    }
+  }
+
+  return candidates;
+}
+
+function buildJsonParseAttempts(text: string): string[] {
+  const attempts: string[] = [];
   const trimmed = text.trim();
 
   if (!trimmed) {
-    return null;
+    return attempts;
   }
 
-  const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (fencedMatch?.[1]) {
-    return fencedMatch[1].trim();
+  attempts.push(trimmed);
+
+  const fencedMatches = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/gi) ?? [];
+  for (const block of fencedMatches) {
+    const unwrapped = block.replace(/```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+    if (unwrapped) {
+      attempts.push(unwrapped);
+    }
   }
 
   const objectStart = trimmed.indexOf("{");
   const objectEnd = trimmed.lastIndexOf("}");
   if (objectStart !== -1 && objectEnd > objectStart) {
-    return trimmed.slice(objectStart, objectEnd + 1);
+    attempts.push(trimmed.slice(objectStart, objectEnd + 1).trim());
   }
 
   const arrayStart = trimmed.indexOf("[");
   const arrayEnd = trimmed.lastIndexOf("]");
   if (arrayStart !== -1 && arrayEnd > arrayStart) {
-    return trimmed.slice(arrayStart, arrayEnd + 1);
+    attempts.push(trimmed.slice(arrayStart, arrayEnd + 1).trim());
   }
 
-  return trimmed;
+  return [...new Set(attempts)];
 }
 
-function parseModelJson(text: string): any {
-  const candidate = extractJsonCandidate(text);
+function parseModelJsonFromResponse(response: any): any {
+  const candidates = collectResponseTextCandidates(response);
 
-  if (!candidate) {
-    throw new Error("MODEL_JSON_PARSE_FAILED");
-  }
+  for (const text of candidates) {
+    const attempts = buildJsonParseAttempts(text);
 
-  try {
-    const parsed = JSON.parse(candidate);
-
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      throw new Error("MODEL_JSON_PARSE_FAILED");
+    for (const attempt of attempts) {
+      try {
+        return JSON.parse(attempt);
+      } catch {
+        // Try next parse attempt.
+      }
     }
-
-    return parsed;
-  } catch {
-    throw new Error("MODEL_JSON_PARSE_FAILED");
   }
+
+  throw new Error("MODEL_JSON_PARSE_FAILED");
 }
 
 async function callJsonModel(modelEnvKey: "STRUCTURE_MODEL" | "EVALUATION_MODEL", prompt: string) {
@@ -77,8 +106,7 @@ async function callJsonModel(modelEnvKey: "STRUCTURE_MODEL" | "EVALUATION_MODEL"
     ],
   });
 
-  const outputText = response.output_text ?? "";
-  return parseModelJson(outputText);
+  return parseModelJsonFromResponse(response);
 }
 
 export async function callStructureModel(prompt: string): Promise<any> {

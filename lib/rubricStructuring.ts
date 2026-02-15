@@ -3,25 +3,30 @@ import { RubricSchema, type Rubric } from "./schema";
 
 export async function structureRubric(rubricText: string): Promise<Rubric> {
   const prompt = [
-    "Extract a grading rubric from the provided text.",
-    "Return strict JSON that matches this schema exactly:",
+    "Extract rubric criteria from the text.",
+    "Return JSON only, matching this schema exactly:",
     '{ "criteria": [{ "name": "string", "max_score": number, "description": "string" }] }',
-    "Requirements:",
-    "- Include every rubric criterion you can identify.",
-    "- For each criterion, provide name, max_score, and description.",
-    "- max_score must be numeric.",
-    "- description should be concise and faithful to the source.",
+    "Rules:",
+    "- Include all identifiable criteria.",
+    "- Each criterion must include name, max_score, description.",
+    "- max_score must be numeric. If missing, infer from rubric scale; if unclear, use 1.",
+    "- description must be short and faithful.",
+    "- No markdown. No extra keys. No extra text.",
     "",
     "Rubric text:",
     rubricText,
   ].join("\n");
 
-  const modelResult = await callStructureModel(prompt);
-  const parsed = RubricSchema.safeParse(modelResult);
+  try {
+    const modelResult = await callStructureModel(prompt);
+    const parsed = RubricSchema.safeParse(modelResult);
 
-  if (!parsed.success) {
+    if (!parsed.success) {
+      throw new Error("RUBRIC_STRUCTURE_FAILED");
+    }
+
+    return parsed.data;
+  } catch {
     throw new Error("RUBRIC_STRUCTURE_FAILED");
   }
-
-  return parsed.data;
 }
