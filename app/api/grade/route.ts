@@ -220,7 +220,7 @@ export async function POST(request: Request) {
 
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { error: "Daily limit reached (50). Try again tomorrow." },
+        { error: `Daily limit reached (${rateLimit.limit}). Try again tomorrow.` },
         { status: 429, headers: rateLimitHeaders },
       );
     }

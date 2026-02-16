@@ -158,6 +158,7 @@ export default function Home() {
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
   const [error, setError] = useState("");
   const [showDailyLimitAlert, setShowDailyLimitAlert] = useState(false);
+  const [dailyLimitValue, setDailyLimitValue] = useState<number | null>(null);
   const [evaluationMessageIndex, setEvaluationMessageIndex] = useState(0);
 
   const isLoading = loadingStep !== "idle";
@@ -354,6 +355,7 @@ export default function Home() {
     event.preventDefault();
     setError("");
     setShowDailyLimitAlert(false);
+    setDailyLimitValue(null);
     setGradeResult(null);
 
     const stepTimers: Array<ReturnType<typeof setTimeout>> = [];
@@ -428,10 +430,22 @@ export default function Home() {
         data && typeof data === "object" && "error" in data
           ? String((data as { error?: unknown }).error ?? "")
           : "";
-      const isDailyLimitHit =
-        response.status === 429 || apiError === "Daily limit reached (50). Try again tomorrow.";
+      const limitHeaderRaw = response.headers.get("x-ratelimit-limit");
+      const limitFromHeader = limitHeaderRaw ? Number.parseInt(limitHeaderRaw, 10) : Number.NaN;
+      const limitFromErrorMatch = apiError.match(/Daily limit reached \((\d+)\)/);
+      const limitFromError = limitFromErrorMatch?.[1]
+        ? Number.parseInt(limitFromErrorMatch[1], 10)
+        : Number.NaN;
+      const detectedDailyLimit =
+        Number.isFinite(limitFromHeader) && limitFromHeader > 0
+          ? limitFromHeader
+          : Number.isFinite(limitFromError) && limitFromError > 0
+            ? limitFromError
+            : null;
+      const isDailyLimitHit = response.status === 429 || apiError.startsWith("Daily limit reached");
 
       if (isDailyLimitHit) {
+        setDailyLimitValue(detectedDailyLimit);
         setShowDailyLimitAlert(true);
         setError("");
         return;
@@ -731,7 +745,9 @@ export default function Home() {
           <section className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 shadow-sm md:p-6">
             <h2 className="text-base font-semibold text-amber-900">Daily limit reached</h2>
             <p className="mt-1 text-sm text-amber-800">
-              You&apos;ve used all 50 checks for today. Please try again tomorrow.
+              {dailyLimitValue
+                ? `You’ve used all ${dailyLimitValue} checks for today. Please try again tomorrow.`
+                : "You’ve reached today’s check limit. Please try again tomorrow."}
             </p>
           </section>
         ) : null}
