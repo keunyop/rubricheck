@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { evaluateAssignment } from "../../../lib/evaluation";
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
+import { checkDailyRateLimit } from "../../../lib/rateLimit";
 import { structureRubric } from "../../../lib/rubricStructuring";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -211,6 +212,19 @@ function buildFinalEvaluation(
 
 export async function POST(request: Request) {
   try {
+    const rateLimit = await checkDailyRateLimit(request);
+    const rateLimitHeaders = {
+      "X-RateLimit-Limit": String(rateLimit.limit),
+      "X-RateLimit-Remaining": String(rateLimit.remaining),
+    };
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Daily limit reached (50). Try again tomorrow." },
+        { status: 429, headers: rateLimitHeaders },
+      );
+    }
+
     const formData = await request.formData();
 
     const rubricFile = getUploadedFile(formData, "rubric");
@@ -240,12 +254,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "MISSING_INPUT" }, { status: 400 });
     }
 
-    const rubricText = await resolveFieldText("rubric", rubricTextInput, rubricFile);
-    const assignmentText = await resolveFieldText(
-      "assignment",
-      assignmentTextInput,
-      assignmentFile,
-    );
+    const [rubricText, assignmentText] = await Promise.all([
+      resolveFieldText("rubric", rubricTextInput, rubricFile),
+      resolveFieldText("assignment", assignmentTextInput, assignmentFile),
+    ]);
 
     let structuredRubric;
     try {
@@ -258,12 +270,17 @@ export async function POST(request: Request) {
     try {
       const evaluation = await evaluateAssignment(structuredRubric, assignmentText);
       const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation);
-      return NextResponse.json(finalEvaluation);
+      return NextResponse.json(finalEvaluation, { headers: rateLimitHeaders });
     } catch (error) {
       console.error("EVALUATION_FAILED", error);
       return NextResponse.json({ error: "EVALUATION_FAILED" }, { status: 500 });
     }
   } catch (error) {
+    if (error instanceof Error && error.message === "UPSTASH_REDIS_CONFIG_MISSING") {
+      console.error("RATE_LIMIT_CONFIG_MISSING");
+      return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
+    }
+
     if (error instanceof Error && error.message === "MISSING_INPUT") {
       return NextResponse.json({ error: "MISSING_INPUT" }, { status: 400 });
     }

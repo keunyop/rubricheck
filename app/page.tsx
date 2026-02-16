@@ -47,8 +47,17 @@ const loadingStepLabels: Record<Exclude<LoadingStep, "idle">, string> = {
   uploading: "Uploading...",
   parsing: "Parsing files...",
   structuringRubric: "Structuring rubric...",
-  evaluatingAssignment: "Evaluating assignment...",
+  evaluatingAssignment: "Reviewing your assignment against the rubric…",
 };
+
+const evaluationRotatingMessages = [
+  "Reviewing your assignment against the rubric…",
+  "Identifying strengths and improvement areas…",
+  "Estimating a score range…",
+];
+const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
+const rubricFileInputId = "rubric-file-input";
+const assignmentFileInputId = "assignment-file-input";
 
 function formatOverallScoreDisplay(range: [number, number]): string {
   const [low, high] = range;
@@ -89,6 +98,20 @@ function validateFile(file: File): string | null {
   }
 
   return null;
+}
+
+function restoreBrowserFocus() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    window.focus();
+  });
+
+  setTimeout(() => {
+    window.focus();
+  }, 120);
 }
 
 function TabButton({
@@ -134,6 +157,8 @@ export default function Home() {
   const [loadingStep, setLoadingStep] = useState<LoadingStep>("idle");
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
   const [error, setError] = useState("");
+  const [showDailyLimitAlert, setShowDailyLimitAlert] = useState(false);
+  const [evaluationMessageIndex, setEvaluationMessageIndex] = useState(0);
 
   const isLoading = loadingStep !== "idle";
 
@@ -142,7 +167,26 @@ export default function Home() {
       return "";
     }
 
+    if (loadingStep === "evaluatingAssignment") {
+      return evaluationRotatingMessages[evaluationMessageIndex];
+    }
+
     return loadingStepLabels[loadingStep];
+  }, [evaluationMessageIndex, loadingStep]);
+
+  useEffect(() => {
+    if (loadingStep !== "evaluatingAssignment") {
+      setEvaluationMessageIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setEvaluationMessageIndex((prev) => (prev + 1) % evaluationRotatingMessages.length);
+    }, 1200);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, [loadingStep]);
 
   useEffect(() => {
@@ -211,10 +255,12 @@ export default function Home() {
   function handleFileInputChange(field: InputField, event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) {
+      restoreBrowserFocus();
       return;
     }
 
     applyFileSelection(field, selectedFile);
+    restoreBrowserFocus();
   }
 
   function handleDrop(
@@ -241,6 +287,10 @@ export default function Home() {
 
   function mapApiError(data: GradeErrorResponse): string {
     const message = data.error;
+
+    if (message === "SERVICE_UNAVAILABLE") {
+      return "Service is temporarily unavailable. Please try again shortly.";
+    }
 
     if (message === "MISSING_INPUT") {
       return "Please provide both a rubric and an assignment.";
@@ -303,6 +353,7 @@ export default function Home() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setShowDailyLimitAlert(false);
     setGradeResult(null);
 
     const stepTimers: Array<ReturnType<typeof setTimeout>> = [];
@@ -373,6 +424,19 @@ export default function Home() {
         ? await response.json()
         : { error: "INTERNAL_SERVER_ERROR" };
 
+      const apiError =
+        data && typeof data === "object" && "error" in data
+          ? String((data as { error?: unknown }).error ?? "")
+          : "";
+      const isDailyLimitHit =
+        response.status === 429 || apiError === "Daily limit reached (50). Try again tomorrow.";
+
+      if (isDailyLimitHit) {
+        setShowDailyLimitAlert(true);
+        setError("");
+        return;
+      }
+
       if (!response.ok) {
         setError(mapApiError((data ?? {}) as GradeErrorResponse));
         return;
@@ -399,7 +463,12 @@ export default function Home() {
       <div className="mx-auto w-full max-w-5xl space-y-8">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="mb-6 border-b border-slate-100 pb-5">
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900">RubriCheck</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">RubriCheck</h1>
+              <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
+                Beta
+              </span>
+            </div>
             <p className="mt-2 text-sm text-slate-600 md:text-[15px]">
               Upload your rubric and assignment to get a rubric-based score estimate in seconds.
             </p>
@@ -455,10 +524,12 @@ export default function Home() {
                 {rubricMode === "file" ? (
                   <div className="space-y-3">
                     <input
+                      id={rubricFileInputId}
                       ref={rubricInputRef}
                       type="file"
                       accept=".pdf,.docx,.txt"
                       className="hidden"
+                      onBlur={restoreBrowserFocus}
                       onChange={(event) => handleFileInputChange("rubric", event)}
                     />
                     <div
@@ -486,13 +557,12 @@ export default function Home() {
                     >
                       <p className="text-sm font-medium text-slate-700">Drag and drop a file here</p>
                       <p className="mt-1 text-xs text-slate-500">PDF, DOCX, or TXT up to 5MB</p>
-                      <button
-                        type="button"
-                        onClick={() => rubricInputRef.current?.click()}
-                        className="mt-4 rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      <label
+                        htmlFor={rubricFileInputId}
+                        className="mt-4 inline-flex cursor-pointer rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
                       >
                         Choose File
-                      </button>
+                      </label>
                     </div>
                     {rubricFile ? (
                       <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -567,10 +637,12 @@ export default function Home() {
                 {assignmentMode === "file" ? (
                   <div className="space-y-3">
                     <input
+                      id={assignmentFileInputId}
                       ref={assignmentInputRef}
                       type="file"
                       accept=".pdf,.docx,.txt"
                       className="hidden"
+                      onBlur={restoreBrowserFocus}
                       onChange={(event) => handleFileInputChange("assignment", event)}
                     />
                     <div
@@ -598,13 +670,12 @@ export default function Home() {
                     >
                       <p className="text-sm font-medium text-slate-700">Drag and drop a file here</p>
                       <p className="mt-1 text-xs text-slate-500">PDF, DOCX, or TXT up to 5MB</p>
-                      <button
-                        type="button"
-                        onClick={() => assignmentInputRef.current?.click()}
-                        className="mt-4 rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                      <label
+                        htmlFor={assignmentFileInputId}
+                        className="mt-4 inline-flex cursor-pointer rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
                       >
                         Choose File
-                      </button>
+                      </label>
                     </div>
                     {assignmentFile ? (
                       <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -640,21 +711,30 @@ export default function Home() {
             ) : null}
 
             {isLoading ? (
-              <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              <div className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 md:text-sm">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-                <span>{loadingMessage}</span>
+                <span className="leading-5">{loadingMessage}</span>
               </div>
             ) : null}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="w-full rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-500 active:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Grade my assignment
             </button>
           </form>
         </section>
+
+        {showDailyLimitAlert ? (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 shadow-sm md:p-6">
+            <h2 className="text-base font-semibold text-amber-900">Daily limit reached</h2>
+            <p className="mt-1 text-sm text-amber-800">
+              You&apos;ve used all 50 checks for today. Please try again tomorrow.
+            </p>
+          </section>
+        ) : null}
 
         {gradeResult ? (
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
@@ -675,6 +755,10 @@ export default function Home() {
               <p className="mt-2 text-3xl font-semibold tracking-tight text-indigo-700 md:text-4xl">
                 {formatOverallScoreDisplay(gradeResult.overall_range)}{" "}
                 <span className="text-xl md:text-2xl">/ 100</span>
+              </p>
+              <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
+                This is an AI-estimated range based on your rubric. Use it as guidance before
+                submission.
               </p>
             </div>
 
@@ -740,6 +824,19 @@ export default function Home() {
               ))}
             </div>
           </section>
+        ) : null}
+
+        {feedbackUrl ? (
+          <footer className="pt-1 text-center text-xs text-slate-500">
+            <a
+              href={feedbackUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="font-medium text-slate-600 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-800"
+            >
+              Feedback
+            </a>
+          </footer>
         ) : null}
       </div>
     </main>
