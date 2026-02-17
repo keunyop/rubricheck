@@ -1,6 +1,7 @@
 import { Redis } from "@upstash/redis";
+import { FREE_DAILY_LIMIT } from "../src/config/plans";
 
-const DAILY_LIMIT = 50;
+const DAILY_LIMIT = FREE_DAILY_LIMIT;
 const WINDOW_SECONDS = 86400;
 
 let redisClient: Redis | null = null;

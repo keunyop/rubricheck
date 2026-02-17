@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { evaluateAssignment } from "../../../lib/evaluation";
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
-import { checkDailyRateLimit } from "../../../lib/rateLimit";
 import { structureRubric } from "../../../lib/rubricStructuring";
+import { buildUsageLimitHeaders, checkUsageLimit } from "../../../src/lib/usageLimit";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 type FieldName = "rubric" | "assignment";
@@ -212,16 +212,13 @@ function buildFinalEvaluation(
 
 export async function POST(request: Request) {
   try {
-    const rateLimit = await checkDailyRateLimit(request);
-    const rateLimitHeaders = {
-      "X-RateLimit-Limit": String(rateLimit.limit),
-      "X-RateLimit-Remaining": String(rateLimit.remaining),
-    };
+    const usage = await checkUsageLimit(request, "evaluate");
+    const usageHeaders = buildUsageLimitHeaders(usage);
 
-    if (!rateLimit.allowed) {
+    if (!usage.allowed) {
       return NextResponse.json(
-        { error: `Daily limit reached (${rateLimit.limit}). Try again tomorrow.` },
-        { status: 429, headers: rateLimitHeaders },
+        { error: usage.errorMessage ?? `Free daily limit reached (${usage.limit}). Upgrade to continue.` },
+        { status: 429, headers: usageHeaders },
       );
     }
 
@@ -270,7 +267,7 @@ export async function POST(request: Request) {
     try {
       const evaluation = await evaluateAssignment(structuredRubric, assignmentText);
       const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation);
-      return NextResponse.json(finalEvaluation, { headers: rateLimitHeaders });
+      return NextResponse.json(finalEvaluation, { headers: usageHeaders });
     } catch (error) {
       console.error("EVALUATION_FAILED", error);
       return NextResponse.json({ error: "EVALUATION_FAILED" }, { status: 500 });
