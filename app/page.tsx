@@ -44,6 +44,11 @@ type GradeResult = {
   criteria: CriteriaResult[];
 };
 
+type CheckoutResponse = {
+  url?: string;
+  error?: string;
+};
+
 const loadingStepLabels: Record<Exclude<LoadingStep, "idle">, string> = {
   uploading: "Uploading...",
   parsing: "Parsing files...",
@@ -59,6 +64,7 @@ const evaluationRotatingMessages = [
 const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
 const rubricFileInputId = "rubric-file-input";
 const assignmentFileInputId = "assignment-file-input";
+const PRO_MONTHLY_PLAN_ID = "pro_monthly";
 
 function formatOverallScoreDisplay(range: [number, number]): string {
   const [low, high] = range;
@@ -375,6 +381,8 @@ export default function Home() {
   );
   const [isSharingImage, setIsSharingImage] = useState(false);
   const [didCopyImage, setDidCopyImage] = useState(false);
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoading = loadingStep !== "idle";
@@ -425,10 +433,12 @@ export default function Home() {
   }, []);
 
   function openRewritePaywall() {
+    setCheckoutError("");
     setShowRewritePaywall(true);
   }
 
   function closeRewritePaywall() {
+    setCheckoutError("");
     setShowRewritePaywall(false);
   }
 
@@ -504,6 +514,32 @@ export default function Home() {
       setDidCopyImage(false);
     } finally {
       setIsSharingImage(false);
+    }
+  }
+
+  async function handleUpgradeToPro() {
+    setCheckoutError("");
+    setIsCreatingCheckout(true);
+
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ priceId: PRO_MONTHLY_PLAN_ID }),
+      });
+
+      const data: CheckoutResponse = await response.json().catch(() => ({}));
+      if (!response.ok || !data.url) {
+        throw new Error(data.error ?? "CHECKOUT_SESSION_FAILED");
+      }
+
+      window.location.assign(data.url);
+    } catch {
+      setCheckoutError("Unable to start checkout right now. Please try again.");
+    } finally {
+      setIsCreatingCheckout(false);
     }
   }
 
@@ -1177,15 +1213,14 @@ export default function Home() {
                               {isRewriteOpen ? (
                                 <div className="border-t border-slate-200 px-3 py-3">
                                   <p className="text-sm text-slate-600">
-                                    Rewrite Mode is a Pro feature. Coming next: pricing &
-                                    checkout.
+                                    Rewrite Mode is a Pro feature. Upgrade to Pro to unlock it.
                                   </p>
                                   <button
                                     type="button"
                                     onClick={openRewritePaywall}
                                     className="mt-3 inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
                                   >
-                                    Unlock Rewrite Mode
+                                    Upgrade to Pro
                                   </button>
                                 </div>
                               ) : null}
@@ -1236,14 +1271,14 @@ export default function Home() {
                       {isRewriteOpen ? (
                         <div className="border-t border-slate-200 px-3 py-3">
                           <p className="text-sm text-slate-600">
-                            Rewrite Mode is a Pro feature. Coming next: pricing & checkout.
+                            Rewrite Mode is a Pro feature. Upgrade to Pro to unlock it.
                           </p>
                           <button
                             type="button"
                             onClick={openRewritePaywall}
                             className="mt-3 inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
                           >
-                            Unlock Rewrite Mode
+                            Upgrade to Pro
                           </button>
                         </div>
                       ) : null}
@@ -1270,19 +1305,32 @@ export default function Home() {
               className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
             >
               <h3 id="rewrite-mode-title" className="text-lg font-semibold text-slate-900">
-                Rewrite Mode is a Pro feature. Coming next: pricing & checkout.
+                Upgrade to Pro
               </h3>
               <p className="mt-2 text-sm text-slate-600">
-                You can keep grading for free today. Rewrite generation will be unlocked after Pro
-                billing goes live.
+                Pro monthly unlocks Rewrite Mode. Continue to Stripe Checkout to pay with email.
               </p>
-              <div className="mt-5 flex justify-end">
+              {checkoutError ? (
+                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {checkoutError}
+                </p>
+              ) : null}
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={closeRewritePaywall}
-                  className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  disabled={isCreatingCheckout}
+                  className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Close
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpgradeToPro}
+                  disabled={isCreatingCheckout}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
                 </button>
               </div>
             </section>
