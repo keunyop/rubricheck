@@ -1,28 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RubriCheck
 
-## Getting Started
+RubriCheck is an AI-assisted grading workflow that helps students and educators evaluate assignment drafts against a rubric before final submission.
 
-First, run the development server:
+It accepts rubric + assignment input (file upload or pasted text), structures the rubric, estimates criterion-level score ranges, and returns actionable feedback.
+
+## Product Summary
+
+- Problem: Rubric-based grading is time-consuming and inconsistent when students self-review.
+- Solution: A guided AI flow that converts raw rubric text into structured criteria and evaluates work against it.
+- Target users: Students preparing submissions, tutors, and instructors who want fast draft feedback.
+
+## Core Features
+
+- Multi-input support
+  - Upload `PDF`, `DOCX`, `TXT` (up to 5MB) or paste text directly.
+- Rubric structuring
+  - Converts unstructured rubric text into machine-readable grading criteria.
+- Assignment evaluation
+  - Returns criterion-level estimated ranges and feedback.
+  - Produces overall estimated score range (scaled to 100).
+  - Highlights top three improvement priorities.
+- Share-ready output
+  - Generates a shareable summary image from results.
+- Usage control
+  - Rate-limited daily usage using Upstash Redis.
+- Pro gating
+  - Rewrite mode is exposed as a Pro feature entry point.
+
+## Branch Status
+
+- `main`
+  - Stable core grading flow.
+- `feature/stripe-pro-checkout`
+  - Adds Stripe Checkout entry for upgrading to Pro.
+  - Uses checkout session redirect flow and billing success/cancel pages.
+
+## Tech Stack
+
+- Frontend: Next.js App Router, React, TypeScript, Tailwind CSS
+- Backend: Next.js Route Handlers
+- AI: OpenAI API (rubric structuring + evaluation prompts)
+- Storage/limits: Upstash Redis
+- Billing (feature branch): Stripe Checkout
+
+## System Flow
+
+1. User submits rubric and assignment (file or text).
+2. Server parses input and validates file/size/type.
+3. Rubric is structured into criteria.
+4. Assignment is evaluated against criteria.
+5. API returns summary, per-criterion ranges, and top improvements.
+6. UI renders report and optional Pro upgrade entry.
+
+## API Endpoints
+
+- `POST /api/grade`
+  - Main grading pipeline (parse -> structure -> evaluate -> normalize output).
+- `POST /api/rewrite`
+  - Rewrite-related endpoint (Pro surface area).
+- `POST /api/evaluate`
+  - Evaluation-focused endpoint.
+- `POST /api/simulate`
+  - Simulation/testing endpoint.
+- `POST /api/checkout` (feature branch)
+  - Creates Stripe Checkout Session and returns redirect URL.
+
+## Local Setup
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open `http://localhost:3000`.
 
 ## Environment Variables
 
-Create `.env.local` with:
+Create `.env.local`:
 
 ```bash
 OPENAI_API_KEY=...
@@ -31,25 +85,32 @@ EVALUATION_MODEL=...
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 NEXT_PUBLIC_FEEDBACK_URL=...
+```
+
+Stripe-related variables (needed for checkout integration on `feature/stripe-pro-checkout`):
+
+```bash
 STRIPE_SECRET_KEY=...
 STRIPE_WEBHOOK_SECRET=...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-Set the Stripe Pro monthly Price `lookup_key` to `pro_monthly`.
+Stripe setup note:
+- Configure Pro monthly Price with `lookup_key=pro_monthly`.
 
-## Learn More
+## Portfolio Value
 
-To learn more about Next.js, take a look at the following resources:
+This project is designed to demonstrate:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- End-to-end product thinking (problem framing -> UX -> API -> monetization path)
+- Practical AI integration with guardrails and output normalization
+- Real-world engineering concerns (validation, rate limiting, failure handling)
+- SaaS-ready architecture patterns for future account/billing expansion
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Roadmap
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- User accounts and subscription state sync
+- Webhook-based billing lifecycle handling
+- Saved report history and analytics
+- Improved rubric templates and domain-specific tuning
