@@ -7,6 +7,7 @@ const PLAN_ALIAS_PRO_MONTHLY = "pro_monthly";
 
 type CheckoutRequestBody = {
   priceId?: unknown;
+  email?: unknown;
 };
 
 let stripeClient: Stripe | null = null;
@@ -29,8 +30,21 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as CheckoutRequestBody;
     const requestedPriceId = typeof body.priceId === "string" ? body.priceId.trim() : "";
+    const email =
+      typeof body.email === "string"
+        ? body.email.trim().toLowerCase()
+        : "";
+
     if (!requestedPriceId) {
       return NextResponse.json({ error: "MISSING_PRICE_ID" }, { status: 400 });
+    }
+
+    if (!email) {
+      return NextResponse.json({ error: "MISSING_EMAIL" }, { status: 400 });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: "INVALID_EMAIL" }, { status: 400 });
     }
 
     if (requestedPriceId !== PLAN_ALIAS_PRO_MONTHLY) {
@@ -55,6 +69,7 @@ export async function POST(request: Request) {
     const session = await getStripeClient().checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: proMonthlyStripePriceId, quantity: 1 }],
+      customer_email: email,
       success_url: `${appUrl}/billing/success`,
       cancel_url: `${appUrl}/billing/cancel`,
     });

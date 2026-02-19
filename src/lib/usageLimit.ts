@@ -1,6 +1,7 @@
 import { Redis } from "@upstash/redis";
 
 import { FREE_DAILY_LIMIT, PLUS_DAILY_LIMIT, type PlanName, getPlanFromUser } from "../config/plans";
+import { getPlanFromEntitlementCookie } from "./entitlementSession";
 
 export type UsageFeature = "evaluate" | "rewrite" | "simulate";
 
@@ -100,6 +101,24 @@ function getFreePlanLimitMessage(limit: number): string {
   return `Free daily limit reached (${limit}). Upgrade to continue.`;
 }
 
+async function resolveEffectivePlan(request: Request, user?: UserPlanPayload): Promise<PlanName> {
+  const requestedPlan = getPlanFromUser(user);
+  if (requestedPlan !== "free") {
+    return requestedPlan;
+  }
+
+  try {
+    const planFromCookie = getPlanFromEntitlementCookie(request);
+    if (planFromCookie === "pro") {
+      return "pro";
+    }
+  } catch {
+    // Ignore malformed/missing cookie and fall back to free.
+  }
+
+  return "free";
+}
+
 export function buildUsageLimitHeaders(result: Pick<UsageCheckResult, "limit" | "remaining">): Record<string, string> {
   return {
     "X-RateLimit-Limit": String(result.limit),
@@ -112,11 +131,7 @@ export async function checkUsageLimit(
   feature: UsageFeature,
   user?: UserPlanPayload,
 ): Promise<UsageCheckResult> {
-  const requestedPlan = getPlanFromUser(user);
-  void requestedPlan;
-
-  // For now all users are treated as free until billing/user plans are wired.
-  const effectivePlan: PlanName = "free";
+  const effectivePlan = await resolveEffectivePlan(request, user);
   const limit = getLimitForFeature(effectivePlan, feature);
 
   if (limit === null || limit <= 0) {

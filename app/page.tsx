@@ -50,6 +50,50 @@ type CheckoutResponse = {
   error?: string;
 };
 
+type EntitlementStatusResponse = {
+  plan?: string;
+};
+
+const SHOW_FAKE_GRADE_BUTTON = process.env.NODE_ENV !== "production";
+
+const FAKE_GRADE_RESULT: GradeResult = {
+  title: "Demo Submission",
+  overall_range: [84, 90],
+  summary:
+    "Your draft is logically organized and mostly aligned with the rubric. Clarifying evidence and tightening transitions should raise scoring consistency.",
+  top_improvements: [
+    "Add one concrete supporting example for each major claim.",
+    "Strengthen paragraph transitions to improve flow between sections.",
+    "Make the conclusion explicitly tie back to rubric criteria.",
+  ],
+  criteria: [
+    {
+      name: "Thesis & Focus",
+      max_score: 25,
+      estimated_range: [20, 23],
+      feedback: "Clear thesis, but narrow the scope slightly to keep argument focus consistent.",
+    },
+    {
+      name: "Evidence & Analysis",
+      max_score: 35,
+      estimated_range: [27, 31],
+      feedback: "Core reasoning is sound. Add one or two concrete examples for stronger support.",
+    },
+    {
+      name: "Organization & Coherence",
+      max_score: 20,
+      estimated_range: [17, 19],
+      feedback: "Structure is readable; clearer transitions would further improve coherence.",
+    },
+    {
+      name: "Language & Mechanics",
+      max_score: 20,
+      estimated_range: [18, 19],
+      feedback: "Mostly polished writing with minor phrasing and punctuation opportunities.",
+    },
+  ],
+};
+
 const loadingStepLabels: Record<Exclude<LoadingStep, "idle">, string> = {
   uploading: "Uploading...",
   parsing: "Parsing files...",
@@ -106,6 +150,14 @@ function validateFile(file: File): string | null {
   }
 
   return null;
+}
+
+function isValidEmail(email: string): boolean {
+  if (!email || email.length > 320) {
+    return false;
+  }
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function restoreBrowserFocus() {
@@ -383,7 +435,9 @@ export default function Home() {
   const [isSharingImage, setIsSharingImage] = useState(false);
   const [didCopyImage, setDidCopyImage] = useState(false);
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [checkoutEmail, setCheckoutEmail] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
+  const [hasProAccess, setHasProAccess] = useState(false);
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoading = loadingStep !== "idle";
@@ -433,7 +487,40 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    let canceled = false;
+
+    async function syncEntitlementStatus() {
+      try {
+        const response = await fetch("/api/entitlement", {
+          method: "GET",
+          cache: "no-store",
+        });
+        const data: EntitlementStatusResponse = await response.json().catch(() => ({}));
+        if (!canceled) {
+          setHasProAccess(response.ok && data.plan === "pro");
+        }
+      } catch {
+        if (!canceled) {
+          setHasProAccess(false);
+        }
+      }
+    }
+
+    void syncEntitlementStatus();
+
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
   function openRewritePaywall() {
+    if (hasProAccess) {
+      setCheckoutError("");
+      setShowRewritePaywall(false);
+      return;
+    }
+
     setCheckoutError("");
     setShowRewritePaywall(true);
   }
@@ -520,6 +607,12 @@ export default function Home() {
 
   async function handleUpgradeToPro() {
     setCheckoutError("");
+    const normalizedEmail = checkoutEmail.trim().toLowerCase();
+    if (!isValidEmail(normalizedEmail)) {
+      setCheckoutError("Please enter a valid email for Stripe checkout.");
+      return;
+    }
+
     setIsCreatingCheckout(true);
 
     try {
@@ -528,7 +621,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ priceId: PRO_MONTHLY_PLAN_ID }),
+        body: JSON.stringify({ priceId: PRO_MONTHLY_PLAN_ID, email: normalizedEmail }),
       });
 
       const data: CheckoutResponse = await response.json().catch(() => ({}));
@@ -823,6 +916,18 @@ export default function Home() {
     }
   }
 
+  function handleRunFakeGrade() {
+    setError("");
+    setShowDailyLimitAlert(false);
+    setDailyLimitValue(null);
+    setShowRewritePaywall(false);
+    setExpandedRewriteSections({});
+    setIsSharingImage(false);
+    setDidCopyImage(false);
+    setLoadingStep("idle");
+    setGradeResult(FAKE_GRADE_RESULT);
+  }
+
   return (
     <main className="min-h-screen bg-slate-300 px-4 py-10 md:py-14">
       <div className="mx-auto w-full max-w-5xl space-y-8">
@@ -1091,6 +1196,16 @@ export default function Home() {
             >
               Grade my assignment
             </button>
+            {SHOW_FAKE_GRADE_BUTTON ? (
+              <button
+                type="button"
+                onClick={handleRunFakeGrade}
+                disabled={isLoading}
+                className="w-full rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Run fake grade (dev)
+              </button>
+            ) : null}
           </form>
         </section>
 
@@ -1162,12 +1277,15 @@ export default function Home() {
               <button
                 type="button"
                 onClick={openRewritePaywall}
+                disabled={hasProAccess}
                 className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 md:w-auto"
               >
-                Unlock Rewrite Mode
+                {hasProAccess ? "Pro Active on This Device" : "Unlock Rewrite Mode"}
               </button>
               <p className="mt-2 text-xs leading-5 text-indigo-900/80 md:text-sm">
-                Pro helps you improve specific criteria with ready-to-use paragraph rewrites.
+                {hasProAccess
+                  ? "Pro entitlement is active. Rewrite/simulate gates now use your Pro session."
+                  : "Pro helps you improve specific criteria with ready-to-use paragraph rewrites."}
               </p>
             </div>
 
@@ -1215,16 +1333,24 @@ export default function Home() {
                               </button>
                               {isRewriteOpen ? (
                                 <div className="border-t border-slate-200 px-3 py-3">
-                                  <p className="text-sm text-slate-600">
-                                    Rewrite Mode is a Pro feature. Upgrade to Pro to unlock it.
-                                  </p>
-                                  <button
-                                    type="button"
-                                    onClick={openRewritePaywall}
-                                    className="mt-3 inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                  >
-                                    Upgrade to Pro
-                                  </button>
+                                  {hasProAccess ? (
+                                    <p className="text-sm text-emerald-700">
+                                      Pro is active on this device.
+                                    </p>
+                                  ) : (
+                                    <>
+                                      <p className="text-sm text-slate-600">
+                                        Rewrite Mode is a Pro feature. Upgrade to Pro to unlock it.
+                                      </p>
+                                      <button
+                                        type="button"
+                                        onClick={openRewritePaywall}
+                                        className="mt-3 inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                                      >
+                                        Upgrade to Pro
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               ) : null}
                             </div>
@@ -1273,16 +1399,24 @@ export default function Home() {
                       </button>
                       {isRewriteOpen ? (
                         <div className="border-t border-slate-200 px-3 py-3">
-                          <p className="text-sm text-slate-600">
-                            Rewrite Mode is a Pro feature. Upgrade to Pro to unlock it.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={openRewritePaywall}
-                            className="mt-3 inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                          >
-                            Upgrade to Pro
-                          </button>
+                          {hasProAccess ? (
+                            <p className="text-sm text-emerald-700">
+                              Pro is active on this device.
+                            </p>
+                          ) : (
+                            <>
+                              <p className="text-sm text-slate-600">
+                                Rewrite Mode is a Pro feature. Upgrade to Pro to unlock it.
+                              </p>
+                              <button
+                                type="button"
+                                onClick={openRewritePaywall}
+                                className="mt-3 inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                              >
+                                Upgrade to Pro
+                              </button>
+                            </>
+                          )}
                         </div>
                       ) : null}
                     </div>
@@ -1293,7 +1427,7 @@ export default function Home() {
           </section>
         ) : null}
 
-        {showRewritePaywall ? (
+        {showRewritePaywall && !hasProAccess ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <button
               type="button"
@@ -1311,8 +1445,25 @@ export default function Home() {
                 Upgrade to Pro
               </h3>
               <p className="mt-2 text-sm text-slate-600">
-                Pro monthly unlocks Rewrite Mode. Continue to Stripe Checkout to pay with email.
+                Pro monthly unlocks Rewrite Mode. Enter your email and continue to Stripe Checkout.
               </p>
+              <label htmlFor="upgrade-email" className="mt-4 block">
+                <span className="text-xs font-semibold text-slate-700">Email</span>
+                <input
+                  id="upgrade-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={checkoutEmail}
+                  onChange={(event) => {
+                    setCheckoutEmail(event.target.value);
+                    setCheckoutError("");
+                  }}
+                  disabled={isCreatingCheckout}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </label>
               {checkoutError ? (
                 <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {checkoutError}
@@ -1330,7 +1481,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleUpgradeToPro}
-                  disabled={isCreatingCheckout}
+                  disabled={isCreatingCheckout || !checkoutEmail.trim()}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
