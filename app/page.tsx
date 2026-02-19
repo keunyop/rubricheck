@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { ACTIVE_LANDING_COPY } from "../src/config/copy";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"];
@@ -828,13 +829,15 @@ export default function Home() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="mb-6 border-b border-slate-100 pb-5">
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">RubriCheck</h1>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+                {ACTIVE_LANDING_COPY.headline}
+              </h1>
               <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
                 Beta
               </span>
             </div>
             <p className="mt-2 text-sm text-slate-600 md:text-[15px]">
-              Upload your rubric and assignment to get a rubric-based score estimate in seconds.
+              {ACTIVE_LANDING_COPY.subtitle}
             </p>
           </div>
 
