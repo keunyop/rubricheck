@@ -8,24 +8,52 @@ if (!apiKey) {
 
 const client = new OpenAI({ apiKey });
 
-function collectResponseTextCandidates(response: any): string[] {
-  const candidates: string[] = [];
+type UnknownRecord = Record<string, unknown>;
 
-  if (typeof response?.output_text === "string" && response.output_text.length > 0) {
-    candidates.push(response.output_text);
+function asRecord(value: unknown): UnknownRecord | null {
+  if (!value || typeof value !== "object") {
+    return null;
   }
 
-  const outputs = Array.isArray(response?.output) ? response.output : [];
+  return value as UnknownRecord;
+}
+
+function collectResponseTextCandidates(response: unknown): string[] {
+  const candidates: string[] = [];
+  const responseRecord = asRecord(response);
+  if (!responseRecord) {
+    return candidates;
+  }
+
+  const outputText = responseRecord.output_text;
+  if (typeof outputText === "string" && outputText.length > 0) {
+    candidates.push(outputText);
+  }
+
+  const outputs = Array.isArray(responseRecord.output) ? responseRecord.output : [];
 
   for (const output of outputs) {
-    const contentItems = Array.isArray(output?.content) ? output.content : [];
+    const outputRecord = asRecord(output);
+    if (!outputRecord) {
+      continue;
+    }
+
+    const contentItems = Array.isArray(outputRecord.content) ? outputRecord.content : [];
 
     for (const content of contentItems) {
-      if (typeof content?.text === "string" && content.text.length > 0) {
-        candidates.push(content.text);
+      const contentRecord = asRecord(content);
+      if (!contentRecord) {
+        continue;
       }
-      if (typeof content?.text?.value === "string" && content.text.value.length > 0) {
-        candidates.push(content.text.value);
+
+      if (typeof contentRecord.text === "string" && contentRecord.text.length > 0) {
+        candidates.push(contentRecord.text);
+      }
+
+      const textRecord = asRecord(contentRecord.text);
+      const textValue = textRecord?.value;
+      if (typeof textValue === "string" && textValue.length > 0) {
+        candidates.push(textValue);
       }
     }
   }
@@ -66,7 +94,7 @@ function buildJsonParseAttempts(text: string): string[] {
   return [...new Set(attempts)];
 }
 
-function parseModelJsonFromResponse(response: any): any {
+function parseModelJsonFromResponse(response: unknown): unknown {
   const candidates = collectResponseTextCandidates(response);
 
   for (const text of candidates) {
@@ -84,7 +112,18 @@ function parseModelJsonFromResponse(response: any): any {
   throw new Error("MODEL_JSON_PARSE_FAILED");
 }
 
-async function callJsonModel(modelEnvKey: "STRUCTURE_MODEL" | "EVALUATION_MODEL", prompt: string) {
+type JsonModelOptions = {
+  systemInstruction?: string;
+};
+
+const DEFAULT_JSON_SYSTEM_INSTRUCTION =
+  "Return a single valid JSON object only. Do not include markdown, code fences, or extra text.";
+
+async function callJsonModel(
+  modelEnvKey: "STRUCTURE_MODEL" | "EVALUATION_MODEL",
+  prompt: string,
+  options?: JsonModelOptions,
+) {
   const model = process.env[modelEnvKey];
 
   if (!model) {
@@ -96,8 +135,7 @@ async function callJsonModel(modelEnvKey: "STRUCTURE_MODEL" | "EVALUATION_MODEL"
     input: [
       {
         role: "system",
-        content:
-          "Return a single valid JSON object only. Do not include markdown, code fences, or extra text.",
+        content: options?.systemInstruction ?? DEFAULT_JSON_SYSTEM_INSTRUCTION,
       },
       {
         role: "user",
@@ -109,10 +147,10 @@ async function callJsonModel(modelEnvKey: "STRUCTURE_MODEL" | "EVALUATION_MODEL"
   return parseModelJsonFromResponse(response);
 }
 
-export async function callStructureModel(prompt: string): Promise<any> {
-  return callJsonModel("STRUCTURE_MODEL", prompt);
+export async function callStructureModel(prompt: string, options?: JsonModelOptions): Promise<unknown> {
+  return callJsonModel("STRUCTURE_MODEL", prompt, options);
 }
 
-export async function callEvaluationModel(prompt: string): Promise<any> {
-  return callJsonModel("EVALUATION_MODEL", prompt);
+export async function callEvaluationModel(prompt: string, options?: JsonModelOptions): Promise<unknown> {
+  return callJsonModel("EVALUATION_MODEL", prompt, options);
 }

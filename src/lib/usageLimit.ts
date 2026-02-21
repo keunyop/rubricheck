@@ -94,7 +94,7 @@ function getLimitForFeature(plan: PlanName, feature: UsageFeature): number | nul
 
 function getFeatureBlockedMessage(feature: UsageFeature): string {
   const label = feature.charAt(0).toUpperCase() + feature.slice(1);
-  return `${label} is a Pro feature. Upgrade to continue.`;
+  return `${label} is a Pro feature. Restore Pro or upgrade to continue.`;
 }
 
 function getFreePlanLimitMessage(limit: number): string {

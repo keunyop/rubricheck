@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const GradingModeSchema = z.enum(["standard", "strict"]);
+
 const oneToTwoSentences = (value: string): boolean => {
   const sentenceCount = value
     .trim()
@@ -16,6 +18,39 @@ const integerRangeTuple = z
     message: "estimated_range must be [low, high] with low <= high",
   });
 
+const shortLineSchema = z
+  .string()
+  .max(140)
+  .refine((value) => !/[\r\n]/.test(value), {
+    message: "text must be single-line",
+  });
+
+const evidenceArraySchema = z.array(z.string().trim().min(1).max(220)).min(1).max(2);
+
+export const CriterionResultSchema = z.object({
+  name: z.string(),
+  score: z.number().int().nonnegative(),
+  rationale: shortLineSchema,
+  evidence: evidenceArraySchema.optional(),
+});
+
+export const StrictCriterionResultSchema = CriterionResultSchema.extend({
+  evidence: evidenceArraySchema,
+});
+
+const EvaluationCriterionSchema = z.object({
+  name: z.string(),
+  score: z.number().int().nonnegative(),
+  rationale: shortLineSchema,
+  estimated_range: integerRangeTuple,
+  feedback: shortLineSchema,
+  evidence: evidenceArraySchema.optional(),
+});
+
+const StrictEvaluationCriterionSchema = EvaluationCriterionSchema.extend({
+  evidence: evidenceArraySchema,
+});
+
 export const RubricSchema = z.object({
   criteria: z.array(
     z.object({
@@ -30,18 +65,17 @@ export const EvaluationSchema = z.object({
   summary: z.string().max(280).refine(oneToTwoSentences, {
     message: "summary must be 1-2 sentences",
   }),
-  criteria_scores: z.array(
-    z.object({
-      name: z.string(),
-      estimated_range: integerRangeTuple,
-      feedback: z
-        .string()
-        .max(140)
-        .refine((value) => !/[\r\n]/.test(value), {
-          message: "feedback must be single-line",
-        }),
-    }),
-  ),
+  criteria_scores: z.array(EvaluationCriterionSchema),
+  top_improvements: z
+    .array(z.string().max(120))
+    .length(3),
+});
+
+export const StrictEvaluationSchema = z.object({
+  summary: z.string().max(280).refine(oneToTwoSentences, {
+    message: "summary must be 1-2 sentences",
+  }),
+  criteria_scores: z.array(StrictEvaluationCriterionSchema),
   top_improvements: z
     .array(z.string().max(120))
     .length(3),
@@ -49,3 +83,7 @@ export const EvaluationSchema = z.object({
 
 export type Rubric = z.infer<typeof RubricSchema>;
 export type Evaluation = z.infer<typeof EvaluationSchema>;
+export type StrictEvaluation = z.infer<typeof StrictEvaluationSchema>;
+export type CriterionResult = z.infer<typeof CriterionResultSchema>;
+export type StrictCriterionResult = z.infer<typeof StrictCriterionResultSchema>;
+export type GradingMode = z.infer<typeof GradingModeSchema>;

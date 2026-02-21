@@ -6,10 +6,12 @@ export type EntitlementRecord = {
   plan: EntitlementPlan;
   status: string;
   currentPeriodEnd: number;
+  updatedAt: number;
 };
 
 const ENTITLEMENT_KEY_PREFIX = "rubricheck:entitlement:";
 const CUSTOMER_BY_EMAIL_KEY_PREFIX = "rubricheck:customerByEmail:";
+const STRIPE_LOOKUP_CACHE_BY_EMAIL_KEY_PREFIX = "rubricheck:stripeLookupByEmail:";
 
 let redisClient: Redis | null = null;
 
@@ -47,6 +49,10 @@ function getCustomerByEmailKey(email: string): string {
   return `${CUSTOMER_BY_EMAIL_KEY_PREFIX}${normalizeEmail(email)}`;
 }
 
+function getStripeLookupCacheByEmailKey(email: string): string {
+  return `${STRIPE_LOOKUP_CACHE_BY_EMAIL_KEY_PREFIX}${normalizeEmail(email)}`;
+}
+
 function parseEntitlement(value: unknown): EntitlementRecord | null {
   if (typeof value === "string") {
     try {
@@ -64,6 +70,7 @@ function parseEntitlement(value: unknown): EntitlementRecord | null {
     plan?: unknown;
     status?: unknown;
     currentPeriodEnd?: unknown;
+    updatedAt?: unknown;
   };
 
   if (raw.plan !== "pro") {
@@ -78,10 +85,59 @@ function parseEntitlement(value: unknown): EntitlementRecord | null {
     return null;
   }
 
+  const updatedAt =
+    typeof raw.updatedAt === "number" && Number.isFinite(raw.updatedAt)
+      ? raw.updatedAt
+      : Math.floor(Date.now() / 1000);
+
   return {
     plan: "pro",
     status: raw.status,
     currentPeriodEnd: raw.currentPeriodEnd,
+    updatedAt,
+  };
+}
+
+type StripeLookupCacheRecord = {
+  customerId: string | null;
+  entitlement: EntitlementRecord | null;
+  checkedAt: number;
+};
+
+function parseStripeLookupCacheRecord(value: unknown): StripeLookupCacheRecord | null {
+  if (typeof value === "string") {
+    try {
+      return parseStripeLookupCacheRecord(JSON.parse(value));
+    } catch {
+      return null;
+    }
+  }
+
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const raw = value as {
+    customerId?: unknown;
+    entitlement?: unknown;
+    checkedAt?: unknown;
+  };
+
+  const customerId =
+    typeof raw.customerId === "string" && raw.customerId.trim().length > 0
+      ? raw.customerId.trim()
+      : null;
+
+  const entitlement = parseEntitlement(raw.entitlement);
+  const checkedAt =
+    typeof raw.checkedAt === "number" && Number.isFinite(raw.checkedAt)
+      ? raw.checkedAt
+      : Math.floor(Date.now() / 1000);
+
+  return {
+    customerId,
+    entitlement,
+    checkedAt,
   };
 }
 
@@ -153,4 +209,41 @@ export async function getEntitlementByEmail(email: string): Promise<EntitlementR
   }
 
   return getEntitlementByCustomerId(customerId);
+}
+
+export async function getCachedStripeLookupByEmail(email: string): Promise<StripeLookupCacheRecord | null> {
+  if (!hasRedisConfig()) {
+    return null;
+  }
+
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  const raw = await getRedisClient().get(getStripeLookupCacheByEmailKey(normalizedEmail));
+  return parseStripeLookupCacheRecord(raw);
+}
+
+export async function setCachedStripeLookupByEmail(
+  email: string,
+  value: StripeLookupCacheRecord,
+  ttlSeconds: number,
+): Promise<void> {
+  if (!hasRedisConfig()) {
+    throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
+  }
+
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    throw new Error("EMAIL_MISSING");
+  }
+
+  if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) {
+    throw new Error("INVALID_TTL");
+  }
+
+  await getRedisClient().set(getStripeLookupCacheByEmailKey(normalizedEmail), value, {
+    ex: Math.floor(ttlSeconds),
+  });
 }

@@ -61,11 +61,7 @@ async function resolveCustomerEmail(customerId: string): Promise<string | null> 
 }
 
 function normalizeEntitlementStatus(status: Stripe.Subscription.Status): "active" | "canceled" {
-  if (status === "canceled" || status === "unpaid" || status === "incomplete_expired") {
-    return "canceled";
-  }
-
-  return "active";
+  return status === "active" || status === "trialing" ? "active" : "canceled";
 }
 
 function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {
@@ -85,6 +81,7 @@ function mapSubscriptionToEntitlement(subscription: Stripe.Subscription): Entitl
     plan: "pro",
     status: normalizeEntitlementStatus(subscription.status),
     currentPeriodEnd: getCurrentPeriodEnd(subscription),
+    updatedAt: Math.floor(Date.now() / 1000),
   };
 }
 
@@ -133,6 +130,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
       plan: "pro",
       status: "active",
       currentPeriodEnd: nowSeconds + 3600,
+      updatedAt: nowSeconds,
     },
     email: sessionEmail,
   });
