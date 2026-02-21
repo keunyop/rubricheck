@@ -76,7 +76,7 @@ function clamp(value: number, min: number, max: number): number {
 function roundAndClampRange(range: [number, number], maxScore: number): [number, number] {
   const highLimit = Math.max(0, Math.floor(maxScore));
   let low = clamp(Math.round(range[0]), 0, highLimit);
-  let high = clamp(Math.round(range[1]), 0, highLimit);
+  const high = clamp(Math.round(range[1]), 0, highLimit);
 
   if (low > high) {
     low = high;

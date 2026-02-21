@@ -27,6 +27,14 @@ It accepts rubric + assignment input (file upload or pasted text), structures th
 - Pro gating
   - Rewrite mode is exposed as a Pro feature entry point.
 
+## Grading Modes
+### Standard
+Balanced score estimate.
+
+### 🔥 Strict Mode
+Simulates a tough academic marker. Expect lower but more defensible scores.
+Evidence-based and conservative scoring; requires quotes per criterion.
+
 ## Branch Status
 
 - `main`
@@ -64,6 +72,12 @@ It accepts rubric + assignment input (file upload or pasted text), structures th
   - Simulation/testing endpoint.
 - `POST /api/checkout` (feature branch)
   - Creates Stripe Checkout Session and returns redirect URL.
+- `GET /api/entitlement`
+  - Returns entitlement session status (`active` or `needs_restore`).
+- `POST /api/entitlement/restore/start`
+  - Starts email OTP verification for Pro restore.
+- `POST /api/entitlement/restore/verify`
+  - Verifies OTP, re-checks Stripe subscription, and re-issues Pro session cookie.
 
 ## Local Setup
 
@@ -85,6 +99,8 @@ EVALUATION_MODEL=...
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 NEXT_PUBLIC_FEEDBACK_URL=...
+NEXT_PUBLIC_COPY_VARIANT=... # optional (e.g. default, student)
+NEXT_PUBLIC_APP_ENV=development # set to production on Vercel
 ```
 
 Stripe-related variables (needed for checkout integration on `feature/stripe-pro-checkout`):
@@ -92,12 +108,53 @@ Stripe-related variables (needed for checkout integration on `feature/stripe-pro
 ```bash
 STRIPE_SECRET_KEY=...
 STRIPE_WEBHOOK_SECRET=...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+ENTITLEMENT_SESSION_SECRET=... # recommended (fallbacks to STRIPE_WEBHOOK_SECRET if missing)
+ENTITLEMENT_OTP_SECRET=... # recommended for OTP hashing (fallbacks to session secret)
+RESEND_API_KEY=... # optional in dev, required in prod for OTP email send
+OTP_FROM_EMAIL=... # e.g. no-reply@yourdomain.com
 ```
 
 Stripe setup note:
 - Configure Pro monthly Price with `lookup_key=pro_monthly`.
+
+## Redis Keys
+
+- Usage limits
+  - `rubricheck:usage:{ip}:{yyyy-mm-dd}:{feature}`
+- Entitlement storage
+  - `rubricheck:customerByEmail:{email}` -> Stripe customer ID
+  - `rubricheck:entitlement:{stripeCustomerId}` -> `{ plan, status, currentPeriodEnd, updatedAt }`
+- Stripe lookup cache (restore)
+  - `rubricheck:stripeLookupByEmail:{email}` -> `{ customerId, entitlement, checkedAt }` (short TTL)
+- Restore OTP / anti-abuse
+  - `rubricheck:restore:otp:code:{email}` -> hashed code record (10m TTL)
+  - `rubricheck:restore:otp:send:email:{email}` -> send rate limit counter (10m window)
+  - `rubricheck:restore:otp:send:ip:{ip}` -> send rate limit counter (10m window)
+  - `rubricheck:restore:otp:verify:{email}:{ip}` -> verify rate limit counter (10m window)
+
+## Restoring Pro After Session Expiry
+
+- Pro purchase and Pro restore are separate flows:
+  - Purchase: `POST /api/checkout` (Stripe Checkout).
+  - Restore: email OTP verification + Stripe entitlement re-check.
+- If `rubricheck_entitlement` cookie is missing/expired:
+  - UI shows both `Restore Pro` and `Upgrade to Pro`.
+  - `GET /api/entitlement` returns `needs_restore` instead of forcing checkout.
+- Restore flow:
+  1. User enters email (`/api/entitlement/restore/start`).
+  2. Server sends 6-digit OTP (dev mode logs code to server if email provider not configured).
+  3. User submits OTP (`/api/entitlement/restore/verify`).
+  4. Server verifies OTP, checks active/trialing `pro_monthly` subscription via Redis/Stripe, then re-issues `rubricheck_entitlement` cookie (12h).
+
+## E2E Restore Checklist
+
+1. Buy Pro and verify Pro features are available.
+2. Clear cookies (or wait 12h cookie TTL).
+3. Trigger a Pro gate and confirm both `Restore Pro` and `Upgrade to Pro` are shown.
+4. Restore with the same email and OTP; verify Pro access returns without payment.
+5. Verify a non-subscriber email cannot restore and is shown upgrade CTA.
+6. Verify OTP send/verify rate limits (5 attempts per 10 minutes) are enforced.
 
 ## Portfolio Value
 

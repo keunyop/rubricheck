@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { evaluateAssignment } from "../../../lib/evaluation";
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
 import { structureRubric } from "../../../lib/rubricStructuring";
+import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
 import { buildUsageLimitHeaders, checkUsageLimit } from "../../../src/lib/usageLimit";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const STRICT_OVERALL_PENALTY = 3;
+const GradeRequestSchema = z.object({
+  mode: GradingModeSchema.default("standard"),
+});
+const JsonGradeRequestSchema = z.object({
+  mode: GradingModeSchema.default("standard"),
+  rubricText: z.string().trim().min(1),
+  assignmentText: z.string().trim().min(1),
+});
+
 type FieldName = "rubric" | "assignment";
 type StructuredRubric = Awaited<ReturnType<typeof structureRubric>>;
 type Evaluation = Awaited<ReturnType<typeof evaluateAssignment>>;
@@ -128,6 +140,7 @@ function clampCriterionRange(
 function buildFinalEvaluation(
   structuredRubric: StructuredRubric,
   evaluation: Evaluation,
+  mode: GradingMode,
 ) {
   const rubricCriteria = structuredRubric.criteria;
   const scoreByName = new Map<string, Evaluation["criteria_scores"][number]>();
@@ -158,12 +171,23 @@ function buildFinalEvaluation(
       matchedScore.estimated_range,
       rubricCriterion.max_score,
     );
+    const score = clamp(Math.round(matchedScore.score), 0, Math.max(0, Math.round(rubricCriterion.max_score)));
+    const rationale = matchedScore.rationale;
+    const feedback = matchedScore.feedback;
+    const evidence = matchedScore.evidence?.slice(0, 2);
+
+    if (mode === "strict" && (!evidence || evidence.length < 1 || evidence.length > 2)) {
+      throw new Error("EVALUATION_FAILED");
+    }
 
     return {
       name: rubricCriterion.name,
       max_score: rubricCriterion.max_score,
+      score,
+      rationale,
       estimated_range: estimatedRange,
-      feedback: matchedScore.feedback,
+      feedback,
+      ...(evidence ? { evidence } : {}),
     };
   });
 
@@ -181,6 +205,11 @@ function buildFinalEvaluation(
 
   let scaledLow = clamp(Math.round((overallRawLow / rubricTotal) * 100), 0, 100);
   let scaledHigh = clamp(Math.round((overallRawHigh / rubricTotal) * 100), 0, 100);
+
+  if (mode === "strict") {
+    scaledLow = clamp(scaledLow - STRICT_OVERALL_PENALTY, 0, 100);
+    scaledHigh = clamp(scaledHigh - STRICT_OVERALL_PENALTY, 0, 100);
+  }
 
   if (scaledLow > scaledHigh) {
     [scaledLow, scaledHigh] = [scaledHigh, scaledLow];
@@ -222,12 +251,46 @@ export async function POST(request: Request) {
       );
     }
 
-    const formData = await request.formData();
+    const contentType = request.headers.get("content-type") ?? "";
+    let mode: GradingMode = "standard";
+    let rubricFile: File | null = null;
+    let assignmentFile: File | null = null;
+    let rubricTextInput: string | null = null;
+    let assignmentTextInput: string | null = null;
 
-    const rubricFile = getUploadedFile(formData, "rubric");
-    const assignmentFile = getUploadedFile(formData, "assignment");
-    const rubricTextInput = getTextInput(formData, "rubricText");
-    const assignmentTextInput = getTextInput(formData, "assignmentText");
+    if (contentType.includes("application/json")) {
+      let payload: unknown;
+      try {
+        payload = await request.json();
+      } catch {
+        return NextResponse.json({ error: "INVALID_JSON" }, { status: 400, headers: usageHeaders });
+      }
+
+      const parsedRequest = JsonGradeRequestSchema.safeParse(payload);
+      if (!parsedRequest.success) {
+        return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400, headers: usageHeaders });
+      }
+
+      mode = parsedRequest.data.mode;
+      rubricTextInput = parsedRequest.data.rubricText;
+      assignmentTextInput = parsedRequest.data.assignmentText;
+    } else {
+      const formData = await request.formData();
+      const modeInput = formData.get("mode");
+      const parsedRequest = GradeRequestSchema.safeParse({
+        mode: typeof modeInput === "string" ? modeInput : undefined,
+      });
+
+      if (!parsedRequest.success) {
+        return NextResponse.json({ error: "INVALID_MODE" }, { status: 400, headers: usageHeaders });
+      }
+
+      mode = parsedRequest.data.mode;
+      rubricFile = getUploadedFile(formData, "rubric");
+      assignmentFile = getUploadedFile(formData, "assignment");
+      rubricTextInput = getTextInput(formData, "rubricText");
+      assignmentTextInput = getTextInput(formData, "assignmentText");
+    }
 
     if (rubricFile) {
       const rubricSizeError = validateFileSize(rubricFile, "rubric");
@@ -265,8 +328,8 @@ export async function POST(request: Request) {
     }
 
     try {
-      const evaluation = await evaluateAssignment(structuredRubric, assignmentText);
-      const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation);
+      const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode);
+      const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode);
       return NextResponse.json(finalEvaluation, { headers: usageHeaders });
     } catch (error) {
       console.error("EVALUATION_FAILED", error);

@@ -11,12 +11,14 @@ import {
   useRef,
   useState,
 } from "react";
+import { ACTIVE_LANDING_COPY } from "../src/config/copy";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"];
 
 type InputMode = "file" | "text";
 type InputField = "rubric" | "assignment";
+type GradingMode = "standard" | "strict";
 type LoadingStep =
   | "idle"
   | "uploading"
@@ -32,8 +34,11 @@ type GradeErrorResponse = {
 type CriteriaResult = {
   name: string;
   max_score: number;
+  score?: number;
+  rationale?: string;
   estimated_range: [number, number];
   feedback: string;
+  evidence?: string[];
 };
 
 type GradeResult = {
@@ -42,6 +47,75 @@ type GradeResult = {
   summary: string;
   top_improvements: string[];
   criteria: CriteriaResult[];
+};
+
+type CheckoutResponse = {
+  url?: string;
+  error?: string;
+};
+
+type EntitlementStatusResponse = {
+  plan?: string;
+  status?: string;
+};
+
+type RestoreStartResponse = {
+  ok?: boolean;
+  message?: string;
+  error?: string;
+};
+
+type RestoreVerifyResponse = {
+  ok?: boolean;
+  plan?: string;
+  status?: string;
+  error?: string;
+};
+
+type PaywallMode = "restore" | "upgrade";
+type RestoreStep = "email" | "code";
+
+const APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
+const IS_PRODUCTION_ENV = APP_ENV === "production";
+const SHOW_FAKE_GRADE_BUTTON = !IS_PRODUCTION_ENV;
+const SHOW_PRO_FEATURES = !IS_PRODUCTION_ENV;
+
+const FAKE_GRADE_RESULT: GradeResult = {
+  title: "Demo Submission",
+  overall_range: [84, 90],
+  summary:
+    "Your draft is logically organized and mostly aligned with the rubric. Clarifying evidence and tightening transitions should raise scoring consistency.",
+  top_improvements: [
+    "Add one concrete supporting example for each major claim.",
+    "Strengthen paragraph transitions to improve flow between sections.",
+    "Make the conclusion explicitly tie back to rubric criteria.",
+  ],
+  criteria: [
+    {
+      name: "Thesis & Focus",
+      max_score: 25,
+      estimated_range: [20, 23],
+      feedback: "Clear thesis, but narrow the scope slightly to keep argument focus consistent.",
+    },
+    {
+      name: "Evidence & Analysis",
+      max_score: 35,
+      estimated_range: [27, 31],
+      feedback: "Core reasoning is sound. Add one or two concrete examples for stronger support.",
+    },
+    {
+      name: "Organization & Coherence",
+      max_score: 20,
+      estimated_range: [17, 19],
+      feedback: "Structure is readable; clearer transitions would further improve coherence.",
+    },
+    {
+      name: "Language & Mechanics",
+      max_score: 20,
+      estimated_range: [18, 19],
+      feedback: "Mostly polished writing with minor phrasing and punctuation opportunities.",
+    },
+  ],
 };
 
 const loadingStepLabels: Record<Exclude<LoadingStep, "idle">, string> = {
@@ -59,6 +133,8 @@ const evaluationRotatingMessages = [
 const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
 const rubricFileInputId = "rubric-file-input";
 const assignmentFileInputId = "assignment-file-input";
+const PRO_MONTHLY_PLAN_ID = "pro_monthly";
+const GRADING_MODE_STORAGE_KEY = "rubricheck_grading_mode";
 
 function formatOverallScoreDisplay(range: [number, number]): string {
   const [low, high] = range;
@@ -99,6 +175,14 @@ function validateFile(file: File): string | null {
   }
 
   return null;
+}
+
+function isValidEmail(email: string): boolean {
+  if (!email || email.length > 320) {
+    return false;
+  }
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function restoreBrowserFocus() {
@@ -359,6 +443,8 @@ export default function Home() {
   const [assignmentFile, setAssignmentFile] = useState<File | null>(null);
   const [rubricText, setRubricText] = useState("");
   const [assignmentText, setAssignmentText] = useState("");
+  const [gradingMode, setGradingMode] = useState<GradingMode>("standard");
+  const [resultMode, setResultMode] = useState<GradingMode | null>(null);
 
   const [rubricDragOver, setRubricDragOver] = useState(false);
   const [assignmentDragOver, setAssignmentDragOver] = useState(false);
@@ -375,6 +461,20 @@ export default function Home() {
   );
   const [isSharingImage, setIsSharingImage] = useState(false);
   const [didCopyImage, setDidCopyImage] = useState(false);
+  const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [checkoutEmail, setCheckoutEmail] = useState("");
+  const [checkoutError, setCheckoutError] = useState("");
+  const [hasProAccess, setHasProAccess] = useState(false);
+  const [entitlementStatus, setEntitlementStatus] = useState<"active" | "needs_restore">("needs_restore");
+  const [paywallMode, setPaywallMode] = useState<PaywallMode>("restore");
+  const [restoreStep, setRestoreStep] = useState<RestoreStep>("email");
+  const [restoreEmail, setRestoreEmail] = useState("");
+  const [restoreCode, setRestoreCode] = useState("");
+  const [restoreError, setRestoreError] = useState("");
+  const [restoreInfo, setRestoreInfo] = useState("");
+  const [isStartingRestore, setIsStartingRestore] = useState(false);
+  const [isVerifyingRestore, setIsVerifyingRestore] = useState(false);
+  const [proRestoreNotice, setProRestoreNotice] = useState("");
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoading = loadingStep !== "idle";
@@ -390,6 +490,25 @@ export default function Home() {
 
     return loadingStepLabels[loadingStep];
   }, [evaluationMessageIndex, loadingStep]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const storedMode = window.localStorage.getItem(GRADING_MODE_STORAGE_KEY);
+    if (storedMode === "standard" || storedMode === "strict") {
+      setGradingMode(storedMode);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(GRADING_MODE_STORAGE_KEY, gradingMode);
+  }, [gradingMode]);
 
   useEffect(() => {
     if (loadingStep !== "evaluatingAssignment") {
@@ -424,11 +543,69 @@ export default function Home() {
     };
   }, []);
 
-  function openRewritePaywall() {
+  useEffect(() => {
+    if (!SHOW_PRO_FEATURES) {
+      setHasProAccess(false);
+      setEntitlementStatus("needs_restore");
+      return;
+    }
+
+    let canceled = false;
+
+    async function syncEntitlementStatus() {
+      try {
+        const response = await fetch("/api/entitlement", {
+          method: "GET",
+          cache: "no-store",
+        });
+        const data: EntitlementStatusResponse = await response.json().catch(() => ({}));
+        if (!canceled) {
+          const isActive = response.ok && data.plan === "pro" && data.status === "active";
+          setHasProAccess(isActive);
+          setEntitlementStatus(isActive ? "active" : "needs_restore");
+        }
+      } catch {
+        if (!canceled) {
+          setHasProAccess(false);
+          setEntitlementStatus("needs_restore");
+        }
+      }
+    }
+
+    void syncEntitlementStatus();
+
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  function openRewritePaywall(mode: PaywallMode = "restore") {
+    if (!SHOW_PRO_FEATURES) {
+      return;
+    }
+
+    if (hasProAccess) {
+      setCheckoutError("");
+      setRestoreError("");
+      setShowRewritePaywall(false);
+      return;
+    }
+
+    setCheckoutError("");
+    setRestoreError("");
+    setRestoreInfo("");
+    setPaywallMode(mode);
+    if (mode === "restore") {
+      setRestoreStep("email");
+      setRestoreCode("");
+    }
     setShowRewritePaywall(true);
   }
 
   function closeRewritePaywall() {
+    setCheckoutError("");
+    setRestoreError("");
+    setRestoreInfo("");
     setShowRewritePaywall(false);
   }
 
@@ -504,6 +681,38 @@ export default function Home() {
       setDidCopyImage(false);
     } finally {
       setIsSharingImage(false);
+    }
+  }
+
+  async function handleUpgradeToPro() {
+    setCheckoutError("");
+    const normalizedEmail = checkoutEmail.trim().toLowerCase();
+    if (!isValidEmail(normalizedEmail)) {
+      setCheckoutError("Please enter a valid email for Stripe checkout.");
+      return;
+    }
+
+    setIsCreatingCheckout(true);
+
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ priceId: PRO_MONTHLY_PLAN_ID, email: normalizedEmail }),
+      });
+
+      const data: CheckoutResponse = await response.json().catch(() => ({}));
+      if (!response.ok || !data.url) {
+        throw new Error(data.error ?? "CHECKOUT_SESSION_FAILED");
+      }
+
+      window.location.assign(data.url);
+    } catch {
+      setCheckoutError("Unable to start checkout right now. Please try again.");
+    } finally {
+      setIsCreatingCheckout(false);
     }
   }
 
@@ -617,10 +826,18 @@ export default function Home() {
       return "File is too large. Max size is 5MB.";
     }
 
+    if (message === "INVALID_MODE") {
+      return "Invalid grading mode. Please select Standard or Strict Mode.";
+    }
+
+    if (message === "INVALID_JSON" || message === "INVALID_INPUT") {
+      return "Please provide valid rubric and assignment inputs.";
+    }
+
     return "Something went wrong. Please try again.";
   }
 
-  function isGradeResult(value: unknown): value is GradeResult {
+  function isGradeResult(value: unknown, mode: GradingMode): value is GradeResult {
     if (!value || typeof value !== "object") {
       return false;
     }
@@ -648,22 +865,45 @@ export default function Home() {
         return (
           typeof row.name === "string" &&
           typeof row.max_score === "number" &&
+          (row.score === undefined || typeof row.score === "number") &&
+          (row.rationale === undefined || typeof row.rationale === "string") &&
           Array.isArray(row.estimated_range) &&
           row.estimated_range.length === 2 &&
           row.estimated_range.every((value) => typeof value === "number") &&
-          typeof row.feedback === "string"
+          typeof row.feedback === "string" &&
+          (row.evidence === undefined ||
+            (Array.isArray(row.evidence) &&
+              row.evidence.length >= 1 &&
+              row.evidence.length <= 2 &&
+              row.evidence.every((snippet) => typeof snippet === "string" && snippet.trim().length > 0)))
         );
       });
 
-    return hasTitle && hasSummary && hasOverallRange && hasTopImprovements && hasCriteria;
+    const hasStrictEvidence =
+      mode !== "strict" ||
+      (Array.isArray(candidate.criteria) &&
+        candidate.criteria.every(
+          (item) =>
+            Array.isArray(item.evidence) &&
+            item.evidence.length >= 1 &&
+            item.evidence.length <= 2 &&
+            item.evidence.every((snippet) => typeof snippet === "string" && snippet.trim().length > 0),
+        ));
+
+    return hasTitle && hasSummary && hasOverallRange && hasTopImprovements && hasCriteria && hasStrictEvidence;
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submitGrade(selectedMode: GradingMode) {
+    if (isLoading) {
+      return;
+    }
+
+    setGradingMode(selectedMode);
     setError("");
     setShowDailyLimitAlert(false);
     setDailyLimitValue(null);
     setGradeResult(null);
+    setResultMode(null);
     setShowRewritePaywall(false);
     setExpandedRewriteSections({});
     setIsSharingImage(false);
@@ -692,33 +932,50 @@ export default function Home() {
 
     try {
       setLoadingStep("uploading");
+      let requestPromise: Promise<Response>;
 
-      const formData = new FormData();
-
-      if (rubricMode === "file") {
-        if (!rubricFile) {
-          setError("Please provide both a rubric and an assignment.");
-          return;
-        }
-        formData.append("rubric", rubricFile);
+      if (rubricMode === "text" && assignmentMode === "text") {
+        requestPromise = fetch("/api/grade", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            rubricText: rubricText.trim(),
+            assignmentText: assignmentText.trim(),
+            mode: selectedMode,
+          }),
+        });
       } else {
-        formData.append("rubricText", rubricText.trim());
-      }
+        const formData = new FormData();
 
-      if (assignmentMode === "file") {
-        if (!assignmentFile) {
-          setError("Please provide both a rubric and an assignment.");
-          return;
+        if (rubricMode === "file") {
+          if (!rubricFile) {
+            setError("Please provide both a rubric and an assignment.");
+            return;
+          }
+          formData.append("rubric", rubricFile);
+        } else {
+          formData.append("rubricText", rubricText.trim());
         }
-        formData.append("assignment", assignmentFile);
-      } else {
-        formData.append("assignmentText", assignmentText.trim());
-      }
 
-      const requestPromise = fetch("/api/grade", {
-        method: "POST",
-        body: formData,
-      });
+        if (assignmentMode === "file") {
+          if (!assignmentFile) {
+            setError("Please provide both a rubric and an assignment.");
+            return;
+          }
+          formData.append("assignment", assignmentFile);
+        } else {
+          formData.append("assignmentText", assignmentText.trim());
+        }
+
+        formData.append("mode", selectedMode);
+
+        requestPromise = fetch("/api/grade", {
+          method: "POST",
+          body: formData,
+        });
+      }
 
       stepTimers.push(
         setTimeout(() => setLoadingStep("parsing"), 150),
@@ -770,12 +1027,13 @@ export default function Home() {
         return;
       }
 
-      if (!isGradeResult(data)) {
+      if (!isGradeResult(data, selectedMode)) {
         setError("Something went wrong. Please try again.");
         return;
       }
 
       setGradeResult(data);
+      setResultMode(selectedMode);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -786,19 +1044,157 @@ export default function Home() {
     }
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void submitGrade("standard");
+  }
+
+  function handleStrictSubmit() {
+    void submitGrade("strict");
+  }
+
+  async function handleStartRestorePro() {
+    setRestoreError("");
+    setRestoreInfo("");
+
+    const normalizedEmail = restoreEmail.trim().toLowerCase();
+    if (!isValidEmail(normalizedEmail)) {
+      setRestoreError("Please enter a valid email.");
+      return;
+    }
+
+    setIsStartingRestore(true);
+    try {
+      const response = await fetch("/api/entitlement/restore/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+
+      const data: RestoreStartResponse = await response.json().catch(() => ({}));
+      if (!response.ok || data.ok !== true) {
+        throw new Error(data.error ?? "ENTITLEMENT_RESTORE_START_FAILED");
+      }
+
+      setRestoreEmail(normalizedEmail);
+      setCheckoutEmail((previous) => previous || normalizedEmail);
+      setRestoreStep("code");
+      setRestoreInfo(data.message ?? "If that email can receive recovery codes, a code has been sent.");
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_START_FAILED";
+      if (code === "RATE_LIMITED") {
+        setRestoreError("Too many requests. Please wait and try again.");
+        return;
+      }
+
+      if (code === "SERVICE_UNAVAILABLE") {
+        setRestoreError("Restore is temporarily unavailable. Please try again shortly.");
+        return;
+      }
+
+      setRestoreError("Unable to start restore right now. Please try again.");
+    } finally {
+      setIsStartingRestore(false);
+    }
+  }
+
+  async function handleVerifyRestorePro() {
+    setRestoreError("");
+    setRestoreInfo("");
+
+    const normalizedEmail = restoreEmail.trim().toLowerCase();
+    const normalizedCode = restoreCode.trim();
+
+    if (!isValidEmail(normalizedEmail)) {
+      setRestoreError("Please enter a valid email.");
+      setRestoreStep("email");
+      return;
+    }
+
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      setRestoreError("Enter the 6-digit code.");
+      return;
+    }
+
+    setIsVerifyingRestore(true);
+    try {
+      const response = await fetch("/api/entitlement/restore/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: normalizedEmail, code: normalizedCode }),
+      });
+
+      const data: RestoreVerifyResponse = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error ?? "ENTITLEMENT_RESTORE_VERIFY_FAILED");
+      }
+
+      if (data.ok === true && data.plan === "pro" && data.status === "active") {
+        setHasProAccess(true);
+        setEntitlementStatus("active");
+        setProRestoreNotice("Pro restored on this device.");
+        setRestoreCode("");
+        setRestoreStep("email");
+        setShowRewritePaywall(false);
+        return;
+      }
+
+      setEntitlementStatus("needs_restore");
+      setRestoreError("No active Pro subscription found for this email. Upgrade to continue.");
+      setPaywallMode("upgrade");
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_VERIFY_FAILED";
+      if (code === "INVALID_CODE") {
+        setRestoreError("Invalid or expired code. Please try again.");
+        return;
+      }
+      if (code === "RATE_LIMITED") {
+        setRestoreError("Too many attempts. Please wait and try again.");
+        return;
+      }
+      if (code === "SERVICE_UNAVAILABLE") {
+        setRestoreError("Restore is temporarily unavailable. Please try again shortly.");
+        return;
+      }
+
+      setRestoreError("Unable to verify restore right now. Please try again.");
+    } finally {
+      setIsVerifyingRestore(false);
+    }
+  }
+
+  function handleRunFakeGrade() {
+    setError("");
+    setShowDailyLimitAlert(false);
+    setDailyLimitValue(null);
+    setShowRewritePaywall(false);
+    setExpandedRewriteSections({});
+    setIsSharingImage(false);
+    setDidCopyImage(false);
+    setLoadingStep("idle");
+    setGradeResult(FAKE_GRADE_RESULT);
+    setResultMode("standard");
+  }
+
   return (
     <main className="min-h-screen bg-slate-300 px-4 py-10 md:py-14">
       <div className="mx-auto w-full max-w-5xl space-y-8">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
           <div className="mb-6 border-b border-slate-100 pb-5">
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">RubriCheck</h1>
+              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+                {ACTIVE_LANDING_COPY.headline}
+              </h1>
               <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
                 Beta
               </span>
             </div>
             <p className="mt-2 text-sm text-slate-600 md:text-[15px]">
-              Upload your rubric and assignment to get a rubric-based score estimate in seconds.
+              {ACTIVE_LANDING_COPY.subtitle}
             </p>
           </div>
 
@@ -1045,13 +1441,36 @@ export default function Home() {
               </div>
             ) : null}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-500 active:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              Grade my assignment
-            </button>
+            <div className="flex items-stretch gap-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="min-w-0 flex-1 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-500 active:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Grade my assignment
+              </button>
+              <button
+                type="button"
+                onClick={handleStrictSubmit}
+                disabled={isLoading}
+                className="shrink-0 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition-colors duration-150 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 md:px-4"
+              >
+                <span className="inline-flex items-center gap-1">
+                  <span aria-hidden="true">{"\u{1F525}"}</span>
+                  <span>Strict Mode</span>
+                </span>
+              </button>
+            </div>
+            {SHOW_FAKE_GRADE_BUTTON ? (
+              <button
+                type="button"
+                onClick={handleRunFakeGrade}
+                disabled={isLoading}
+                className="w-full rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Run fake grade (dev)
+              </button>
+            ) : null}
           </form>
         </section>
 
@@ -1069,13 +1488,21 @@ export default function Home() {
         {gradeResult ? (
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
             <div className="border-b border-slate-100 pb-4">
-              <h2
-                ref={evaluationHeadingRef}
-                tabIndex={-1}
-                className="text-xl font-semibold text-slate-900 focus:outline-none"
-              >
-                Evaluation Summary
-              </h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2
+                  ref={evaluationHeadingRef}
+                  tabIndex={-1}
+                  className="text-xl font-semibold text-slate-900 focus:outline-none"
+                >
+                  Evaluation Summary
+                </h2>
+                {resultMode === "strict" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
+                    <span aria-hidden="true">{"\u{1F525}"}</span>
+                    <span>Strict Mode</span>
+                  </span>
+                ) : null}
+              </div>
             </div>
 
             <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 md:p-5">
@@ -1119,18 +1546,42 @@ export default function Home() {
 
             </div>
 
-            <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 md:p-5">
-              <button
-                type="button"
-                onClick={openRewritePaywall}
-                className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 md:w-auto"
-              >
-                Unlock Rewrite Mode
-              </button>
-              <p className="mt-2 text-xs leading-5 text-indigo-900/80 md:text-sm">
-                Pro helps you improve specific criteria with ready-to-use paragraph rewrites.
-              </p>
-            </div>
+            {SHOW_PRO_FEATURES ? (
+              <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 md:p-5">
+                {hasProAccess ? (
+                  <p className="inline-flex items-center rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
+                    Pro Active on This Device
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => openRewritePaywall("restore")}
+                      className="inline-flex w-full items-center justify-center rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
+                    >
+                      Restore Pro
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openRewritePaywall("upgrade")}
+                      className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
+                    >
+                      Upgrade to Pro
+                    </button>
+                  </div>
+                )}
+                <p className="mt-2 text-xs leading-5 text-indigo-900/80 md:text-sm">
+                  {hasProAccess
+                    ? "Pro entitlement is active. Rewrite/simulate gates now use your Pro session."
+                    : entitlementStatus === "needs_restore"
+                      ? "Already subscribed? Restore Pro with email verification, or upgrade to Pro."
+                      : "Pro helps you improve specific criteria with ready-to-use paragraph rewrites."}
+                </p>
+                {proRestoreNotice ? (
+                  <p className="mt-2 text-xs font-medium text-emerald-700 md:text-sm">{proRestoreNotice}</p>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="mt-6 hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
               <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
@@ -1146,6 +1597,8 @@ export default function Home() {
                   {gradeResult.criteria.map((item, index) => {
                     const criteriaKey = `criteria-${index}-${item.name}`;
                     const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
+                    const rationaleText = item.rationale ?? item.feedback;
+                    const evidenceList = item.evidence ?? [];
 
                     return (
                       <Fragment key={criteriaKey}>
@@ -1158,40 +1611,65 @@ export default function Home() {
                             </span>
                           </td>
                           <td className="max-w-[22rem] whitespace-normal break-words px-4 py-3 align-top">
-                            {item.feedback}
+                            <p>{rationaleText}</p>
+                            {evidenceList.length > 0 ? (
+                              <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-600">
+                                {evidenceList.map((snippet, snippetIndex) => (
+                                  <li key={`${criteriaKey}-evidence-${snippetIndex}`}>{snippet}</li>
+                                ))}
+                              </ul>
+                            ) : null}
                           </td>
                         </tr>
-                        <tr>
-                          <td colSpan={4} className="px-4 pb-4 pt-0">
-                            <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/80">
-                              <button
-                                type="button"
-                                onClick={() => toggleRewriteSection(criteriaKey)}
-                                className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70"
-                              >
-                                <span>Rewrite suggestions (Pro)</span>
-                                <span className="text-xs font-medium text-slate-500">
-                                  {isRewriteOpen ? "Hide" : "Show"}
-                                </span>
-                              </button>
-                              {isRewriteOpen ? (
-                                <div className="border-t border-slate-200 px-3 py-3">
-                                  <p className="text-sm text-slate-600">
-                                    Rewrite Mode is a Pro feature. Coming next: pricing &
-                                    checkout.
-                                  </p>
-                                  <button
-                                    type="button"
-                                    onClick={openRewritePaywall}
-                                    className="mt-3 inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                  >
-                                    Unlock Rewrite Mode
-                                  </button>
-                                </div>
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
+                        {SHOW_PRO_FEATURES ? (
+                          <tr>
+                            <td colSpan={4} className="px-4 pb-4 pt-0">
+                              <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/80">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleRewriteSection(criteriaKey)}
+                                  className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70"
+                                >
+                                  <span>Rewrite suggestions (Pro)</span>
+                                  <span className="text-xs font-medium text-slate-500">
+                                    {isRewriteOpen ? "Hide" : "Show"}
+                                  </span>
+                                </button>
+                                {isRewriteOpen ? (
+                                  <div className="border-t border-slate-200 px-3 py-3">
+                                    {hasProAccess ? (
+                                      <p className="text-sm text-emerald-700">
+                                        Pro is active on this device.
+                                      </p>
+                                    ) : (
+                                      <>
+                                        <p className="text-sm text-slate-600">
+                                          Rewrite Mode is a Pro feature. Restore Pro or upgrade to unlock it.
+                                        </p>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => openRewritePaywall("restore")}
+                                            className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                                          >
+                                            Restore Pro
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => openRewritePaywall("upgrade")}
+                                            className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                                          >
+                                            Upgrade to Pro
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </td>
+                          </tr>
+                        ) : null}
                       </Fragment>
                     );
                   })}
@@ -1203,6 +1681,8 @@ export default function Home() {
               {gradeResult.criteria.map((item, index) => {
                 const criteriaKey = `criteria-${index}-${item.name}`;
                 const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
+                const rationaleText = item.rationale ?? item.feedback;
+                const evidenceList = item.evidence ?? [];
 
                 return (
                   <article
@@ -1219,35 +1699,61 @@ export default function Home() {
                       Max score: {item.max_score}
                     </p>
                     <p className="mt-2 whitespace-normal break-words text-sm text-slate-700">
-                      {item.feedback}
+                      {rationaleText}
                     </p>
+                    {evidenceList.length > 0 ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
+                        {evidenceList.map((snippet, snippetIndex) => (
+                          <li key={`${criteriaKey}-mobile-evidence-${snippetIndex}`}>{snippet}</li>
+                        ))}
+                      </ul>
+                    ) : null}
 
-                    <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-white/80">
-                      <button
-                        type="button"
-                        onClick={() => toggleRewriteSection(criteriaKey)}
-                        className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70"
-                      >
-                        <span>Rewrite suggestions (Pro)</span>
-                        <span className="text-xs font-medium text-slate-500">
-                          {isRewriteOpen ? "Hide" : "Show"}
-                        </span>
-                      </button>
-                      {isRewriteOpen ? (
-                        <div className="border-t border-slate-200 px-3 py-3">
-                          <p className="text-sm text-slate-600">
-                            Rewrite Mode is a Pro feature. Coming next: pricing & checkout.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={openRewritePaywall}
-                            className="mt-3 inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                          >
-                            Unlock Rewrite Mode
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
+                    {SHOW_PRO_FEATURES ? (
+                      <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-white/80">
+                        <button
+                          type="button"
+                          onClick={() => toggleRewriteSection(criteriaKey)}
+                          className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70"
+                        >
+                          <span>Rewrite suggestions (Pro)</span>
+                          <span className="text-xs font-medium text-slate-500">
+                            {isRewriteOpen ? "Hide" : "Show"}
+                          </span>
+                        </button>
+                        {isRewriteOpen ? (
+                          <div className="border-t border-slate-200 px-3 py-3">
+                            {hasProAccess ? (
+                              <p className="text-sm text-emerald-700">
+                                Pro is active on this device.
+                              </p>
+                            ) : (
+                              <>
+                                <p className="text-sm text-slate-600">
+                                  Rewrite Mode is a Pro feature. Restore Pro or upgrade to unlock it.
+                                </p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => openRewritePaywall("restore")}
+                                    className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                                  >
+                                    Restore Pro
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => openRewritePaywall("upgrade")}
+                                    className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                                  >
+                                    Upgrade to Pro
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </article>
                 );
               })}
@@ -1255,7 +1761,7 @@ export default function Home() {
           </section>
         ) : null}
 
-        {showRewritePaywall ? (
+        {SHOW_PRO_FEATURES && showRewritePaywall && !hasProAccess ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <button
               type="button"
@@ -1270,17 +1776,171 @@ export default function Home() {
               className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
             >
               <h3 id="rewrite-mode-title" className="text-lg font-semibold text-slate-900">
-                Rewrite Mode is a Pro feature. Coming next: pricing & checkout.
+                Unlock Rewrite Mode
               </h3>
               <p className="mt-2 text-sm text-slate-600">
-                You can keep grading for free today. Rewrite generation will be unlocked after Pro
-                billing goes live.
+                Already subscribed? Restore Pro. New to Pro? Upgrade with Stripe.
               </p>
+              <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setPaywallMode("restore")}
+                  className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                    paywallMode === "restore"
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Restore Pro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaywallMode("upgrade")}
+                  className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                    paywallMode === "upgrade"
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Upgrade to Pro
+                </button>
+              </div>
+
+              {paywallMode === "restore" ? (
+                <div className="mt-4 space-y-3">
+                  <p className="text-xs text-slate-600">
+                    We will send a one-time code to verify ownership before restoring your Pro session.
+                  </p>
+                  <label htmlFor="restore-email" className="block">
+                    <span className="text-xs font-semibold text-slate-700">Email</span>
+                    <input
+                      id="restore-email"
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={restoreEmail}
+                      onChange={(event) => {
+                        setRestoreEmail(event.target.value);
+                        setRestoreError("");
+                      }}
+                      disabled={isStartingRestore || isVerifyingRestore}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                    />
+                  </label>
+                  {restoreStep === "code" ? (
+                    <label htmlFor="restore-code" className="block">
+                      <span className="text-xs font-semibold text-slate-700">Verification code</span>
+                      <input
+                        id="restore-code"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        placeholder="123456"
+                        value={restoreCode}
+                        onChange={(event) => {
+                          setRestoreCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+                          setRestoreError("");
+                        }}
+                        disabled={isStartingRestore || isVerifyingRestore}
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm tracking-[0.2em] text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                      />
+                    </label>
+                  ) : null}
+                  {restoreInfo ? (
+                    <p className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+                      {restoreInfo}
+                    </p>
+                  ) : null}
+                  {restoreError ? (
+                    <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                      {restoreError}
+                    </p>
+                  ) : null}
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    {restoreStep === "code" ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRestoreStep("email");
+                            setRestoreCode("");
+                            setRestoreError("");
+                            setRestoreInfo("");
+                          }}
+                          disabled={isStartingRestore || isVerifyingRestore}
+                          className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleVerifyRestorePro}
+                          disabled={isStartingRestore || isVerifyingRestore || !restoreCode.trim()}
+                          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isVerifyingRestore ? "Verifying..." : "Verify & Restore"}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleStartRestorePro}
+                        disabled={isStartingRestore || isVerifyingRestore || !restoreEmail.trim()}
+                        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isStartingRestore ? "Sending..." : "Send code"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  <p className="text-xs text-slate-600">
+                    Pro monthly unlocks Rewrite Mode. Continue to Stripe Checkout.
+                  </p>
+                  <label htmlFor="upgrade-email" className="block">
+                    <span className="text-xs font-semibold text-slate-700">Email</span>
+                    <input
+                      id="upgrade-email"
+                      type="email"
+                      inputMode="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={checkoutEmail}
+                      onChange={(event) => {
+                        setCheckoutEmail(event.target.value);
+                        setCheckoutError("");
+                      }}
+                      disabled={isCreatingCheckout}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                    />
+                  </label>
+                  {checkoutError ? (
+                    <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                      {checkoutError}
+                    </p>
+                  ) : null}
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={handleUpgradeToPro}
+                      disabled={isCreatingCheckout || !checkoutEmail.trim()}
+                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-5 flex justify-end">
                 <button
                   type="button"
                   onClick={closeRewritePaywall}
-                  className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                  disabled={isCreatingCheckout || isStartingRestore || isVerifyingRestore}
+                  className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Close
                 </button>
@@ -1305,3 +1965,4 @@ export default function Home() {
     </main>
   );
 }
+
