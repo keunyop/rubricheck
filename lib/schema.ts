@@ -18,9 +18,16 @@ const integerRangeTuple = z
     message: "estimated_range must be [low, high] with low <= high",
   });
 
-const shortLineSchema = z
+const rationaleLineSchema = z
   .string()
-  .max(140)
+  .max(220)
+  .refine((value) => !/[\r\n]/.test(value), {
+    message: "text must be single-line",
+  });
+
+const feedbackLineSchema = z
+  .string()
+  .max(1200)
   .refine((value) => !/[\r\n]/.test(value), {
     message: "text must be single-line",
   });
@@ -30,7 +37,7 @@ const evidenceArraySchema = z.array(z.string().trim().min(1).max(220)).min(1).ma
 export const CriterionResultSchema = z.object({
   name: z.string(),
   score: z.number().int().nonnegative(),
-  rationale: shortLineSchema,
+  rationale: rationaleLineSchema,
   evidence: evidenceArraySchema.optional(),
 });
 
@@ -41,10 +48,12 @@ export const StrictCriterionResultSchema = CriterionResultSchema.extend({
 const EvaluationCriterionSchema = z.object({
   name: z.string(),
   score: z.number().int().nonnegative(),
-  rationale: shortLineSchema,
+  rationale: rationaleLineSchema,
   estimated_range: integerRangeTuple,
-  feedback: shortLineSchema,
+  feedback: feedbackLineSchema,
   evidence: evidenceArraySchema.optional(),
+  detailed_breakdown: z.string().max(2400).optional(),
+  example_revisions: z.array(z.string().trim().min(1).max(300)).min(1).max(2).optional(),
 });
 
 const StrictEvaluationCriterionSchema = EvaluationCriterionSchema.extend({

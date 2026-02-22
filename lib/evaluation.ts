@@ -1,5 +1,10 @@
 import { callEvaluationModel } from "./openai";
 import {
+  buildEvaluationPrompt,
+  STRICT_JSON_SYSTEM_INSTRUCTION,
+  type EvaluationDetailLevel,
+} from "./evaluationPrompt";
+import {
   EvaluationSchema,
   GradingModeSchema,
   StrictEvaluationSchema,
@@ -8,12 +13,8 @@ import {
   type Rubric,
 } from "./schema";
 
-const STRICT_JSON_SYSTEM_INSTRUCTION = [
-  "Return a single valid JSON object only.",
-  "Do not include markdown, code fences, or extra text.",
-  "Use a firm, academic, concise tone.",
-  "Apply strict and conservative grading with no benefit of doubt.",
-].join(" ");
+const MAX_RATIONALE_LENGTH = 220;
+const MAX_FEEDBACK_LENGTH = 1200;
 
 function sanitizeSingleLine(value: string, maxLength: number): string {
   return value.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength);
@@ -56,6 +57,29 @@ function normalizeEvidence(value: unknown): string[] | undefined {
   const normalized = value
     .filter((item): item is string => typeof item === "string")
     .map((item) => sanitizeSingleLine(item, 220))
+    .filter((item) => item.length > 0)
+    .slice(0, 2);
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeDetailedBreakdown(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.replace(/\r\n/g, "\n").trim().slice(0, 2_400);
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeExampleRevisions(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const normalized = value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => sanitizeSingleLine(item, 300))
     .filter((item) => item.length > 0)
     .slice(0, 2);
 
@@ -111,14 +135,18 @@ function normalizeCriteriaScores(value: unknown): unknown {
           : row.estimated_range;
 
     const evidence = normalizeEvidence(row.evidence);
+    const detailedBreakdown = normalizeDetailedBreakdown(row.detailed_breakdown);
+    const exampleRevisions = normalizeExampleRevisions(row.example_revisions);
 
     return {
       ...row,
       score: score ?? row.score,
-      rationale: rationaleRaw === null ? row.rationale : sanitizeSingleLine(rationaleRaw, 140),
-      feedback: feedbackRaw === null ? row.feedback : sanitizeSingleLine(feedbackRaw, 140),
+      rationale: rationaleRaw === null ? row.rationale : sanitizeSingleLine(rationaleRaw, MAX_RATIONALE_LENGTH),
+      feedback: feedbackRaw === null ? row.feedback : sanitizeSingleLine(feedbackRaw, MAX_FEEDBACK_LENGTH),
       estimated_range: estimatedRange,
       ...(evidence ? { evidence } : {}),
+      ...(detailedBreakdown ? { detailed_breakdown: detailedBreakdown } : {}),
+      ...(exampleRevisions ? { example_revisions: exampleRevisions } : {}),
     };
   });
 }
@@ -136,92 +164,6 @@ function normalizeModelEvaluation(modelResult: unknown): unknown {
     top_improvements: normalizeTopImprovements(source.top_improvements),
     criteria_scores: normalizeCriteriaScores(source.criteria_scores),
   };
-}
-
-function buildEvaluationPrompt(rubric: Rubric, assignmentText: string, mode: GradingMode): string {
-  const criteriaForScoring = rubric.criteria.map((criterion) => ({
-    name: criterion.name,
-    max_score: criterion.max_score,
-    description: criterion.description,
-  }));
-  const schemaDescription =
-    mode === "strict"
-      ? `{
-  "summary": "string",
-  "criteria_scores": [
-    {
-      "name": "string",
-      "score": integer,
-      "rationale": "string",
-      "estimated_range": [integer, integer],
-      "feedback": "string",
-      "evidence": ["string", "string"]
-    }
-  ],
-  "top_improvements": ["string", "string", "string"]
-}`
-      : `{
-  "summary": "string",
-  "criteria_scores": [
-    {
-      "name": "string",
-      "score": integer,
-      "rationale": "string",
-      "estimated_range": [integer, integer],
-      "feedback": "string",
-      "evidence": ["string"]
-    }
-  ],
-  "top_improvements": ["string", "string", "string"]
-}`;
-
-  const rules =
-    mode === "strict"
-      ? [
-          "- Be conservative. Do not give benefit of doubt when evidence is missing or unclear.",
-          "- Include one criteria_scores item per rubric criterion.",
-          "- Use the rubric criterion names exactly as given and keep the same order.",
-          "- Use rubric wording explicitly. Do not invent criteria.",
-          "- For each criterion, provide evidence with 1-2 short direct quotes/snippets from the assignment.",
-          "- evidence is required and must contain 1-2 items per criterion.",
-          "- If evidence is weak/missing, cap score and estimated_range high at <= 60% of criterion max_score.",
-          "- Penalize omissions of required content, structure, or format more strongly.",
-          "- score and estimated_range must be integers and align with each other.",
-          "- estimated_range must be [low, high] with low <= high.",
-          "- rationale and feedback must be one line, <= 140 chars, firm and academic.",
-          "- summary must be 1-2 sentences, <= 280 chars, concise and academic.",
-          "- top_improvements must contain exactly 3 items, each <= 120 chars.",
-          "- Do not include numbering prefixes in top_improvements.",
-          "- No markdown. No extra keys. No extra text.",
-        ]
-      : [
-          "- Include one criteria_scores item per rubric criterion.",
-          "- Use the rubric criterion names exactly as given.",
-          "- Keep criteria_scores in the same order as rubric criteria.",
-          "- score and estimated_range must be integers and align with each other.",
-          "- estimated_range must be [low, high] integers with low <= high.",
-          "- Keep each range width modest; target width <= 20% of that criterion max_score.",
-          "- rationale and feedback must be one line, <= 140 chars, and neutral in tone.",
-          "- summary must be 1-2 sentences, <= 280 chars, and neutral in tone.",
-          "- top_improvements must contain exactly 3 items, each <= 120 chars.",
-          "- evidence is optional in standard mode; omit it if not useful.",
-          "- Do not include numbering prefixes in top_improvements.",
-          "- No markdown. No extra keys. No extra text.",
-        ];
-
-  return [
-    "Evaluate the assignment using the provided rubric.",
-    "Return JSON only, matching this schema exactly:",
-    schemaDescription,
-    "Rules:",
-    ...rules,
-    "",
-    "Rubric criteria (use these names exactly):",
-    JSON.stringify(criteriaForScoring),
-    "",
-    "Assignment text:",
-    assignmentText,
-  ].join("\n");
 }
 
 function parseEvaluationByMode(mode: GradingMode, normalizedResult: unknown): Evaluation {
@@ -248,8 +190,16 @@ export async function evaluateAssignment(
   rubric: Rubric,
   assignmentText: string,
   mode: GradingMode = GradingModeSchema.enum.standard,
+  options?: {
+    detailLevel?: EvaluationDetailLevel;
+  },
 ): Promise<Evaluation> {
-  const prompt = buildEvaluationPrompt(rubric, assignmentText, mode);
+  const prompt = buildEvaluationPrompt(
+    rubric,
+    assignmentText,
+    mode,
+    options?.detailLevel ?? "diagnostic",
+  );
 
   try {
     const modelResult =
