@@ -39,6 +39,9 @@ type CriteriaResult = {
   estimated_range: [number, number];
   feedback: string;
   evidence?: string[];
+  detailed_breakdown?: string;
+  example_revisions?: string[];
+  detailed_breakdown_locked?: boolean;
 };
 
 type GradeResult = {
@@ -75,10 +78,15 @@ type RestoreVerifyResponse = {
 type PaywallMode = "restore" | "upgrade";
 type RestoreStep = "email" | "code";
 
-const APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
-const IS_PRODUCTION_ENV = APP_ENV === "production";
-const SHOW_FAKE_GRADE_BUTTON = !IS_PRODUCTION_ENV;
-const SHOW_PRO_FEATURES = !IS_PRODUCTION_ENV;
+const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "";
+const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ?? "";
+const NODE_ENV = process.env.NODE_ENV?.trim().toLowerCase() ?? "";
+const IS_PRODUCTION_DEPLOYMENT =
+  NODE_ENV === "production" ||
+  NEXT_PUBLIC_APP_ENV === "production" ||
+  NEXT_PUBLIC_VERCEL_ENV === "production";
+const SHOW_FAKE_GRADE_BUTTON = !IS_PRODUCTION_DEPLOYMENT;
+const SHOW_PRO_FEATURES = true;
 
 const FAKE_GRADE_RESULT: GradeResult = {
   title: "Demo Submission",
@@ -135,6 +143,15 @@ const rubricFileInputId = "rubric-file-input";
 const assignmentFileInputId = "assignment-file-input";
 const PRO_MONTHLY_PLAN_ID = "pro_monthly";
 const GRADING_MODE_STORAGE_KEY = "rubricheck_grading_mode";
+const LOCKED_DETAILED_FEEDBACK_NOTICE = "Detailed criterion breakdown is available with Pro.";
+
+function splitDetailedBreakdownBullets(value: string): string[] {
+  return value
+    .split(/\r?\n+/)
+    .map((line) => line.replace(/^[\-*]\s*/, "").trim())
+    .filter((line) => line.length > 0)
+    .slice(0, 5);
+}
 
 function formatOverallScoreDisplay(range: [number, number]): string {
   const [low, high] = range;
@@ -197,6 +214,15 @@ function restoreBrowserFocus() {
   setTimeout(() => {
     window.focus();
   }, 120);
+}
+
+function shouldShowEnvDebugFooter(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+  return searchParams.get("debug") === "1";
 }
 
 function TabButton({
@@ -475,6 +501,7 @@ export default function Home() {
   const [isStartingRestore, setIsStartingRestore] = useState(false);
   const [isVerifyingRestore, setIsVerifyingRestore] = useState(false);
   const [proRestoreNotice, setProRestoreNotice] = useState("");
+  const [showEnvDebugFooter, setShowEnvDebugFooter] = useState(false);
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoading = loadingStep !== "idle";
@@ -509,6 +536,22 @@ export default function Home() {
 
     window.localStorage.setItem(GRADING_MODE_STORAGE_KEY, gradingMode);
   }, [gradingMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const syncDebugFlag = () => {
+      setShowEnvDebugFooter(shouldShowEnvDebugFooter());
+    };
+
+    syncDebugFlag();
+    window.addEventListener("popstate", syncDebugFlag);
+    return () => {
+      window.removeEventListener("popstate", syncDebugFlag);
+    };
+  }, []);
 
   useEffect(() => {
     if (loadingStep !== "evaluatingAssignment") {
@@ -871,6 +914,7 @@ export default function Home() {
           row.estimated_range.length === 2 &&
           row.estimated_range.every((value) => typeof value === "number") &&
           typeof row.feedback === "string" &&
+          (row.detailed_breakdown_locked === undefined || typeof row.detailed_breakdown_locked === "boolean") &&
           (row.evidence === undefined ||
             (Array.isArray(row.evidence) &&
               row.evidence.length >= 1 &&
@@ -1599,6 +1643,12 @@ export default function Home() {
                     const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
                     const rationaleText = item.rationale ?? item.feedback;
                     const evidenceList = item.evidence ?? [];
+                    const detailedBreakdownBullets = item.detailed_breakdown
+                      ? splitDetailedBreakdownBullets(item.detailed_breakdown)
+                      : [];
+                    const isDetailedBreakdownLocked = item.detailed_breakdown_locked === true;
+                    const showDetailedBreakdownLockNotice =
+                      detailedBreakdownBullets.length === 0 && isDetailedBreakdownLocked;
 
                     return (
                       <Fragment key={criteriaKey}>
@@ -1612,7 +1662,19 @@ export default function Home() {
                           </td>
                           <td className="max-w-[22rem] whitespace-normal break-words px-4 py-3 align-top">
                             <p>{rationaleText}</p>
-                            {evidenceList.length > 0 ? (
+                            {detailedBreakdownBullets.length > 0 ? (
+                              <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-700">
+                                {detailedBreakdownBullets.map((bullet, bulletIndex) => (
+                                  <li key={`${criteriaKey}-detail-${bulletIndex}`}>{bullet}</li>
+                                ))}
+                              </ul>
+                            ) : null}
+                            {showDetailedBreakdownLockNotice ? (
+                              <p className="mt-2 text-xs font-medium text-indigo-700">
+                                {LOCKED_DETAILED_FEEDBACK_NOTICE}
+                              </p>
+                            ) : null}
+                            {!isDetailedBreakdownLocked && evidenceList.length > 0 ? (
                               <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-600">
                                 {evidenceList.map((snippet, snippetIndex) => (
                                   <li key={`${criteriaKey}-evidence-${snippetIndex}`}>{snippet}</li>
@@ -1683,6 +1745,12 @@ export default function Home() {
                 const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
                 const rationaleText = item.rationale ?? item.feedback;
                 const evidenceList = item.evidence ?? [];
+                const detailedBreakdownBullets = item.detailed_breakdown
+                  ? splitDetailedBreakdownBullets(item.detailed_breakdown)
+                  : [];
+                const isDetailedBreakdownLocked = item.detailed_breakdown_locked === true;
+                const showDetailedBreakdownLockNotice =
+                  detailedBreakdownBullets.length === 0 && isDetailedBreakdownLocked;
 
                 return (
                   <article
@@ -1701,7 +1769,19 @@ export default function Home() {
                     <p className="mt-2 whitespace-normal break-words text-sm text-slate-700">
                       {rationaleText}
                     </p>
-                    {evidenceList.length > 0 ? (
+                    {detailedBreakdownBullets.length > 0 ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-700">
+                        {detailedBreakdownBullets.map((bullet, bulletIndex) => (
+                          <li key={`${criteriaKey}-mobile-detail-${bulletIndex}`}>{bullet}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {showDetailedBreakdownLockNotice ? (
+                      <p className="mt-2 text-xs font-medium text-indigo-700">
+                        {LOCKED_DETAILED_FEEDBACK_NOTICE}
+                      </p>
+                    ) : null}
+                    {!isDetailedBreakdownLocked && evidenceList.length > 0 ? (
                       <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
                         {evidenceList.map((snippet, snippetIndex) => (
                           <li key={`${criteriaKey}-mobile-evidence-${snippetIndex}`}>{snippet}</li>
@@ -1959,6 +2039,13 @@ export default function Home() {
             >
               Feedback
             </a>
+          </footer>
+        ) : null}
+        {showEnvDebugFooter ? (
+          <footer className="pt-1 text-center text-[11px] text-slate-500">
+            NEXT_PUBLIC_APP_ENV={NEXT_PUBLIC_APP_ENV || "(unset)"} | NODE_ENV={NODE_ENV || "(unset)"} |
+            NEXT_PUBLIC_VERCEL_ENV={NEXT_PUBLIC_VERCEL_ENV || "(unset)"} | SHOW_FAKE_GRADE_BUTTON=
+            {String(SHOW_FAKE_GRADE_BUTTON)} | SHOW_PRO_FEATURES={String(SHOW_PRO_FEATURES)}
           </footer>
         ) : null}
       </div>

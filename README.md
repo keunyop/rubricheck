@@ -103,6 +103,9 @@ NEXT_PUBLIC_COPY_VARIANT=... # optional (e.g. default, student)
 NEXT_PUBLIC_APP_ENV=development # set to production on Vercel
 ```
 
+Deployment note:
+- `NEXT_PUBLIC_*` variables are baked into the client bundle at build time. If you change `NEXT_PUBLIC_APP_ENV` (or any `NEXT_PUBLIC_*` value), trigger a new build/redeploy so client-side gating/UI reflects the new value.
+
 Stripe-related variables (needed for checkout integration on `feature/stripe-pro-checkout`):
 
 ```bash
