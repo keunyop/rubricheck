@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { includesProLookupKey } from "../config/proCheckout";
 
 import {
   getCachedStripeLookupByEmail,
@@ -12,8 +13,6 @@ import {
 import { isActiveProEntitlement, isValidEmail, normalizeEmailInput } from "./entitlementRestoreShared";
 
 export { normalizeEmailInput, isValidEmail } from "./entitlementRestoreShared";
-
-const PLAN_ALIAS_PRO_MONTHLY = "pro_monthly";
 const STRIPE_LOOKUP_CACHE_TTL_SECONDS = 60 * 5;
 
 let stripeClient: Stripe | null = null;
@@ -65,9 +64,9 @@ function getSubscriptionLookupKeys(subscription: Stripe.Subscription): string[] 
     .filter((value): value is string => Boolean(value));
 }
 
-function isProMonthlySubscription(subscription: Stripe.Subscription): boolean {
+function isProSubscription(subscription: Stripe.Subscription): boolean {
   const lookupKeys = getSubscriptionLookupKeys(subscription);
-  return lookupKeys.includes(PLAN_ALIAS_PRO_MONTHLY);
+  return includesProLookupKey(lookupKeys);
 }
 
 function mapSubscriptionToEntitlement(subscription: Stripe.Subscription): EntitlementRecord {
@@ -100,7 +99,7 @@ async function listSubscriptionsByCustomer(customerId: string): Promise<Stripe.S
 
 function getBestActiveEntitlementFromSubscriptions(subscriptions: Stripe.Subscription[]): EntitlementRecord | null {
   return subscriptions
-    .filter((subscription) => isProMonthlySubscription(subscription))
+    .filter((subscription) => isProSubscription(subscription))
     .map((subscription) => mapSubscriptionToEntitlement(subscription))
     .filter((entitlement) => isActiveEntitlement(entitlement))
     .sort((a, b) => b.currentPeriodEnd - a.currentPeriodEnd)[0] ?? null;

@@ -12,6 +12,14 @@ import {
   useState,
 } from "react";
 import { ACTIVE_LANDING_COPY } from "../src/config/copy";
+import { PRO_CHECKOUT_DISPLAY, type ProCheckoutPlan } from "../src/config/proCheckout";
+import {
+  CREDIT_PACK_IDS,
+  getCreditPackLabel,
+  getCreditPackMarketingLabel,
+  getCreditPackPriceLabel,
+} from "../src/config/creditPacks";
+import { getEvaluateInterstitialDecision } from "../src/lib/evaluateInterstitial";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"];
@@ -27,8 +35,23 @@ type LoadingStep =
   | "evaluatingAssignment";
 
 type GradeErrorResponse = {
+  code?: string;
+  action?: string;
+  freeLimit?: number;
   error?: string;
+  message?: string;
   field?: "rubric" | "assignment";
+};
+
+type EvaluationDraftSnapshot = {
+  rubricMode: InputMode;
+  assignmentMode: InputMode;
+  rubricText: string;
+  assignmentText: string;
+  gradingMode: GradingMode;
+  hadRubricFile: boolean;
+  hadAssignmentFile: boolean;
+  savedAt: number;
 };
 
 type CriteriaResult = {
@@ -54,6 +77,14 @@ type GradeResult = {
 
 type CheckoutResponse = {
   url?: string;
+  plan?: string;
+  packId?: string;
+  error?: string;
+};
+
+type CreditsBalanceResponse = {
+  balance?: number | null;
+  hasIdentity?: boolean;
   error?: string;
 };
 
@@ -139,9 +170,11 @@ const evaluationRotatingMessages = [
 const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
 const rubricFileInputId = "rubric-file-input";
 const assignmentFileInputId = "assignment-file-input";
-const PRO_MONTHLY_PLAN_ID = "pro_monthly";
 const GRADING_MODE_STORAGE_KEY = "rubricheck_grading_mode";
 const LOCKED_DETAILED_FEEDBACK_NOTICE = "Detailed criterion breakdown is available with Pro.";
+const FREE_EVALUATIONS_PER_DAY = 3;
+const EVALUATION_DRAFT_STORAGE_KEY = "rubricheck_evaluation_draft_v1";
+const EVALUATION_DRAFT_TTL_MS = 1000 * 60 * 60 * 24;
 
 function splitDetailedBreakdownBullets(value: string): string[] {
   return value
@@ -478,6 +511,10 @@ export default function Home() {
   const [error, setError] = useState("");
   const [showDailyLimitAlert, setShowDailyLimitAlert] = useState(false);
   const [dailyLimitValue, setDailyLimitValue] = useState<number | null>(null);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [creditCheckoutEmail, setCreditCheckoutEmail] = useState("");
+  const [creditCheckoutError, setCreditCheckoutError] = useState("");
+  const [isCreatingCreditCheckout, setIsCreatingCreditCheckout] = useState(false);
   const [evaluationMessageIndex, setEvaluationMessageIndex] = useState(0);
   const [showRewritePaywall, setShowRewritePaywall] = useState(false);
   const [expandedRewriteSections, setExpandedRewriteSections] = useState<Record<string, boolean>>(
@@ -486,6 +523,7 @@ export default function Home() {
   const [isSharingImage, setIsSharingImage] = useState(false);
   const [didCopyImage, setDidCopyImage] = useState(false);
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<ProCheckoutPlan>("monthly");
   const [checkoutEmail, setCheckoutEmail] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
   const [hasProAccess, setHasProAccess] = useState(false);
@@ -500,9 +538,11 @@ export default function Home() {
   const [isVerifyingRestore, setIsVerifyingRestore] = useState(false);
   const [proRestoreNotice, setProRestoreNotice] = useState("");
   const [showEnvDebugFooter, setShowEnvDebugFooter] = useState(false);
+  const [draftRestoreNotice, setDraftRestoreNotice] = useState("");
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoading = loadingStep !== "idle";
+  const selectedCheckoutPlanDisplay = PRO_CHECKOUT_DISPLAY[checkoutPlan];
 
   const loadingMessage = useMemo(() => {
     if (loadingStep === "idle") {
@@ -516,6 +556,41 @@ export default function Home() {
     return loadingStepLabels[loadingStep];
   }, [evaluationMessageIndex, loadingStep]);
 
+  function syncCreditBalanceFromHeader(response: Response) {
+    const raw = response.headers.get("x-credits-balance");
+    if (!raw) {
+      return;
+    }
+
+    const parsed = Number.parseInt(raw, 10);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      setCreditBalance(parsed);
+    }
+  }
+
+  function persistEvaluationDraftForCheckout() {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const snapshot: EvaluationDraftSnapshot = {
+      rubricMode,
+      assignmentMode,
+      rubricText: rubricText.trim(),
+      assignmentText: assignmentText.trim(),
+      gradingMode,
+      hadRubricFile: rubricFile !== null,
+      hadAssignmentFile: assignmentFile !== null,
+      savedAt: Date.now(),
+    };
+
+    try {
+      window.localStorage.setItem(EVALUATION_DRAFT_STORAGE_KEY, JSON.stringify(snapshot));
+    } catch {
+      // Ignore quota/private mode storage failures.
+    }
+  }
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
@@ -524,6 +599,58 @@ export default function Home() {
     const storedMode = window.localStorage.getItem(GRADING_MODE_STORAGE_KEY);
     if (storedMode === "standard" || storedMode === "strict") {
       setGradingMode(storedMode);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const rawDraft = window.localStorage.getItem(EVALUATION_DRAFT_STORAGE_KEY);
+    if (!rawDraft) {
+      return;
+    }
+
+    window.localStorage.removeItem(EVALUATION_DRAFT_STORAGE_KEY);
+
+    try {
+      const parsed = JSON.parse(rawDraft) as Partial<EvaluationDraftSnapshot>;
+      const savedAt = typeof parsed.savedAt === "number" ? parsed.savedAt : 0;
+      if (!savedAt || Date.now() - savedAt > EVALUATION_DRAFT_TTL_MS) {
+        return;
+      }
+
+      const restoredRubricText = typeof parsed.rubricText === "string" ? parsed.rubricText : "";
+      const restoredAssignmentText = typeof parsed.assignmentText === "string" ? parsed.assignmentText : "";
+
+      if (restoredRubricText) {
+        setRubricMode("text");
+        setRubricText(restoredRubricText);
+      }
+
+      if (restoredAssignmentText) {
+        setAssignmentMode("text");
+        setAssignmentText(restoredAssignmentText);
+      }
+
+      if (parsed.gradingMode === "standard" || parsed.gradingMode === "strict") {
+        setGradingMode(parsed.gradingMode);
+      }
+
+      const hadRubricFile = parsed.hadRubricFile === true;
+      const hadAssignmentFile = parsed.hadAssignmentFile === true;
+      if (hadRubricFile || hadAssignmentFile) {
+        setDraftRestoreNotice(
+          restoredRubricText || restoredAssignmentText
+            ? "Text inputs were restored. Re-select files before running evaluate again."
+            : "Previous file selections cannot be restored. Please re-select files before running evaluate again.",
+        );
+      } else if (restoredRubricText || restoredAssignmentText) {
+        setDraftRestoreNotice("Your text inputs were restored so you can run evaluate again.");
+      }
+    } catch {
+      // Ignore invalid cached drafts.
     }
   }, []);
 
@@ -548,6 +675,39 @@ export default function Home() {
     window.addEventListener("popstate", syncDebugFlag);
     return () => {
       window.removeEventListener("popstate", syncDebugFlag);
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+
+    async function fetchCreditsBalance() {
+      try {
+        const response = await fetch("/api/credits", {
+          method: "GET",
+          cache: "no-store",
+        });
+        const data: CreditsBalanceResponse = await response.json().catch(() => ({}));
+        if (canceled) {
+          return;
+        }
+
+        if (typeof data.balance === "number" && Number.isFinite(data.balance) && data.balance >= 0) {
+          setCreditBalance(data.balance);
+        } else if (data.balance === null) {
+          setCreditBalance(null);
+        }
+      } catch {
+        if (!canceled) {
+          setCreditBalance(null);
+        }
+      }
+    }
+
+    void fetchCreditsBalance();
+
+    return () => {
+      canceled = true;
     };
   }, []);
 
@@ -639,6 +799,8 @@ export default function Home() {
     if (mode === "restore") {
       setRestoreStep("email");
       setRestoreCode("");
+    } else {
+      setCheckoutPlan("monthly");
     }
     setShowRewritePaywall(true);
   }
@@ -725,6 +887,39 @@ export default function Home() {
     }
   }
 
+  async function handleBuyCredits(packId: (typeof CREDIT_PACK_IDS)[number]) {
+    setCreditCheckoutError("");
+    const normalizedEmail = creditCheckoutEmail.trim().toLowerCase();
+    if (!isValidEmail(normalizedEmail)) {
+      setCreditCheckoutError("Please enter a valid email for credit purchase.");
+      return;
+    }
+
+    setIsCreatingCreditCheckout(true);
+
+    try {
+      const response = await fetch("/api/checkout/credits", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ packId, email: normalizedEmail }),
+      });
+
+      const data: CheckoutResponse = await response.json().catch(() => ({}));
+      if (!response.ok || !data.url) {
+        throw new Error(data.error ?? "CREDIT_CHECKOUT_SESSION_FAILED");
+      }
+
+      persistEvaluationDraftForCheckout();
+      window.location.assign(data.url);
+    } catch {
+      setCreditCheckoutError("Unable to start credit checkout right now. Please try again.");
+    } finally {
+      setIsCreatingCreditCheckout(false);
+    }
+  }
+
   async function handleUpgradeToPro() {
     setCheckoutError("");
     const normalizedEmail = checkoutEmail.trim().toLowerCase();
@@ -741,7 +936,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ priceId: PRO_MONTHLY_PLAN_ID, email: normalizedEmail }),
+        body: JSON.stringify({ plan: checkoutPlan, email: normalizedEmail }),
       });
 
       const data: CheckoutResponse = await response.json().catch(() => ({}));
@@ -749,6 +944,7 @@ export default function Home() {
         throw new Error(data.error ?? "CHECKOUT_SESSION_FAILED");
       }
 
+      persistEvaluationDraftForCheckout();
       window.location.assign(data.url);
     } catch {
       setCheckoutError("Unable to start checkout right now. Please try again.");
@@ -875,6 +1071,10 @@ export default function Home() {
       return "Please provide valid rubric and assignment inputs.";
     }
 
+    if (message === "FREE_LIMIT_REACHED") {
+      return "You've used today's free evaluations. Upgrade to Pro or buy credits to continue.";
+    }
+
     return "Something went wrong. Please try again.";
   }
 
@@ -943,6 +1143,9 @@ export default function Home() {
     setGradingMode(selectedMode);
     setError("");
     setShowDailyLimitAlert(false);
+    setDraftRestoreNotice("");
+    setCreditCheckoutError("");
+    setCheckoutError("");
     setDailyLimitValue(null);
     setGradeResult(null);
     setResultMode(null);
@@ -977,7 +1180,7 @@ export default function Home() {
       let requestPromise: Promise<Response>;
 
       if (rubricMode === "text" && assignmentMode === "text") {
-        requestPromise = fetch("/api/grade", {
+        requestPromise = fetch("/api/evaluate", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1013,7 +1216,7 @@ export default function Home() {
 
         formData.append("mode", selectedMode);
 
-        requestPromise = fetch("/api/grade", {
+        requestPromise = fetch("/api/evaluate", {
           method: "POST",
           body: formData,
         });
@@ -1035,14 +1238,20 @@ export default function Home() {
       const data: unknown = contentType.includes("application/json")
         ? await response.json()
         : { error: "INTERNAL_SERVER_ERROR" };
+      syncCreditBalanceFromHeader(response);
 
+      const apiErrorResponse = (data ?? {}) as GradeErrorResponse;
       const apiError =
         data && typeof data === "object" && "error" in data
           ? String((data as { error?: unknown }).error ?? "")
           : "";
+      const apiMessage =
+        data && typeof data === "object" && "message" in data
+          ? String((data as { message?: unknown }).message ?? "")
+          : "";
       const limitHeaderRaw = response.headers.get("x-ratelimit-limit");
       const limitFromHeader = limitHeaderRaw ? Number.parseInt(limitHeaderRaw, 10) : Number.NaN;
-      const limitFromErrorMatch = apiError.match(/(?:Free )?daily limit reached \((\d+)\)/i);
+      const limitFromErrorMatch = (apiMessage || apiError).match(/(?:Free )?daily limit reached \((\d+)\)/i);
       const limitFromError = limitFromErrorMatch?.[1]
         ? Number.parseInt(limitFromErrorMatch[1], 10)
         : Number.NaN;
@@ -1052,13 +1261,14 @@ export default function Home() {
           : Number.isFinite(limitFromError) && limitFromError > 0
             ? limitFromError
             : null;
-      const isDailyLimitHit =
-        response.status === 429 ||
-        apiError.toLowerCase().startsWith("daily limit reached") ||
-        apiError.toLowerCase().startsWith("free daily limit reached");
+      const interstitialDecision = getEvaluateInterstitialDecision({
+        status: response.status,
+        payload: apiErrorResponse,
+        fallbackLimit: detectedDailyLimit ?? FREE_EVALUATIONS_PER_DAY,
+      });
 
-      if (isDailyLimitHit) {
-        setDailyLimitValue(detectedDailyLimit);
+      if (interstitialDecision.show) {
+        setDailyLimitValue(interstitialDecision.freeLimit ?? FREE_EVALUATIONS_PER_DAY);
         setShowDailyLimitAlert(true);
         setError("");
         return;
@@ -1475,6 +1685,11 @@ export default function Home() {
                 {error}
               </div>
             ) : null}
+            {draftRestoreNotice ? (
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 px-4 py-3 text-sm text-indigo-800">
+                {draftRestoreNotice}
+              </div>
+            ) : null}
 
             {isLoading ? (
               <div className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 md:text-sm">
@@ -1514,16 +1729,169 @@ export default function Home() {
               </button>
             ) : null}
           </form>
+          {typeof creditBalance === "number" ? (
+            <p className="mt-3 text-xs text-slate-600">Current credits: {creditBalance}</p>
+          ) : null}
         </section>
 
         {showDailyLimitAlert ? (
-          <section className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 shadow-sm md:p-6">
-            <h2 className="text-base font-semibold text-amber-900">Daily limit reached</h2>
-            <p className="mt-1 text-sm text-amber-800">
-              {dailyLimitValue
-                ? `You've used all ${dailyLimitValue} checks for today. Please try again tomorrow.`
-                : "You've reached today's check limit. Please try again tomorrow."}
+          <section className="rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm md:p-6">
+            <h2 className="text-lg font-semibold text-slate-900">
+              You&apos;ve used today&apos;s {dailyLimitValue ?? FREE_EVALUATIONS_PER_DAY} free evaluations.
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Choose Credits for extra evaluations, or upgrade to Pro for Rewrite + more daily usage.
             </p>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Primary</p>
+                <h3 className="mt-1 text-base font-semibold text-slate-900">Upgrade to Pro</h3>
+                <p className="mt-1 text-xs text-slate-600">30/day on evaluate, simulate, and rewrite.</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-white/90 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutPlan("monthly")}
+                    disabled={isCreatingCheckout}
+                    className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                      checkoutPlan === "monthly"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutPlan("annual")}
+                    disabled={isCreatingCheckout}
+                    className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                      checkoutPlan === "annual"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Annual
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-indigo-900">
+                  {selectedCheckoutPlanDisplay.price}
+                  <span className="ml-1 text-indigo-700">{selectedCheckoutPlanDisplay.periodLabel}</span>
+                </p>
+                <label htmlFor="interstitial-pro-email" className="mt-3 block">
+                  <span className="text-xs font-semibold text-slate-700">Email</span>
+                  <input
+                    id="interstitial-pro-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    value={checkoutEmail}
+                    onChange={(event) => {
+                      setCheckoutEmail(event.target.value);
+                      setCheckoutError("");
+                    }}
+                    disabled={isCreatingCheckout}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  />
+                </label>
+                {checkoutError ? (
+                  <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    {checkoutError}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleUpgradeToPro}
+                  disabled={isCreatingCheckout || !checkoutEmail.trim()}
+                  className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                <h3 className="text-base font-semibold text-slate-900">Buy Credits</h3>
+                <p className="mt-1 text-xs text-slate-600">Credits are for evaluate only (no subscription).</p>
+                {typeof creditBalance === "number" ? (
+                  <p className="mt-1 text-xs text-slate-600">Current credits: {creditBalance}</p>
+                ) : null}
+                <label htmlFor="credit-checkout-email" className="mt-3 block">
+                  <span className="text-xs font-semibold text-slate-700">Email</span>
+                  <input
+                    id="credit-checkout-email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    value={creditCheckoutEmail}
+                    onChange={(event) => {
+                      setCreditCheckoutEmail(event.target.value);
+                      setCreditCheckoutError("");
+                    }}
+                    disabled={isCreatingCreditCheckout}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  />
+                </label>
+                {creditCheckoutError ? (
+                  <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    {creditCheckoutError}
+                  </p>
+                ) : null}
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {CREDIT_PACK_IDS.map((pack) => (
+                    <article key={`credit-pack-${pack}`} className="rounded-lg border border-slate-200 bg-white p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-600">
+                        {getCreditPackMarketingLabel(pack)}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-900">{getCreditPackLabel(pack)}</p>
+                      <p className="mt-0.5 text-xs text-slate-600">{getCreditPackPriceLabel(pack)}</p>
+                      <button
+                        type="button"
+                        onClick={() => void handleBuyCredits(pack)}
+                        disabled={isCreatingCreditCheckout || !creditCheckoutEmail.trim()}
+                        className="mt-2 w-full rounded-md bg-slate-800 px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isCreatingCreditCheckout ? "Redirecting..." : "Buy"}
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
+              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                <thead className="bg-slate-50">
+                  <tr className="text-slate-700">
+                    <th className="px-3 py-2 font-semibold">Plan</th>
+                    <th className="px-3 py-2 font-semibold">Evaluate</th>
+                    <th className="px-3 py-2 font-semibold">Strict Mode</th>
+                    <th className="px-3 py-2 font-semibold">Rewrite</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                  <tr>
+                    <td className="px-3 py-2 font-medium">Free</td>
+                    <td className="px-3 py-2">3 evaluations/day</td>
+                    <td className="px-3 py-2">Yes</td>
+                    <td className="px-3 py-2">No</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 font-medium">Credits</td>
+                    <td className="px-3 py-2">Extra evaluations (no subscription)</td>
+                    <td className="px-3 py-2">Yes</td>
+                    <td className="px-3 py-2">No</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 font-medium">Pro</td>
+                    <td className="px-3 py-2">30/day</td>
+                    <td className="px-3 py-2">Yes</td>
+                    <td className="px-3 py-2">Yes</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </section>
         ) : null}
 
@@ -1988,8 +2356,45 @@ export default function Home() {
               ) : (
                 <div className="mt-4 space-y-3">
                   <p className="text-xs text-slate-600">
-                    Pro monthly unlocks Rewrite Mode. Continue to Stripe Checkout.
+                    Choose a Pro billing plan, then continue to Stripe Checkout.
                   </p>
+                  <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutPlan("monthly")}
+                      disabled={isCreatingCheckout}
+                      className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                        checkoutPlan === "monthly"
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      Monthly
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCheckoutPlan("annual")}
+                      disabled={isCreatingCheckout}
+                      className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                        checkoutPlan === "annual"
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      Annual
+                    </button>
+                  </div>
+                  <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+                    <p className="text-sm font-semibold text-indigo-900">
+                      {selectedCheckoutPlanDisplay.price}
+                      <span className="ml-1 text-xs font-medium text-indigo-700">
+                        {selectedCheckoutPlanDisplay.periodLabel}
+                      </span>
+                    </p>
+                    {selectedCheckoutPlanDisplay.saveNote ? (
+                      <p className="mt-1 text-xs text-indigo-700">{selectedCheckoutPlanDisplay.saveNote}</p>
+                    ) : null}
+                  </div>
                   <label htmlFor="upgrade-email" className="block">
                     <span className="text-xs font-semibold text-slate-700">Email</span>
                     <input
@@ -2019,7 +2424,9 @@ export default function Home() {
                       disabled={isCreatingCheckout || !checkoutEmail.trim()}
                       className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
+                      {isCreatingCheckout
+                        ? "Redirecting..."
+                        : `Upgrade to Pro (${checkoutPlan === "annual" ? "Annual" : "Monthly"})`}
                     </button>
                   </div>
                 </div>

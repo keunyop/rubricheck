@@ -6,8 +6,13 @@ import { buildFinalEvaluation, type FeedbackAccessTier } from "../../../lib/grad
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
 import { structureRubric } from "../../../lib/rubricStructuring";
 import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
-import { buildUsageLimitHeaders, checkUsageLimit } from "../../../src/lib/usageLimit";
-import { getPlanFromEntitlementCookie } from "../../../src/lib/entitlementSession";
+import { shouldRefundReservedEvaluateCredit } from "../../../src/lib/evaluationCreditSettlement";
+import { buildFreeLimitReachedPayload } from "../../../src/lib/evaluateLimitPayload";
+import {
+  buildUsageLimitHeaders,
+  checkUsageLimit,
+  refundUsageCreditReservation,
+} from "../../../src/lib/usageLimit";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const GradeRequestSchema = z.object({
@@ -92,18 +97,6 @@ async function resolveFieldText(
 
 export async function POST(request: Request) {
   try {
-    const usage = await checkUsageLimit(request, "evaluate");
-    const usageHeaders = buildUsageLimitHeaders(usage);
-    const feedbackTier: FeedbackAccessTier =
-      getPlanFromEntitlementCookie(request) === "pro" ? "pro" : "free";
-
-    if (!usage.allowed) {
-      return NextResponse.json(
-        { error: usage.errorMessage ?? `Free daily limit reached (${usage.limit}). Upgrade to continue.` },
-        { status: 429, headers: usageHeaders },
-      );
-    }
-
     const contentType = request.headers.get("content-type") ?? "";
     let mode: GradingMode = "standard";
     let rubricFile: File | null = null;
@@ -116,12 +109,12 @@ export async function POST(request: Request) {
       try {
         payload = await request.json();
       } catch {
-        return NextResponse.json({ error: "INVALID_JSON" }, { status: 400, headers: usageHeaders });
+        return NextResponse.json({ error: "INVALID_JSON" }, { status: 400 });
       }
 
       const parsedRequest = JsonGradeRequestSchema.safeParse(payload);
       if (!parsedRequest.success) {
-        return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400, headers: usageHeaders });
+        return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400 });
       }
 
       mode = parsedRequest.data.mode;
@@ -135,7 +128,7 @@ export async function POST(request: Request) {
       });
 
       if (!parsedRequest.success) {
-        return NextResponse.json({ error: "INVALID_MODE" }, { status: 400, headers: usageHeaders });
+        return NextResponse.json({ error: "INVALID_MODE" }, { status: 400 });
       }
 
       mode = parsedRequest.data.mode;
@@ -180,11 +173,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "RUBRIC_STRUCTURE_FAILED" }, { status: 400 });
     }
 
+    const usage = await checkUsageLimit(request, "evaluate");
+    const usageHeaders = buildUsageLimitHeaders(usage);
+    const feedbackTier: FeedbackAccessTier = usage.billingSource === "pro" ? "pro" : "free";
+
+    if (!usage.allowed) {
+      if (usage.errorCode === "FREE_LIMIT_REACHED" && usage.action === "SHOW_INTERSTITIAL") {
+        return NextResponse.json(buildFreeLimitReachedPayload(usage.limit), {
+          status: 429,
+          headers: usageHeaders,
+        });
+      }
+
+      return NextResponse.json(
+        {
+          error: usage.errorCode ?? usage.errorMessage ?? `Free daily limit reached (${usage.limit}). Upgrade to continue.`,
+          message: usage.errorMessage,
+        },
+        { status: 429, headers: usageHeaders },
+      );
+    }
+
     try {
       const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode);
       const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
       return NextResponse.json(finalEvaluation, { headers: usageHeaders });
     } catch (error) {
+      if (
+        shouldRefundReservedEvaluateCredit({
+          billingSource: usage.billingSource,
+          hasReservation: Boolean(usage.creditReservation),
+          evaluationSucceeded: false,
+        })
+      ) {
+        try {
+          await refundUsageCreditReservation(usage);
+        } catch (refundError) {
+          console.error("CREDIT_RESERVATION_REFUND_FAILED", refundError);
+        }
+      }
       console.error("EVALUATION_FAILED", error);
       return NextResponse.json({ error: "EVALUATION_FAILED" }, { status: 500 });
     }

@@ -1,9 +1,22 @@
 import { Redis } from "@upstash/redis";
 
-import { FREE_DAILY_LIMIT, PLUS_DAILY_LIMIT, type PlanName, getPlanFromUser } from "../config/plans";
-import { getPlanFromEntitlementCookie } from "./entitlementSession";
+import { FREE_DAILY_LIMIT, PLUS_DAILY_LIMIT, type PlanName, getPlanFromUser } from "../config/plans.ts";
+import {
+  FREE_LIMIT_REACHED_CODE,
+  SHOW_INTERSTITIAL_ACTION,
+} from "./evaluateLimitPayload.ts";
+import { canUseCreditsForFeature } from "./evaluationFeatureBilling.ts";
+import {
+  getCreditBalanceForRequest,
+  refundCreditReservation,
+  reserveOneCreditForRequest,
+  type CreditReservation,
+} from "./credits.ts";
+import { decideFreeEvaluateAccess } from "./evaluationCreditsPolicy.ts";
+import { getPlanFromEntitlementCookie } from "./entitlementSession.ts";
 
 export type UsageFeature = "evaluate" | "rewrite" | "simulate";
+export type UsageAction = typeof SHOW_INTERSTITIAL_ACTION;
 
 type UserPlanPayload = {
   plan?: string;
@@ -11,14 +24,23 @@ type UserPlanPayload = {
 
 type FeatureLimitMap = Record<UsageFeature, number | null>;
 
+export type UsageErrorCode = typeof FREE_LIMIT_REACHED_CODE;
+
 export type UsageCheckResult = {
   allowed: boolean;
   limit: number;
   remaining: number;
   errorMessage?: string;
+  errorCode?: UsageErrorCode;
+  action?: UsageAction;
+  creditsBalance?: number | null;
+  plan?: PlanName;
+  billingSource?: "free" | "pro" | "credit";
+  creditReservation?: CreditReservation;
 };
 
 const WINDOW_SECONDS = 86400;
+export const FREE_EVALUATE_DAILY_LIMIT = 3;
 
 const PLAN_FEATURE_LIMITS: Record<PlanName, FeatureLimitMap> = {
   free: {
@@ -119,26 +141,20 @@ async function resolveEffectivePlan(request: Request, user?: UserPlanPayload): P
   return "free";
 }
 
-export function buildUsageLimitHeaders(result: Pick<UsageCheckResult, "limit" | "remaining">): Record<string, string> {
-  return {
-    "X-RateLimit-Limit": String(result.limit),
-    "X-RateLimit-Remaining": String(result.remaining),
-  };
-}
-
-export async function checkUsageLimit(
+async function checkPlanLimitedFeature(
   request: Request,
   feature: UsageFeature,
-  user?: UserPlanPayload,
+  plan: PlanName,
 ): Promise<UsageCheckResult> {
-  const effectivePlan = await resolveEffectivePlan(request, user);
-  const limit = getLimitForFeature(effectivePlan, feature);
+  const limit = getLimitForFeature(plan, feature);
 
   if (limit === null || limit <= 0) {
     return {
       allowed: false,
       limit: 0,
       remaining: 0,
+      plan,
+      billingSource: plan === "free" ? "free" : "pro",
       errorMessage: getFeatureBlockedMessage(feature),
     };
   }
@@ -149,6 +165,8 @@ export async function checkUsageLimit(
         allowed: true,
         limit,
         remaining: limit,
+        plan,
+        billingSource: plan === "free" ? "free" : "pro",
       };
     }
 
@@ -172,6 +190,136 @@ export async function checkUsageLimit(
     allowed,
     limit,
     remaining,
+    plan,
+    billingSource: plan === "free" ? "free" : "pro",
     errorMessage: allowed ? undefined : getFreePlanLimitMessage(limit),
   };
+}
+
+async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageCheckResult> {
+  if (!hasRedisConfig()) {
+    if (process.env.NODE_ENV !== "production") {
+      return {
+        allowed: true,
+        limit: FREE_EVALUATE_DAILY_LIMIT,
+        remaining: FREE_EVALUATE_DAILY_LIMIT,
+        plan: "free",
+        billingSource: "free",
+        creditsBalance: null,
+      };
+    }
+
+    throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
+  }
+
+  const redis = getRedisClient();
+  const ip = getRequestIp(request);
+  const freeKey = `rubricheck:usage:${ip}:${getUtcDateKey()}:evaluate_free`;
+  const freeCount = await redis.incr(freeKey);
+
+  if (freeCount === 1) {
+    await redis.expire(freeKey, WINDOW_SECONDS);
+  }
+
+  if (freeCount <= FREE_EVALUATE_DAILY_LIMIT) {
+    const freeDecision = decideFreeEvaluateAccess({
+      freeCount,
+      freeLimit: FREE_EVALUATE_DAILY_LIMIT,
+      creditsAvailable: 0,
+    });
+
+    return {
+      allowed: freeDecision.allowed,
+      limit: FREE_EVALUATE_DAILY_LIMIT,
+      remaining: Math.max(0, FREE_EVALUATE_DAILY_LIMIT - freeCount),
+      plan: "free",
+      billingSource: "free",
+      creditsBalance: await getCreditBalanceForRequest(request),
+    };
+  }
+
+  const currentCreditBalance = await getCreditBalanceForRequest(request);
+  const creditDecision = decideFreeEvaluateAccess({
+    freeCount,
+    freeLimit: FREE_EVALUATE_DAILY_LIMIT,
+    creditsAvailable: Math.max(0, currentCreditBalance ?? 0),
+  });
+
+  if (!creditDecision.allowed) {
+    return {
+      allowed: false,
+      limit: FREE_EVALUATE_DAILY_LIMIT,
+      remaining: 0,
+      plan: "free",
+      billingSource: "free",
+      errorCode: "FREE_LIMIT_REACHED",
+      action: "SHOW_INTERSTITIAL",
+      errorMessage: getFreePlanLimitMessage(FREE_EVALUATE_DAILY_LIMIT),
+      creditsBalance: Math.max(0, currentCreditBalance ?? 0),
+    };
+  }
+
+  const creditReservation = await reserveOneCreditForRequest(request);
+  if (creditReservation.reserved && creditReservation.reservation) {
+    return {
+      allowed: true,
+      limit: FREE_EVALUATE_DAILY_LIMIT,
+      remaining: 0,
+      plan: "free",
+      billingSource: "credit",
+      creditsBalance: creditReservation.balanceAfter,
+      creditReservation: creditReservation.reservation,
+    };
+  }
+
+  return {
+    allowed: false,
+    limit: FREE_EVALUATE_DAILY_LIMIT,
+    remaining: 0,
+    plan: "free",
+    billingSource: "free",
+    errorCode: "FREE_LIMIT_REACHED",
+    action: "SHOW_INTERSTITIAL",
+    errorMessage: getFreePlanLimitMessage(FREE_EVALUATE_DAILY_LIMIT),
+    creditsBalance: creditReservation.balanceAfter,
+  };
+}
+
+export function buildUsageLimitHeaders(result: Pick<UsageCheckResult, "limit" | "remaining" | "creditsBalance">): Record<string, string> {
+  const headers: Record<string, string> = {
+    "X-RateLimit-Limit": String(result.limit),
+    "X-RateLimit-Remaining": String(result.remaining),
+  };
+
+  if (typeof result.creditsBalance === "number" && Number.isFinite(result.creditsBalance)) {
+    headers["X-Credits-Balance"] = String(Math.max(0, Math.floor(result.creditsBalance)));
+  }
+
+  return headers;
+}
+
+export async function refundUsageCreditReservation(result: UsageCheckResult): Promise<number | null> {
+  if (!result.creditReservation) {
+    return null;
+  }
+
+  return refundCreditReservation(result.creditReservation);
+}
+
+export async function checkUsageLimit(
+  request: Request,
+  feature: UsageFeature,
+  user?: UserPlanPayload,
+): Promise<UsageCheckResult> {
+  const effectivePlan = await resolveEffectivePlan(request, user);
+
+  if (!canUseCreditsForFeature(feature)) {
+    return checkPlanLimitedFeature(request, feature, effectivePlan);
+  }
+
+  if (effectivePlan === "free") {
+    return checkFreeEvaluateWithCredits(request);
+  }
+
+  return checkPlanLimitedFeature(request, feature, effectivePlan);
 }

@@ -6,6 +6,15 @@ import {
   setEntitlementForCustomer,
   type EntitlementRecord,
 } from "../../../../src/lib/entitlement";
+import { includesProLookupKey } from "../../../../src/config/proCheckout";
+import { grantCredits, markCreditsSessionProcessed } from "../../../../src/lib/credits";
+import { grantCreditsExactlyOnce } from "../../../../src/lib/creditsGrant";
+import {
+  getCreditsForCreditPack,
+  normalizeCreditPackId,
+  resolveCreditPackIdFromLookupKey,
+  type CreditPackId,
+} from "../../../../src/config/creditPacks";
 
 export const runtime = "nodejs";
 
@@ -76,6 +85,29 @@ function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {
   return subscription.cancel_at ?? subscription.ended_at ?? Math.floor(Date.now() / 1000);
 }
 
+function getSubscriptionLookupKeys(subscription: Stripe.Subscription): string[] {
+  return subscription.items.data
+    .map((item) => {
+      const price = item.price;
+      if (!price || typeof price === "string") {
+        return null;
+      }
+
+      return typeof price.lookup_key === "string" ? price.lookup_key.trim() : null;
+    })
+    .filter((value): value is string => Boolean(value));
+}
+
+function isProSubscription(subscription: Stripe.Subscription): boolean {
+  return includesProLookupKey(getSubscriptionLookupKeys(subscription));
+}
+
+async function retrieveSubscriptionWithPrices(subscriptionId: string): Promise<Stripe.Subscription> {
+  return getStripeClient().subscriptions.retrieve(subscriptionId, {
+    expand: ["items.data.price"],
+  });
+}
+
 function mapSubscriptionToEntitlement(subscription: Stripe.Subscription): EntitlementRecord {
   return {
     plan: "pro",
@@ -101,12 +133,42 @@ async function persistEntitlement(params: {
 }
 
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): Promise<void> {
+  const sessionEmail = session.customer_details?.email ?? session.customer_email ?? null;
   const customerId = getCustomerId(session.customer);
-  if (!customerId) {
+  const mode = session.mode;
+
+  if (mode === "payment") {
+    if (session.payment_status !== "paid") {
+      return;
+    }
+
+    if (!session.id) {
+      return;
+    }
+
+    const metadataPack = normalizeCreditPackId(session.metadata?.credit_pack_id);
+    const metadataLookupPack = resolveCreditPackIdFromLookupKey(session.metadata?.credit_pack_lookup_key);
+    const fallbackLineItemPack = await resolveCreditPackIdFromSessionLineItems(session.id);
+    const packId = metadataPack ?? metadataLookupPack ?? fallbackLineItemPack;
+
+    if (!packId) {
+      return;
+    }
+
+    await grantCreditsExactlyOnce({
+      sessionId: session.id,
+      amount: getCreditsForCreditPack(packId),
+      customerId,
+      email: sessionEmail,
+      markSessionProcessed: markCreditsSessionProcessed,
+      grantCredits,
+    });
     return;
   }
 
-  const sessionEmail = session.customer_details?.email ?? session.customer_email ?? null;
+  if (!customerId) {
+    return;
+  }
 
   const subscriptionId =
     typeof session.subscription === "string"
@@ -114,7 +176,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
       : session.subscription?.id ?? null;
 
   if (subscriptionId) {
-    const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId);
+    const subscription = await retrieveSubscriptionWithPrices(subscriptionId);
+    if (!isProSubscription(subscription)) {
+      return;
+    }
     await persistEntitlement({
       customerId,
       entitlement: mapSubscriptionToEntitlement(subscription),
@@ -122,22 +187,15 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
     });
     return;
   }
-
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  await persistEntitlement({
-    customerId,
-    entitlement: {
-      plan: "pro",
-      status: "active",
-      currentPeriodEnd: nowSeconds + 3600,
-      updatedAt: nowSeconds,
-    },
-    email: sessionEmail,
-  });
 }
 
 async function handleSubscriptionEvent(subscription: Stripe.Subscription): Promise<void> {
-  const customerId = getCustomerId(subscription.customer);
+  const hydratedSubscription = await retrieveSubscriptionWithPrices(subscription.id);
+  if (!isProSubscription(hydratedSubscription)) {
+    return;
+  }
+
+  const customerId = getCustomerId(hydratedSubscription.customer);
   if (!customerId) {
     return;
   }
@@ -145,9 +203,31 @@ async function handleSubscriptionEvent(subscription: Stripe.Subscription): Promi
   const customerEmail = await resolveCustomerEmail(customerId);
   await persistEntitlement({
     customerId,
-    entitlement: mapSubscriptionToEntitlement(subscription),
+    entitlement: mapSubscriptionToEntitlement(hydratedSubscription),
     email: customerEmail,
   });
+}
+
+async function resolveCreditPackIdFromSessionLineItems(sessionId: string): Promise<CreditPackId | null> {
+  const lineItems = await getStripeClient().checkout.sessions.listLineItems(sessionId, {
+    limit: 20,
+    expand: ["data.price"],
+  });
+
+  for (const item of lineItems.data) {
+    const price = item.price;
+    if (!price || typeof price === "string") {
+      continue;
+    }
+
+    const lookupKey = typeof price.lookup_key === "string" ? price.lookup_key.trim() : "";
+    const resolved = resolveCreditPackIdFromLookupKey(lookupKey);
+    if (resolved) {
+      return resolved;
+    }
+  }
+
+  return null;
 }
 
 export async function POST(request: Request) {

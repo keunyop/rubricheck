@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+
 import {
-  getLookupKeyForProCheckoutPlan,
-  resolveProCheckoutPlan,
-} from "../../../src/config/proCheckout";
+  getLookupKeyForCreditPack,
+  normalizeCreditPackId,
+} from "../../../../src/config/creditPacks";
+import {
+  CREDIT_SESSION_COOKIE_NAME,
+  CREDIT_SESSION_TTL_SECONDS,
+  createCreditSessionToken,
+} from "../../../../src/lib/creditSession";
 
 export const runtime = "nodejs";
 
-type CheckoutRequestBody = {
-  plan?: unknown;
-  priceId?: unknown;
+type CreditCheckoutRequestBody = {
+  packId?: unknown;
   email?: unknown;
 };
 
@@ -29,27 +34,29 @@ function getStripeClient(): Stripe {
   return stripeClient;
 }
 
+function normalizeEmail(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as CheckoutRequestBody;
-    const requestedPlan = resolveProCheckoutPlan({
-      plan: body.plan,
-      priceId: body.priceId,
-    });
-    const email =
-      typeof body.email === "string"
-        ? body.email.trim().toLowerCase()
-        : "";
+    const body = (await request.json()) as CreditCheckoutRequestBody;
+    const packId = normalizeCreditPackId(body.packId);
+    const email = normalizeEmail(body.email);
 
-    if (!requestedPlan) {
-      return NextResponse.json({ error: "INVALID_PLAN" }, { status: 400 });
+    if (!packId) {
+      return NextResponse.json({ error: "INVALID_PACK_ID" }, { status: 400 });
     }
 
     if (!email) {
       return NextResponse.json({ error: "MISSING_EMAIL" }, { status: 400 });
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!isValidEmail(email)) {
       return NextResponse.json({ error: "INVALID_EMAIL" }, { status: 400 });
     }
 
@@ -58,7 +65,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "APP_URL_MISSING" }, { status: 500 });
     }
 
-    const lookupKey = getLookupKeyForProCheckoutPlan(requestedPlan);
+    const lookupKey = getLookupKeyForCreditPack(packId);
     const priceResult = await getStripeClient().prices.list({
       lookup_keys: [lookupKey],
       active: true,
@@ -70,13 +77,16 @@ export async function POST(request: Request) {
     }
 
     const session = await getStripeClient().checkout.sessions.create({
-      mode: "subscription",
+      mode: "payment",
       line_items: [{ price: stripePriceId, quantity: 1 }],
       customer_email: email,
+      customer_creation: "always",
       success_url: `${appUrl}/billing/success`,
       cancel_url: `${appUrl}/billing/cancel`,
       metadata: {
-        pro_plan: requestedPlan,
+        purchase_type: "credits",
+        credit_pack_id: packId,
+        credit_pack_lookup_key: lookupKey,
       },
     });
 
@@ -84,13 +94,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "CHECKOUT_SESSION_URL_MISSING" }, { status: 500 });
     }
 
-    return NextResponse.json({ url: session.url, plan: requestedPlan });
+    const response = NextResponse.json({ url: session.url, packId });
+    response.cookies.set({
+      name: CREDIT_SESSION_COOKIE_NAME,
+      value: createCreditSessionToken({ email }),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: CREDIT_SESSION_TTL_SECONDS,
+    });
+
+    return response;
   } catch (error) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "INVALID_JSON" }, { status: 400 });
     }
 
-    console.error("CHECKOUT_SESSION_FAILED", error);
-    return NextResponse.json({ error: "CHECKOUT_SESSION_FAILED" }, { status: 500 });
+    console.error("CREDIT_CHECKOUT_SESSION_FAILED", error);
+    return NextResponse.json({ error: "CREDIT_CHECKOUT_SESSION_FAILED" }, { status: 500 });
   }
 }

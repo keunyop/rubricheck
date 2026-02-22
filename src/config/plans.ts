@@ -1,4 +1,4 @@
-export const FREE_DAILY_LIMIT = 10;
+export const FREE_DAILY_LIMIT = 3;
 export const PLUS_DAILY_LIMIT = 30;
 
 export const PLAN_NAMES = ["free", "plus", "pro", "semester"] as const;

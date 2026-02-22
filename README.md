@@ -120,6 +120,11 @@ OTP_FROM_EMAIL=... # e.g. no-reply@yourdomain.com
 
 Stripe setup note:
 - Configure Pro monthly Price with `lookup_key=pro_monthly`.
+- Configure Pro annual Price with `lookup_key=pro_annual`.
+- Configure one-time Credit Pack Prices with:
+  - `lookup_key=credits_10_v1`
+  - `lookup_key=credits_25_v1`
+  - `lookup_key=credits_60_v1`
 
 ## Redis Keys
 
