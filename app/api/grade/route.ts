@@ -181,9 +181,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode, {
-        detailLevel: feedbackTier === "pro" ? "detailed" : "diagnostic",
-      });
+      const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode);
       const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
       return NextResponse.json(finalEvaluation, { headers: usageHeaders });
     } catch (error) {
