@@ -78,15 +78,13 @@ type RestoreVerifyResponse = {
 type PaywallMode = "restore" | "upgrade";
 type RestoreStep = "email" | "code";
 
-const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "";
+const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
 const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ?? "";
 const NODE_ENV = process.env.NODE_ENV?.trim().toLowerCase() ?? "";
-const IS_PRODUCTION_DEPLOYMENT =
-  NODE_ENV === "production" ||
-  NEXT_PUBLIC_APP_ENV === "production" ||
-  NEXT_PUBLIC_VERCEL_ENV === "production";
-const SHOW_FAKE_GRADE_BUTTON = !IS_PRODUCTION_DEPLOYMENT;
-const SHOW_PRO_FEATURES = true;
+const IS_PRODUCTION_APP_ENV = NEXT_PUBLIC_APP_ENV === "production";
+const IS_PRODUCTION_DEPLOYMENT = NODE_ENV === "production" || NEXT_PUBLIC_VERCEL_ENV === "production";
+const SHOW_FAKE_GRADE_BUTTON = !IS_PRODUCTION_DEPLOYMENT && !IS_PRODUCTION_APP_ENV;
+const SHOW_PRO_FEATURES = !IS_PRODUCTION_APP_ENV;
 
 const FAKE_GRADE_RESULT: GradeResult = {
   title: "Demo Submission",
@@ -1643,12 +1641,18 @@ export default function Home() {
                     const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
                     const rationaleText = item.rationale ?? item.feedback;
                     const evidenceList = item.evidence ?? [];
-                    const detailedBreakdownBullets = item.detailed_breakdown
-                      ? splitDetailedBreakdownBullets(item.detailed_breakdown)
-                      : [];
                     const isDetailedBreakdownLocked = item.detailed_breakdown_locked === true;
+                    const canShowDetailedBreakdown = SHOW_PRO_FEATURES && hasProAccess;
+                    const detailedBreakdownBullets =
+                      canShowDetailedBreakdown && item.detailed_breakdown
+                        ? splitDetailedBreakdownBullets(item.detailed_breakdown)
+                        : [];
+                    const shouldForceHideDetailedBreakdown =
+                      !canShowDetailedBreakdown && Boolean(item.detailed_breakdown);
                     const showDetailedBreakdownLockNotice =
-                      detailedBreakdownBullets.length === 0 && isDetailedBreakdownLocked;
+                      SHOW_PRO_FEATURES &&
+                      !hasProAccess &&
+                      (isDetailedBreakdownLocked || shouldForceHideDetailedBreakdown);
 
                     return (
                       <Fragment key={criteriaKey}>
@@ -1745,12 +1749,18 @@ export default function Home() {
                 const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
                 const rationaleText = item.rationale ?? item.feedback;
                 const evidenceList = item.evidence ?? [];
-                const detailedBreakdownBullets = item.detailed_breakdown
-                  ? splitDetailedBreakdownBullets(item.detailed_breakdown)
-                  : [];
                 const isDetailedBreakdownLocked = item.detailed_breakdown_locked === true;
+                const canShowDetailedBreakdown = SHOW_PRO_FEATURES && hasProAccess;
+                const detailedBreakdownBullets =
+                  canShowDetailedBreakdown && item.detailed_breakdown
+                    ? splitDetailedBreakdownBullets(item.detailed_breakdown)
+                    : [];
+                const shouldForceHideDetailedBreakdown =
+                  !canShowDetailedBreakdown && Boolean(item.detailed_breakdown);
                 const showDetailedBreakdownLockNotice =
-                  detailedBreakdownBullets.length === 0 && isDetailedBreakdownLocked;
+                  SHOW_PRO_FEATURES &&
+                  !hasProAccess &&
+                  (isDetailedBreakdownLocked || shouldForceHideDetailedBreakdown);
 
                 return (
                   <article

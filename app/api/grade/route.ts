@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { evaluateAssignment } from "../../../lib/evaluation";
+import { buildFinalEvaluation, type FeedbackAccessTier } from "../../../lib/gradeFinalization";
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
 import { structureRubric } from "../../../lib/rubricStructuring";
 import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
 import { buildUsageLimitHeaders, checkUsageLimit } from "../../../src/lib/usageLimit";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const STRICT_OVERALL_PENALTY = 3;
 const GradeRequestSchema = z.object({
   mode: GradingModeSchema.default("standard"),
 });
@@ -19,8 +19,6 @@ const JsonGradeRequestSchema = z.object({
 });
 
 type FieldName = "rubric" | "assignment";
-type StructuredRubric = Awaited<ReturnType<typeof structureRubric>>;
-type Evaluation = Awaited<ReturnType<typeof evaluateAssignment>>;
 
 function getUploadedFile(
   formData: FormData,
@@ -91,158 +89,11 @@ async function resolveFieldText(
   }
 }
 
-function normalizeCriterionName(name: string): string {
-  return name
-    .normalize("NFKC")
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()
-    .replace(/\s+/g, " ");
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function clampCriterionRange(
-  estimatedRange: [number, number],
-  maxScore: number,
-): [number, number] {
-  const maxAllowed = Math.max(0, Math.floor(maxScore));
-
-  let low = Math.round(estimatedRange[0]);
-  let high = Math.round(estimatedRange[1]);
-
-  low = Math.max(0, low);
-  high = Math.min(maxAllowed, high);
-  high = Math.max(0, high);
-
-  if (low > high) {
-    low = high;
-  }
-
-  const widthLimit = Math.max(2, Math.round(maxScore * 0.25));
-
-  if (high - low > widthLimit) {
-    const center = Math.round((low + high) / 2);
-    low = Math.max(0, center - Math.round(widthLimit / 2));
-    high = Math.min(maxAllowed, low + widthLimit);
-    high = Math.max(0, high);
-
-    if (low > high) {
-      low = high;
-    }
-  }
-
-  return [low, high];
-}
-
-function buildFinalEvaluation(
-  structuredRubric: StructuredRubric,
-  evaluation: Evaluation,
-  mode: GradingMode,
-) {
-  const rubricCriteria = structuredRubric.criteria;
-  const scoreByName = new Map<string, Evaluation["criteria_scores"][number]>();
-  const rubricNameSet = new Set<string>();
-
-  for (const score of evaluation.criteria_scores) {
-    const key = normalizeCriterionName(score.name);
-    if (!key || scoreByName.has(key)) {
-      throw new Error("EVALUATION_FAILED");
-    }
-    scoreByName.set(key, score);
-  }
-
-  const criteria = rubricCriteria.map((rubricCriterion) => {
-    const key = normalizeCriterionName(rubricCriterion.name);
-    if (!key || rubricNameSet.has(key)) {
-      throw new Error("EVALUATION_FAILED");
-    }
-
-    rubricNameSet.add(key);
-
-    const matchedScore = scoreByName.get(key);
-    if (!matchedScore) {
-      throw new Error("EVALUATION_FAILED");
-    }
-
-    const estimatedRange = clampCriterionRange(
-      matchedScore.estimated_range,
-      rubricCriterion.max_score,
-    );
-    const score = clamp(Math.round(matchedScore.score), 0, Math.max(0, Math.round(rubricCriterion.max_score)));
-    const rationale = matchedScore.rationale;
-    const feedback = matchedScore.feedback;
-    const evidence = matchedScore.evidence?.slice(0, 2);
-
-    if (mode === "strict" && (!evidence || evidence.length < 1 || evidence.length > 2)) {
-      throw new Error("EVALUATION_FAILED");
-    }
-
-    return {
-      name: rubricCriterion.name,
-      max_score: rubricCriterion.max_score,
-      score,
-      rationale,
-      estimated_range: estimatedRange,
-      feedback,
-      ...(evidence ? { evidence } : {}),
-    };
-  });
-
-  if (criteria.length !== evaluation.criteria_scores.length) {
-    throw new Error("EVALUATION_FAILED");
-  }
-
-  const overallRawLow = criteria.reduce((sum, criterion) => sum + criterion.estimated_range[0], 0);
-  const overallRawHigh = criteria.reduce((sum, criterion) => sum + criterion.estimated_range[1], 0);
-  const rubricTotal = rubricCriteria.reduce((sum, criterion) => sum + criterion.max_score, 0);
-
-  if (!Number.isFinite(rubricTotal) || rubricTotal <= 0) {
-    throw new Error("EVALUATION_FAILED");
-  }
-
-  let scaledLow = clamp(Math.round((overallRawLow / rubricTotal) * 100), 0, 100);
-  let scaledHigh = clamp(Math.round((overallRawHigh / rubricTotal) * 100), 0, 100);
-
-  if (mode === "strict") {
-    scaledLow = clamp(scaledLow - STRICT_OVERALL_PENALTY, 0, 100);
-    scaledHigh = clamp(scaledHigh - STRICT_OVERALL_PENALTY, 0, 100);
-  }
-
-  if (scaledLow > scaledHigh) {
-    [scaledLow, scaledHigh] = [scaledHigh, scaledLow];
-  }
-
-  if (scaledHigh - scaledLow > 25) {
-    const center = Math.round((scaledLow + scaledHigh) / 2);
-    scaledLow = Math.max(0, center - 12);
-    scaledHigh = Math.min(100, scaledLow + 25);
-    if (scaledLow > scaledHigh) {
-      scaledLow = scaledHigh;
-    }
-  }
-
-  if (evaluation.top_improvements.length < 3) {
-    throw new Error("EVALUATION_FAILED");
-  }
-
-  const topImprovements = evaluation.top_improvements.slice(0, 3);
-
-  return {
-    title: "Evaluation Summary",
-    overall_range: [scaledLow, scaledHigh] as [number, number],
-    summary: evaluation.summary,
-    top_improvements: topImprovements,
-    criteria,
-  };
-}
-
 export async function POST(request: Request) {
   try {
     const usage = await checkUsageLimit(request, "evaluate");
     const usageHeaders = buildUsageLimitHeaders(usage);
+    const feedbackTier: FeedbackAccessTier = usage.plan === "pro" ? "pro" : "free";
 
     if (!usage.allowed) {
       return NextResponse.json(
@@ -328,8 +179,10 @@ export async function POST(request: Request) {
     }
 
     try {
-      const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode);
-      const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode);
+      const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode, {
+        detailLevel: feedbackTier === "pro" ? "detailed" : "diagnostic",
+      });
+      const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
       return NextResponse.json(finalEvaluation, { headers: usageHeaders });
     } catch (error) {
       console.error("EVALUATION_FAILED", error);
