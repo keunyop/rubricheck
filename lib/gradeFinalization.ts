@@ -29,6 +29,26 @@ export type FinalEvaluation = {
 
 type EvaluationCriterionScore = Evaluation["criteria_scores"][number];
 
+function readDetailedBreakdown(score: EvaluationCriterionScore): string | undefined {
+  const value = (score as { detailed_breakdown?: unknown }).detailed_breakdown;
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+}
+
+function readExampleRevisions(score: EvaluationCriterionScore): string[] | undefined {
+  const value = (score as { example_revisions?: unknown }).example_revisions;
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const normalized = value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .slice(0, 2);
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 function normalizeCriterionName(name: string): string {
   return name
     .normalize("NFKC")
@@ -187,10 +207,13 @@ function buildStandardCriteria(
       continue;
     }
 
+    const detailedBreakdown = readDetailedBreakdown(matchedScore);
+    const exampleRevisions = readExampleRevisions(matchedScore);
+
     criteria.push({
       ...baseCriterion,
-      ...(matchedScore.detailed_breakdown ? { detailed_breakdown: matchedScore.detailed_breakdown } : {}),
-      ...(matchedScore.example_revisions ? { example_revisions: matchedScore.example_revisions } : {}),
+      ...(detailedBreakdown ? { detailed_breakdown: detailedBreakdown } : {}),
+      ...(exampleRevisions ? { example_revisions: exampleRevisions } : {}),
     });
   }
 
@@ -246,10 +269,13 @@ function buildStrictCriteria(
       continue;
     }
 
+    const detailedBreakdown = readDetailedBreakdown(matchedScore);
+    const exampleRevisions = readExampleRevisions(matchedScore);
+
     criteria.push({
       ...baseCriterion,
-      ...(matchedScore.detailed_breakdown ? { detailed_breakdown: matchedScore.detailed_breakdown } : {}),
-      ...(matchedScore.example_revisions ? { example_revisions: matchedScore.example_revisions } : {}),
+      ...(detailedBreakdown ? { detailed_breakdown: detailedBreakdown } : {}),
+      ...(exampleRevisions ? { example_revisions: exampleRevisions } : {}),
     });
   }
 
