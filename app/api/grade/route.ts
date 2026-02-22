@@ -7,6 +7,7 @@ import { FileParseValidationError, parseFile } from "../../../lib/parse";
 import { structureRubric } from "../../../lib/rubricStructuring";
 import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
 import { buildUsageLimitHeaders, checkUsageLimit } from "../../../src/lib/usageLimit";
+import { getPlanFromEntitlementCookie } from "../../../src/lib/entitlementSession";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const GradeRequestSchema = z.object({
@@ -93,7 +94,8 @@ export async function POST(request: Request) {
   try {
     const usage = await checkUsageLimit(request, "evaluate");
     const usageHeaders = buildUsageLimitHeaders(usage);
-    const feedbackTier: FeedbackAccessTier = usage.plan === "pro" ? "pro" : "free";
+    const feedbackTier: FeedbackAccessTier =
+      getPlanFromEntitlementCookie(request) === "pro" ? "pro" : "free";
 
     if (!usage.allowed) {
       return NextResponse.json(
