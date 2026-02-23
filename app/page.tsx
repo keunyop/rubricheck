@@ -117,6 +117,37 @@ const IS_PRODUCTION_DEPLOYMENT = NODE_ENV === "production" || NEXT_PUBLIC_VERCEL
 const SHOW_FAKE_GRADE_BUTTON = !IS_PRODUCTION_DEPLOYMENT && !IS_PRODUCTION_APP_ENV;
 const SHOW_PRO_FEATURES = !IS_PRODUCTION_APP_ENV;
 
+const LEGAL_POLICIES = [
+  {
+    title: "Privacy Policy",
+    paragraphs: [
+      "RubriCheck collects rubric text, assignment drafts, and account-related metadata to operate evaluation features, manage billing, and maintain service reliability.",
+      "We do not sell your personal data. Access to submitted content is limited to authorized systems and personnel for security, support, and quality improvement purposes.",
+    ],
+  },
+  {
+    title: "Terms of Service",
+    paragraphs: [
+      "By using RubriCheck, you agree to use the service responsibly and in compliance with applicable institutional rules and local laws.",
+      "RubriCheck provides AI-assisted educational guidance and does not guarantee grades, admissions outcomes, or official institutional decisions.",
+    ],
+  },
+  {
+    title: "AI Disclaimer",
+    paragraphs: [
+      "This is an AI-generated estimate, not official grading.",
+      "Always verify feedback with your rubric, assignment instructions, and instructor guidance before making final submission decisions.",
+    ],
+  },
+  {
+    title: "Data Retention Policy",
+    paragraphs: [
+      "Evaluation inputs and generated feedback are retained for up to 30 days to support access, abuse prevention, and troubleshooting.",
+      "Billing and transaction records are retained for the period required by accounting and legal obligations. Eligible data deletion requests can be submitted through support.",
+    ],
+  },
+] as const;
+
 const FAKE_GRADE_RESULT: GradeResult = {
   title: "Demo Submission",
   overall_range: [84, 90],
@@ -2451,34 +2482,25 @@ export default function Home() {
           <p className="mt-2 text-xs leading-5 text-slate-600 md:text-sm">
             This is an AI-generated estimate, not official grading.
           </p>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
-            <li>
-              <a href="/legal/privacy" className="underline decoration-slate-300 underline-offset-4 hover:text-slate-900">
-                Privacy Policy
-              </a>
-            </li>
-            <li>
-              <a href="/legal/terms" className="underline decoration-slate-300 underline-offset-4 hover:text-slate-900">
-                Terms of Service
-              </a>
-            </li>
-            <li>
-              <a
-                href="/legal/ai-disclaimer"
-                className="underline decoration-slate-300 underline-offset-4 hover:text-slate-900"
+          <div className="mt-3 space-y-2">
+            {LEGAL_POLICIES.map((policy) => (
+              <details
+                key={policy.title}
+                className="group rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
               >
-                AI Disclaimer
-              </a>
-            </li>
-            <li>
-              <a
-                href="/legal/data-retention"
-                className="underline decoration-slate-300 underline-offset-4 hover:text-slate-900"
-              >
-                Data Retention Policy
-              </a>
-            </li>
-          </ul>
+                <summary className="cursor-pointer list-none text-sm font-medium text-slate-800 marker:hidden transition group-open:text-slate-900">
+                  {policy.title}
+                </summary>
+                <div className="mt-2 space-y-2 border-t border-slate-200 pt-2">
+                  {policy.paragraphs.map((paragraph) => (
+                    <p key={paragraph} className="text-sm leading-6 text-slate-700">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
         </section>
 
         {feedbackUrl ? (
