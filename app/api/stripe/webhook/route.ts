@@ -60,12 +60,27 @@ function getCustomerId(customer: string | Stripe.Customer | Stripe.DeletedCustom
   return typeof customer.id === "string" && customer.id.trim() ? customer.id : null;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
 function getEventTraceFields(event: Stripe.Event): {
   customerId: string | null;
   subscriptionId: string | null;
   sessionId: string | null;
 } {
-  const payload = event.data.object as Record<string, unknown>;
+  const payload = asRecord(event.data.object as unknown);
+  if (!payload) {
+    return {
+      customerId: null,
+      subscriptionId: null,
+      sessionId: null,
+    };
+  }
   const payloadCustomer = payload.customer;
   const customerId = getCustomerId(
     typeof payloadCustomer === "string" || (payloadCustomer && typeof payloadCustomer === "object")
