@@ -65,17 +65,28 @@ function getEventTraceFields(event: Stripe.Event): {
   subscriptionId: string | null;
   sessionId: string | null;
 } {
-  const payload = event.data.object as Partial<Stripe.Checkout.Session & Stripe.Subscription>;
-  const customerId = getCustomerId(payload.customer ?? null);
+  const payload = event.data.object as Record<string, unknown>;
+  const payloadCustomer = payload.customer;
+  const customerId = getCustomerId(
+    typeof payloadCustomer === "string" || (payloadCustomer && typeof payloadCustomer === "object")
+      ? (payloadCustomer as string | Stripe.Customer | Stripe.DeletedCustomer)
+      : null,
+  );
+
+  const payloadSubscription = payload.subscription;
+  const payloadId = typeof payload.id === "string" ? payload.id : null;
   const subscriptionId =
-    typeof payload.subscription === "string"
-      ? payload.subscription
-      : payload.subscription && typeof payload.subscription === "object" && "id" in payload.subscription
-        ? String(payload.subscription.id)
-        : typeof payload.id === "string" && event.type.startsWith("customer.subscription")
-          ? payload.id
+    typeof payloadSubscription === "string"
+      ? payloadSubscription
+      : payloadSubscription &&
+          typeof payloadSubscription === "object" &&
+          "id" in payloadSubscription &&
+          typeof payloadSubscription.id === "string"
+        ? payloadSubscription.id
+        : payloadId && event.type.startsWith("customer.subscription")
+          ? payloadId
           : null;
-  const sessionId = typeof payload.id === "string" && event.type.startsWith("checkout.session") ? payload.id : null;
+  const sessionId = payloadId && event.type.startsWith("checkout.session") ? payloadId : null;
 
   return { customerId, subscriptionId, sessionId };
 }
