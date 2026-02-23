@@ -2446,8 +2446,43 @@ export default function Home() {
           </div>
         ) : null}
 
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-sm md:p-6">
+          <h2 className="text-base font-semibold text-slate-900">Legal &amp; Trust Layer</h2>
+          <p className="mt-2 text-xs leading-5 text-slate-600 md:text-sm">
+            This is an AI-generated estimate, not official grading.
+          </p>
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
+            <li>
+              <a href="/legal/privacy" className="underline decoration-slate-300 underline-offset-4 hover:text-slate-900">
+                Privacy Policy
+              </a>
+            </li>
+            <li>
+              <a href="/legal/terms" className="underline decoration-slate-300 underline-offset-4 hover:text-slate-900">
+                Terms of Service
+              </a>
+            </li>
+            <li>
+              <a
+                href="/legal/ai-disclaimer"
+                className="underline decoration-slate-300 underline-offset-4 hover:text-slate-900"
+              >
+                AI Disclaimer
+              </a>
+            </li>
+            <li>
+              <a
+                href="/legal/data-retention"
+                className="underline decoration-slate-300 underline-offset-4 hover:text-slate-900"
+              >
+                Data Retention Policy
+              </a>
+            </li>
+          </ul>
+        </section>
+
         {feedbackUrl ? (
-          <footer className="pt-1 text-center text-xs text-slate-500">
+          <footer className="pt-3 text-center text-xs text-slate-500">
             <a
               href={feedbackUrl}
               target="_blank"
@@ -2469,4 +2504,3 @@ export default function Home() {
     </main>
   );
 }
-
