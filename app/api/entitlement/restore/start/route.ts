@@ -1,13 +1,10 @@
-import { NextResponse } from "next/server";
-
 import { isValidEmail, normalizeEmailInput } from "../../../../../src/lib/entitlementRestore";
 import { startRestoreOtp } from "../../../../../src/lib/entitlementRestoreOtp";
+import { createRequestContext, errorResponse, successJson } from "../../../../../src/lib/apiError";
 
 export const runtime = "nodejs";
 
-type RestoreStartRequestBody = {
-  email?: unknown;
-};
+type RestoreStartRequestBody = { email?: unknown };
 
 const GENERIC_START_RESPONSE = {
   ok: true,
@@ -15,25 +12,26 @@ const GENERIC_START_RESPONSE = {
 };
 
 export async function POST(request: Request) {
+  const context = createRequestContext(request);
   let payload: RestoreStartRequestBody;
 
   try {
     payload = (await request.json()) as RestoreStartRequestBody;
   } catch {
-    return NextResponse.json({ error: "INVALID_JSON" }, { status: 400 });
+    return errorResponse(context, 400, "INVALID_JSON", "Request body must be valid JSON.");
   }
 
   const email = normalizeEmailInput(payload.email);
   if (!isValidEmail(email)) {
-    return NextResponse.json({ error: "INVALID_EMAIL" }, { status: 400 });
+    return errorResponse(context, 400, "INVALID_EMAIL", "Please enter a valid email.");
   }
 
   try {
     await startRestoreOtp(request, email);
-    return NextResponse.json(GENERIC_START_RESPONSE);
+    return successJson(context, GENERIC_START_RESPONSE);
   } catch (error) {
     if (error instanceof Error && error.message === "RESTORE_OTP_RATE_LIMITED") {
-      return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
+      return errorResponse(context, 429, "RATE_LIMITED", "Too many requests. Please wait and try again.");
     }
 
     if (
@@ -43,10 +41,10 @@ export async function POST(request: Request) {
         error.message === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED" ||
         error.message === "OTP_EMAIL_SEND_FAILED")
     ) {
-      return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
+      return errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Restore is temporarily unavailable. Please try again shortly.");
     }
 
-    console.error("ENTITLEMENT_RESTORE_START_FAILED", error);
-    return NextResponse.json({ error: "ENTITLEMENT_RESTORE_START_FAILED" }, { status: 500 });
+    console.error("ENTITLEMENT_RESTORE_START_FAILED", { requestId: context.requestId, error });
+    return errorResponse(context, 500, "ENTITLEMENT_RESTORE_START_FAILED", "Unable to send a verification code right now.");
   }
 }

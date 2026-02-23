@@ -15,6 +15,11 @@ import {
   resolveCreditPackIdFromLookupKey,
   type CreditPackId,
 } from "../../../../src/config/creditPacks";
+import {
+  markWebhookEventProcessed,
+  persistWebhookFailure,
+} from "../../../../src/lib/stripeWebhookEvents";
+import { createRequestContext, errorResponse } from "../../../../src/lib/apiError";
 
 export const runtime = "nodejs";
 
@@ -53,6 +58,26 @@ function getCustomerId(customer: string | Stripe.Customer | Stripe.DeletedCustom
   }
 
   return typeof customer.id === "string" && customer.id.trim() ? customer.id : null;
+}
+
+function getEventTraceFields(event: Stripe.Event): {
+  customerId: string | null;
+  subscriptionId: string | null;
+  sessionId: string | null;
+} {
+  const payload = event.data.object as Partial<Stripe.Checkout.Session & Stripe.Subscription>;
+  const customerId = getCustomerId(payload.customer ?? null);
+  const subscriptionId =
+    typeof payload.subscription === "string"
+      ? payload.subscription
+      : payload.subscription && typeof payload.subscription === "object" && "id" in payload.subscription
+        ? String(payload.subscription.id)
+        : typeof payload.id === "string" && event.type.startsWith("customer.subscription")
+          ? payload.id
+          : null;
+  const sessionId = typeof payload.id === "string" && event.type.startsWith("checkout.session") ? payload.id : null;
+
+  return { customerId, subscriptionId, sessionId };
 }
 
 async function resolveCustomerEmail(customerId: string): Promise<string | null> {
@@ -231,9 +256,10 @@ async function resolveCreditPackIdFromSessionLineItems(sessionId: string): Promi
 }
 
 export async function POST(request: Request) {
+  const context = createRequestContext(request);
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
-    return NextResponse.json({ error: "STRIPE_SIGNATURE_MISSING" }, { status: 400 });
+    return errorResponse(context, 400, "STRIPE_SIGNATURE_MISSING", "Missing Stripe signature header.");
   }
 
   const rawBody = await request.text();
@@ -242,8 +268,28 @@ export async function POST(request: Request) {
   try {
     event = getStripeClient().webhooks.constructEvent(rawBody, signature, getWebhookSecret());
   } catch (error) {
-    console.error("STRIPE_WEBHOOK_SIGNATURE_INVALID", error);
-    return NextResponse.json({ error: "STRIPE_SIGNATURE_INVALID" }, { status: 400 });
+    console.error("STRIPE_WEBHOOK_SIGNATURE_INVALID", { requestId: context.requestId, error });
+    return errorResponse(context, 400, "STRIPE_SIGNATURE_INVALID", "Invalid Stripe webhook signature.");
+  }
+
+  const traceFields = getEventTraceFields(event);
+  console.info("STRIPE_WEBHOOK_RECEIVED", {
+    requestId: context.requestId,
+    eventId: event.id,
+    eventType: event.type,
+    customerId: traceFields.customerId,
+    subscriptionId: traceFields.subscriptionId,
+    sessionId: traceFields.sessionId,
+  });
+
+  const firstProcess = await markWebhookEventProcessed(event.id);
+  if (!firstProcess) {
+    console.info("STRIPE_WEBHOOK_DUPLICATE_IGNORED", {
+      requestId: context.requestId,
+      eventId: event.id,
+      eventType: event.type,
+    });
+    return NextResponse.json({ received: true, duplicate: true }, { headers: { "x-request-id": context.requestId } });
   }
 
   try {
@@ -262,9 +308,28 @@ export async function POST(request: Request) {
         break;
     }
 
-    return NextResponse.json({ received: true });
+    return NextResponse.json({ received: true }, { headers: { "x-request-id": context.requestId } });
   } catch (error) {
-    console.error("STRIPE_WEBHOOK_PROCESSING_FAILED", { eventType: event.type, error });
-    return NextResponse.json({ error: "STRIPE_WEBHOOK_PROCESSING_FAILED" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown webhook error";
+    await persistWebhookFailure({
+      eventId: event.id,
+      eventType: event.type,
+      customerId: traceFields.customerId,
+      subscriptionId: traceFields.subscriptionId,
+      sessionId: traceFields.sessionId,
+      requestId: context.requestId,
+      errorMessage: message,
+    });
+
+    console.error("STRIPE_WEBHOOK_PROCESSING_FAILED", {
+      requestId: context.requestId,
+      eventId: event.id,
+      eventType: event.type,
+      customerId: traceFields.customerId,
+      subscriptionId: traceFields.subscriptionId,
+      sessionId: traceFields.sessionId,
+      error,
+    });
+    return errorResponse(context, 500, "STRIPE_WEBHOOK_PROCESSING_FAILED", "Webhook processing failed. See logs with requestId and eventId.");
   }
 }

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { evaluateAssignment } from "../../../lib/evaluation";
 import { RubricSchema, type Rubric } from "../../../lib/schema";
 import { buildUsageLimitHeaders, checkUsageLimit } from "../../../src/lib/usageLimit";
+import { createRequestContext, errorResponse } from "../../../src/lib/apiError";
 
 const MAX_ASSIGNMENT_TEXT_LENGTH = 200_000;
 const MAX_PATCH_EXCERPT_LENGTH = 6_000;
@@ -314,14 +315,18 @@ function buildExplanation(params: {
 }
 
 export async function POST(request: Request) {
+  const context = createRequestContext(request);
   const usage = await checkUsageLimit(request, "simulate");
   const usageHeaders = buildUsageLimitHeaders(usage);
 
+  if (usage.degradedCode === "REDIS_UNAVAILABLE") {
+    usageHeaders["x-rubricheck-warning"] = "REDIS_UNAVAILABLE";
+  }
+
   if (!usage.allowed) {
-    return NextResponse.json(
-      { error: usage.errorMessage ?? `Free daily limit reached (${usage.limit}). Upgrade to continue.` },
-      { status: 429, headers: usageHeaders },
-    );
+    const status = usage.errorCode === "REDIS_UNAVAILABLE" ? 503 : 429;
+    const code = usage.errorCode ?? (status === 429 ? "RATE_LIMITED" : "REDIS_UNAVAILABLE");
+    return errorResponse(context, status, code, usage.errorMessage ?? "Request unavailable right now.", undefined, usageHeaders);
   }
 
   let payload: unknown;
@@ -329,18 +334,12 @@ export async function POST(request: Request) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json({ error: "INVALID_JSON" }, { status: 400, headers: usageHeaders });
+    return errorResponse(context, 400, "INVALID_INPUT", "Request body must be valid JSON.", undefined, usageHeaders);
   }
 
   const parsedInput = SimulateRequestSchema.safeParse(payload);
   if (!parsedInput.success) {
-    return NextResponse.json(
-      {
-        error: "INVALID_INPUT",
-        details: parsedInput.error.flatten(),
-      },
-      { status: 400, headers: usageHeaders },
-    );
+    return errorResponse(context, 400, "INVALID_INPUT", "Please provide valid simulation inputs.", parsedInput.error.flatten(), usageHeaders);
   }
 
   const rubric = parsedInput.data.structuredRubric;
@@ -348,7 +347,7 @@ export async function POST(request: Request) {
   const criterionIndex = resolveTargetCriterionIndex(parsedInput.data.criteriaId, rubric, originalRows);
 
   if (criterionIndex === null || !rubric.criteria[criterionIndex]) {
-    return NextResponse.json({ error: "CRITERIA_NOT_FOUND" }, { status: 400, headers: usageHeaders });
+    return errorResponse(context, 400, "CRITERIA_NOT_FOUND", "Criterion was not found in rubric.", undefined, usageHeaders);
   }
 
   const targetCriterion = rubric.criteria[criterionIndex];
@@ -360,10 +359,7 @@ export async function POST(request: Request) {
   );
 
   if (!beforeRangeRaw) {
-    return NextResponse.json(
-      { error: "CRITERIA_BEFORE_RANGE_NOT_FOUND" },
-      { status: 400, headers: usageHeaders },
-    );
+    return errorResponse(context, 400, "CRITERIA_BEFORE_RANGE_NOT_FOUND", "Could not resolve baseline criterion range.", undefined, usageHeaders);
   }
 
   const patchResult = applyPatchToAssignment(parsedInput.data.assignmentText, parsedInput.data.proposedPatch);
@@ -383,10 +379,7 @@ export async function POST(request: Request) {
       : patchedEvaluation.criteria_scores[criterionIndex]?.estimated_range;
 
     if (!afterRangeRaw) {
-      return NextResponse.json(
-        { error: "SIMULATION_RESULT_INCOMPLETE" },
-        { status: 502, headers: usageHeaders },
-      );
+      return errorResponse(context, 503, "SIMULATION_RESULT_INCOMPLETE", "Simulation result was incomplete. Please retry.", undefined, usageHeaders);
     }
 
     const totalRubricMaxScore = rubric.criteria.reduce((sum, criterion) => sum + criterion.max_score, 0);
@@ -404,6 +397,8 @@ export async function POST(request: Request) {
       afterRange[1] - beforeRange[1],
     ];
 
+    const headers = new Headers(usageHeaders);
+    headers.set("x-request-id", context.requestId);
     return NextResponse.json(
       {
         criteriaId: parsedInput.data.criteriaId,
@@ -417,16 +412,20 @@ export async function POST(request: Request) {
           allowedPositiveIncrease: cappedAfter.allowedPositiveIncrease,
         }),
       },
-      { headers: usageHeaders },
+      { headers },
     );
   } catch (error) {
     if (
       error instanceof Error &&
       (error.message === "OPENAI_API_KEY_MISSING" || error.message === "EVALUATION_MODEL_MISSING")
     ) {
-      return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503, headers: usageHeaders });
+      return errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Simulation service is unavailable right now.", undefined, usageHeaders);
     }
 
-    return NextResponse.json({ error: "SIMULATION_FAILED" }, { status: 502, headers: usageHeaders });
+    if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
+      return errorResponse(context, 504, "OPENAI_TIMEOUT", "Our AI reviewer is taking longer than usual. Please retry in a moment.", undefined, usageHeaders);
+    }
+
+    return errorResponse(context, 503, "SIMULATION_FAILED", "Simulation failed. Please retry.", undefined, usageHeaders);
   }
 }

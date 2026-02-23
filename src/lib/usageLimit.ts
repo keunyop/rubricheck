@@ -24,7 +24,7 @@ type UserPlanPayload = {
 
 type FeatureLimitMap = Record<UsageFeature, number | null>;
 
-export type UsageErrorCode = typeof FREE_LIMIT_REACHED_CODE;
+export type UsageErrorCode = typeof FREE_LIMIT_REACHED_CODE | "REDIS_UNAVAILABLE";
 
 export type UsageCheckResult = {
   allowed: boolean;
@@ -37,10 +37,31 @@ export type UsageCheckResult = {
   plan?: PlanName;
   billingSource?: "free" | "pro" | "credit";
   creditReservation?: CreditReservation;
+  degradedCode?: "REDIS_UNAVAILABLE";
 };
 
 const WINDOW_SECONDS = 86400;
 export const FREE_EVALUATE_DAILY_LIMIT = 3;
+
+const REDIS_FALLBACK_LIMIT = 2;
+const fallbackCounters = new Map<string, number>();
+
+export function checkRedisFallbackAllowance(request: Request, feature: UsageFeature): {
+  allowed: boolean;
+  limit: number;
+  remaining: number;
+} {
+  const key = `rubricheck:fallback:${getRequestIp(request)}:${getUtcDateKey()}:${feature}`;
+  const next = (fallbackCounters.get(key) ?? 0) + 1;
+  fallbackCounters.set(key, next);
+
+  const allowed = next <= REDIS_FALLBACK_LIMIT;
+  return {
+    allowed,
+    limit: REDIS_FALLBACK_LIMIT,
+    remaining: Math.max(0, REDIS_FALLBACK_LIMIT - next),
+  };
+}
 
 const PLAN_FEATURE_LIMITS: Record<PlanName, FeatureLimitMap> = {
   free: {
@@ -173,27 +194,43 @@ async function checkPlanLimitedFeature(
     throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
   }
 
-  const redis = getRedisClient();
-  const ip = getRequestIp(request);
-  const key = `rubricheck:usage:${ip}:${getUtcDateKey()}:${feature}`;
+  try {
+    const redis = getRedisClient();
+    const ip = getRequestIp(request);
+    const key = `rubricheck:usage:${ip}:${getUtcDateKey()}:${feature}`;
 
-  const count = await redis.incr(key);
+    const count = await redis.incr(key);
 
-  if (count === 1) {
-    await redis.expire(key, WINDOW_SECONDS);
+    if (count === 1) {
+      await redis.expire(key, WINDOW_SECONDS);
+    }
+
+    const allowed = count <= limit;
+    const remaining = Math.max(0, limit - count);
+
+    return {
+      allowed,
+      limit,
+      remaining,
+      plan,
+      billingSource: plan === "free" ? "free" : "pro",
+      errorMessage: allowed ? undefined : getFreePlanLimitMessage(limit),
+    };
+  } catch {
+    const fallback = checkRedisFallbackAllowance(request, feature);
+    return {
+      allowed: fallback.allowed,
+      limit: fallback.limit,
+      remaining: fallback.remaining,
+      plan,
+      billingSource: plan === "free" ? "free" : "pro",
+      degradedCode: "REDIS_UNAVAILABLE",
+      errorCode: fallback.allowed ? undefined : "REDIS_UNAVAILABLE",
+      errorMessage: fallback.allowed
+        ? "Usage checks are running in limited mode while we reconnect."
+        : "Service is busy verifying usage right now. Please retry shortly.",
+    };
   }
-
-  const allowed = count <= limit;
-  const remaining = Math.max(0, limit - count);
-
-  return {
-    allowed,
-    limit,
-    remaining,
-    plan,
-    billingSource: plan === "free" ? "free" : "pro",
-    errorMessage: allowed ? undefined : getFreePlanLimitMessage(limit),
-  };
 }
 
 async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageCheckResult> {
@@ -212,10 +249,11 @@ async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageChec
     throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
   }
 
-  const redis = getRedisClient();
-  const ip = getRequestIp(request);
-  const freeKey = `rubricheck:usage:${ip}:${getUtcDateKey()}:evaluate_free`;
-  const freeCount = await redis.incr(freeKey);
+  try {
+    const redis = getRedisClient();
+    const ip = getRequestIp(request);
+    const freeKey = `rubricheck:usage:${ip}:${getUtcDateKey()}:evaluate_free`;
+    const freeCount = await redis.incr(freeKey);
 
   if (freeCount === 1) {
     await redis.expire(freeKey, WINDOW_SECONDS);
@@ -283,6 +321,22 @@ async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageChec
     errorMessage: getFreePlanLimitMessage(FREE_EVALUATE_DAILY_LIMIT),
     creditsBalance: creditReservation.balanceAfter,
   };
+  } catch {
+    const fallback = checkRedisFallbackAllowance(request, "evaluate");
+    return {
+      allowed: fallback.allowed,
+      limit: fallback.limit,
+      remaining: fallback.remaining,
+      plan: "free",
+      billingSource: "free",
+      creditsBalance: null,
+      degradedCode: "REDIS_UNAVAILABLE",
+      errorCode: fallback.allowed ? undefined : "REDIS_UNAVAILABLE",
+      errorMessage: fallback.allowed
+        ? "Usage checks are running in limited mode while we reconnect."
+        : "Service is busy verifying usage right now. Please retry shortly.",
+    };
+  }
 }
 
 export function buildUsageLimitHeaders(result: Pick<UsageCheckResult, "limit" | "remaining" | "creditsBalance">): Record<string, string> {

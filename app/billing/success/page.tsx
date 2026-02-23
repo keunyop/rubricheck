@@ -34,6 +34,7 @@ export default function BillingSuccessPage() {
   const [isActivated, setIsActivated] = useState(false);
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
+  const [isActivating, setIsActivating] = useState(false);
 
   async function handleSendCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,10 +117,12 @@ export default function BillingSuccessPage() {
 
       if (data.ok === true && data.plan === "pro" && data.status === "active") {
         setIsActivated(true);
+        setIsActivating(false);
         return;
       }
 
-      setError("No active Pro subscription was found for this email.");
+      setIsActivating(true);
+      setError("Payment received—activating your Pro access. Use Refresh or Restore Pro again in a moment.");
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_VERIFY_FAILED";
       if (code === "INVALID_CODE") {
@@ -210,6 +213,12 @@ export default function BillingSuccessPage() {
             {isActivated ? (
               <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
                 Pro restored on this device.
+              </p>
+            ) : null}
+
+            {isActivating ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                Payment received—activating. If this takes longer than expected, tap Verify &amp; Restore Pro again.
               </p>
             ) : null}
 

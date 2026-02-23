@@ -8,6 +8,8 @@ if (!apiKey) {
 
 const client = new OpenAI({ apiKey });
 
+const OPENAI_TIMEOUT_MS = Number.parseInt(process.env.OPENAI_TIMEOUT_MS ?? "30000", 10);
+
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord | null {
@@ -130,19 +132,38 @@ async function callJsonModel(
     throw new Error(`${modelEnvKey}_MISSING`);
   }
 
-  const response = await client.responses.create({
-    model,
-    input: [
-      {
-        role: "system",
-        content: options?.systemInstruction ?? DEFAULT_JSON_SYSTEM_INSTRUCTION,
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-  });
+  const timeoutMs = Number.isFinite(OPENAI_TIMEOUT_MS) ? Math.max(25_000, Math.min(35_000, OPENAI_TIMEOUT_MS)) : 30_000;
+  const abortController = new AbortController();
+  const timeoutHandle = setTimeout(() => {
+    abortController.abort("OPENAI_TIMEOUT");
+  }, timeoutMs);
+
+  let response: unknown;
+  try {
+    response = await client.responses.create({
+      model,
+      input: [
+        {
+          role: "system",
+          content: options?.systemInstruction ?? DEFAULT_JSON_SYSTEM_INSTRUCTION,
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    }, {
+      signal: abortController.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && (error.name === "AbortError" || error.message.includes("OPENAI_TIMEOUT"))) {
+      throw new Error("OPENAI_TIMEOUT");
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
 
   return parseModelJsonFromResponse(response);
 }
