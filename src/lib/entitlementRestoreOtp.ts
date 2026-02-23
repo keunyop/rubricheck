@@ -185,7 +185,7 @@ async function sendOtpEmail(email: string, code: string): Promise<void> {
   }
 
   if (process.env.NODE_ENV !== "production") {
-    console.info("RESTORE_OTP_DEV_CODE", { email, code });
+    console.info("RESTORE_OTP_DEV_SEND", { email });
     return;
   }
 
