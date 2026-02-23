@@ -159,3 +159,18 @@ export function getPlanFromEntitlementCookie(request: Request): PlanName | null 
     return null;
   }
 }
+
+export function getEntitlementEmailFromCookie(request: Request): string | null {
+  const cookies = parseCookieHeader(request.headers.get("cookie"));
+  const token = cookies[ENTITLEMENT_SESSION_COOKIE_NAME];
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const payload = verifyEntitlementSessionToken(token);
+    return payload?.email ?? null;
+  } catch {
+    return null;
+  }
+}

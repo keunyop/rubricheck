@@ -4,9 +4,12 @@ import { z } from "zod";
 import { evaluateAssignment } from "../../../lib/evaluation";
 import { buildFinalEvaluation, type FeedbackAccessTier } from "../../../lib/gradeFinalization";
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
-import { structureRubric } from "../../../lib/rubricStructuring";
+import { hashNormalizedEmail, structureRubric } from "../../../lib/rubricStructuring";
 import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
 import { createRequestContext, errorResponse } from "../../../src/lib/apiError";
+import { getCreditEmailFromCookie } from "../../../src/lib/creditSession";
+import { resolveCreditStorageTarget } from "../../../src/lib/credits";
+import { getEntitlementEmailFromCookie } from "../../../src/lib/entitlementSession";
 import { shouldRefundReservedEvaluateCredit } from "../../../src/lib/evaluationCreditSettlement";
 import { buildFreeLimitReachedPayload } from "../../../src/lib/evaluateLimitPayload";
 import {
@@ -72,6 +75,43 @@ async function resolveFieldText(field: FieldName, textValue: string | null, file
 
     throw error;
   }
+}
+
+function readCustomerIdFromRequest(request: Request): string | null {
+  const headerValue = request.headers.get("x-stripe-customer-id")?.trim() ?? "";
+  return headerValue ? headerValue : null;
+}
+
+async function resolveRubricCacheIdentity(
+  request: Request,
+): Promise<{ userIdType: "customer" | "emailhash"; userIdValue: string } | null> {
+  const customerIdFromRequest = readCustomerIdFromRequest(request);
+  if (customerIdFromRequest) {
+    return {
+      userIdType: "customer",
+      userIdValue: customerIdFromRequest,
+    };
+  }
+
+  const entitlementEmail = getEntitlementEmailFromCookie(request);
+  const creditEmail = getCreditEmailFromCookie(request);
+  const email = entitlementEmail ?? creditEmail;
+  if (!email) {
+    return null;
+  }
+
+  const target = await resolveCreditStorageTarget({ email });
+  if (target?.type === "customer") {
+    return {
+      userIdType: "customer",
+      userIdValue: target.customerId,
+    };
+  }
+
+  return {
+    userIdType: "emailhash",
+    userIdValue: hashNormalizedEmail(email),
+  };
 }
 
 export async function POST(request: Request) {
@@ -148,7 +188,11 @@ export async function POST(request: Request) {
 
     let structuredRubric;
     try {
-      structuredRubric = await structureRubric(rubricText);
+      const cacheIdentity = await resolveRubricCacheIdentity(request);
+      structuredRubric = await structureRubric(rubricText, {
+        cacheIdentity,
+        requestId: context.requestId,
+      });
     } catch (error) {
       console.error("RUBRIC_STRUCTURE_FAILED", { requestId: context.requestId, error });
       return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.");
