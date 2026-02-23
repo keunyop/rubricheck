@@ -11,6 +11,7 @@ import {
   createEntitlementSessionToken,
 } from "../../../../../src/lib/entitlementSession";
 import { verifyRestoreOtp } from "../../../../../src/lib/entitlementRestoreOtp";
+import { createRequestContext, errorResponse } from "../../../../../src/lib/apiError";
 
 export const runtime = "nodejs";
 
@@ -24,29 +25,30 @@ function normalizeOtpCode(value: unknown): string {
 }
 
 export async function POST(request: Request) {
+  const context = createRequestContext(request);
   let payload: RestoreVerifyRequestBody;
 
   try {
     payload = (await request.json()) as RestoreVerifyRequestBody;
   } catch {
-    return NextResponse.json({ error: "INVALID_JSON" }, { status: 400 });
+    return errorResponse(context, 400, "INVALID_JSON", "Request body must be valid JSON.");
   }
 
   const email = normalizeEmailInput(payload.email);
   const code = normalizeOtpCode(payload.code);
 
   if (!isValidEmail(email)) {
-    return NextResponse.json({ error: "INVALID_EMAIL" }, { status: 400 });
+    return errorResponse(context, 400, "INVALID_EMAIL", "Please enter a valid email.");
   }
 
   if (!/^\d{6}$/.test(code)) {
-    return NextResponse.json({ error: "INVALID_CODE" }, { status: 400 });
+    return errorResponse(context, 400, "INVALID_CODE", "Enter a valid 6-digit code.");
   }
 
   try {
     const isOtpValid = await verifyRestoreOtp(request, email, code);
     if (!isOtpValid) {
-      return NextResponse.json({ error: "INVALID_CODE" }, { status: 400 });
+      return errorResponse(context, 400, "INVALID_CODE", "Invalid or expired code.");
     }
 
     const resolved = await resolveActiveEntitlementByVerifiedEmail(email);
@@ -56,16 +58,19 @@ export async function POST(request: Request) {
           ok: false,
           status: "not_active",
         },
-        { status: 200 },
+        { headers: { "x-request-id": context.requestId } },
       );
     }
 
     const token = createEntitlementSessionToken({ email, plan: "pro" });
-    const response = NextResponse.json({
-      ok: true,
-      status: "active",
-      plan: "pro",
-    });
+    const response = NextResponse.json(
+      {
+        ok: true,
+        status: "active",
+        plan: "pro",
+      },
+      { headers: { "x-request-id": context.requestId } },
+    );
 
     response.cookies.set({
       name: ENTITLEMENT_SESSION_COOKIE_NAME,
@@ -80,7 +85,7 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     if (error instanceof Error && error.message === "RESTORE_OTP_RATE_LIMITED") {
-      return NextResponse.json({ error: "RATE_LIMITED" }, { status: 429 });
+      return errorResponse(context, 429, "RATE_LIMITED", "Too many attempts. Please wait and try again.");
     }
 
     if (
@@ -90,10 +95,10 @@ export async function POST(request: Request) {
         error.message === "ENTITLEMENT_SESSION_SECRET_MISSING" ||
         error.message === "STRIPE_SECRET_KEY_MISSING")
     ) {
-      return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
+      return errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Restore is temporarily unavailable. Please try again shortly.");
     }
 
-    console.error("ENTITLEMENT_RESTORE_VERIFY_FAILED", error);
-    return NextResponse.json({ error: "ENTITLEMENT_RESTORE_VERIFY_FAILED" }, { status: 500 });
+    console.error("ENTITLEMENT_RESTORE_VERIFY_FAILED", { requestId: context.requestId, error });
+    return errorResponse(context, 500, "ENTITLEMENT_RESTORE_VERIFY_FAILED", "Unable to verify restore right now.");
   }
 }

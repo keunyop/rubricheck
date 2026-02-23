@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { callEvaluationModel } from "../../../lib/openai";
+import { createRequestContext, errorResponse } from "../../../src/lib/apiError";
 import { buildUsageLimitHeaders, checkUsageLimit } from "../../../src/lib/usageLimit";
 
 const MAX_ACCEPTED_TEXT_LENGTH = 200_000;
@@ -31,10 +32,7 @@ const ModelRewriteResponseSchema = z.object({
   notes: z.string().trim().min(1).max(MAX_NOTES_LENGTH),
 });
 
-type TruncateResult = {
-  text: string;
-  truncated: boolean;
-};
+type TruncateResult = { text: string; truncated: boolean };
 
 function truncateByCodePoint(value: string, maxLength: number): TruncateResult {
   const codePoints = Array.from(value);
@@ -42,44 +40,16 @@ function truncateByCodePoint(value: string, maxLength: number): TruncateResult {
     return { text: value, truncated: false };
   }
 
-  return {
-    text: codePoints.slice(0, maxLength).join(""),
-    truncated: true,
-  };
+  return { text: codePoints.slice(0, maxLength).join(""), truncated: true };
 }
 
-function appendTruncationNotes(
-  notes: string,
-  {
-    rubricTruncated,
-    assignmentTruncated,
-    feedbackTruncated,
-  }: {
-    rubricTruncated: boolean;
-    assignmentTruncated: boolean;
-    feedbackTruncated: boolean;
-  },
-): string {
+function appendTruncationNotes(notes: string, flags: { rubricTruncated: boolean; assignmentTruncated: boolean; feedbackTruncated: boolean }): string {
   const suffixes: string[] = [];
-
-  if (rubricTruncated) {
-    suffixes.push("Rubric text was truncated for length.");
-  }
-
-  if (assignmentTruncated) {
-    suffixes.push("Assignment text was truncated for length.");
-  }
-
-  if (feedbackTruncated) {
-    suffixes.push("Criteria feedback was truncated for length.");
-  }
-
-  if (suffixes.length === 0) {
-    return notes;
-  }
-
-  const combined = `${notes} ${suffixes.join(" ")}`.trim();
-  return truncateByCodePoint(combined, MAX_NOTES_LENGTH).text;
+  if (flags.rubricTruncated) suffixes.push("Rubric text was truncated for length.");
+  if (flags.assignmentTruncated) suffixes.push("Assignment text was truncated for length.");
+  if (flags.feedbackTruncated) suffixes.push("Criteria feedback was truncated for length.");
+  if (suffixes.length === 0) return notes;
+  return truncateByCodePoint(`${notes} ${suffixes.join(" ")}`.trim(), MAX_NOTES_LENGTH).text;
 }
 
 function buildRewritePrompt(input: {
@@ -93,11 +63,7 @@ function buildRewritePrompt(input: {
   return [
     "You are improving one rubric criterion for a student's assignment.",
     "Return JSON with this exact shape:",
-    `{
-  "strategy": "string",
-  "rewrite_examples": [{ "title": "string", "text": "string" }],
-  "notes": "string"
-}`,
+    `{\n  "strategy": "string",\n  "rewrite_examples": [{ "title": "string", "text": "string" }],\n  "notes": "string"\n}`,
     "Rules:",
     "- strategy: concise action steps specific to this criterion.",
     "- rewrite_examples: 1 to 3 improved paragraph examples the student can adapt.",
@@ -120,48 +86,35 @@ function buildRewritePrompt(input: {
 }
 
 export async function POST(request: Request) {
+  const context = createRequestContext(request);
   const usage = await checkUsageLimit(request, "rewrite");
   const usageHeaders = buildUsageLimitHeaders(usage);
+  if (usage.degradedCode === "REDIS_UNAVAILABLE") {
+    usageHeaders["x-rubricheck-warning"] = "REDIS_UNAVAILABLE";
+  }
 
   if (!usage.allowed) {
-    return NextResponse.json(
-      { error: usage.errorMessage ?? `Free daily limit reached (${usage.limit}). Upgrade to continue.` },
-      { status: 429, headers: usageHeaders },
-    );
+    const status = usage.errorCode === "REDIS_UNAVAILABLE" ? 503 : 429;
+    const code = usage.errorCode ?? (status === 429 ? "RATE_LIMITED" : "REDIS_UNAVAILABLE");
+    return errorResponse(context, status, code, usage.errorMessage ?? "Request unavailable right now.", undefined, usageHeaders);
   }
 
   let payload: unknown;
-
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json({ error: "INVALID_JSON" }, { status: 400, headers: usageHeaders });
+    return errorResponse(context, 400, "INVALID_INPUT", "Request body must be valid JSON.", undefined, usageHeaders);
   }
 
   const parsedInput = RewriteRequestSchema.safeParse(payload);
   if (!parsedInput.success) {
-    return NextResponse.json(
-      {
-        error: "INVALID_INPUT",
-        details: parsedInput.error.flatten(),
-      },
-      { status: 400, headers: usageHeaders },
-    );
+    return errorResponse(context, 400, "INVALID_INPUT", "Please provide valid rewrite inputs.", parsedInput.error.flatten(), usageHeaders);
   }
 
   const rubricResult = truncateByCodePoint(parsedInput.data.rubricText, MAX_PROMPT_RUBRIC_LENGTH);
-  const assignmentResult = truncateByCodePoint(
-    parsedInput.data.assignmentText,
-    MAX_PROMPT_ASSIGNMENT_LENGTH,
-  );
-  const criteriaNameResult = truncateByCodePoint(
-    parsedInput.data.criteriaName,
-    MAX_PROMPT_CRITERIA_NAME_LENGTH,
-  );
-  const feedbackResult = truncateByCodePoint(
-    parsedInput.data.criteriaFeedback,
-    MAX_PROMPT_FEEDBACK_LENGTH,
-  );
+  const assignmentResult = truncateByCodePoint(parsedInput.data.assignmentText, MAX_PROMPT_ASSIGNMENT_LENGTH);
+  const criteriaNameResult = truncateByCodePoint(parsedInput.data.criteriaName, MAX_PROMPT_CRITERIA_NAME_LENGTH);
+  const feedbackResult = truncateByCodePoint(parsedInput.data.criteriaFeedback, MAX_PROMPT_FEEDBACK_LENGTH);
 
   const prompt = buildRewritePrompt({
     rubricText: rubricResult.text,
@@ -175,31 +128,27 @@ export async function POST(request: Request) {
   try {
     const rawModelResponse = await callEvaluationModel(prompt);
     const parsedModelResponse = ModelRewriteResponseSchema.safeParse(rawModelResponse);
-
     if (!parsedModelResponse.success) {
-      return NextResponse.json({ error: "REWRITE_OUTPUT_INVALID" }, { status: 502, headers: usageHeaders });
+      return errorResponse(context, 502, "REWRITE_OUTPUT_INVALID", "The rewrite response was invalid. Please retry.", undefined, usageHeaders);
     }
 
-    return NextResponse.json(
-      {
-        criteriaId: parsedInput.data.criteriaId,
-        strategy: parsedModelResponse.data.strategy,
-        rewrite_examples: parsedModelResponse.data.rewrite_examples,
-        notes: appendTruncationNotes(parsedModelResponse.data.notes, {
-          rubricTruncated: rubricResult.truncated,
-          assignmentTruncated: assignmentResult.truncated,
-          feedbackTruncated: feedbackResult.truncated,
-        }),
-      },
-      { headers: usageHeaders },
-    );
+    const headers = new Headers(usageHeaders);
+    headers.set("x-request-id", context.requestId);
+    return NextResponse.json({
+      criteriaId: parsedInput.data.criteriaId,
+      strategy: parsedModelResponse.data.strategy,
+      rewrite_examples: parsedModelResponse.data.rewrite_examples,
+      notes: appendTruncationNotes(parsedModelResponse.data.notes, {
+        rubricTruncated: rubricResult.truncated,
+        assignmentTruncated: assignmentResult.truncated,
+        feedbackTruncated: feedbackResult.truncated,
+      }),
+    }, { headers });
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === "OPENAI_API_KEY_MISSING" || error.message === "EVALUATION_MODEL_MISSING") {
-        return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503, headers: usageHeaders });
-      }
+    if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
+      return errorResponse(context, 504, "OPENAI_TIMEOUT", "Our AI reviewer is taking longer than usual. Please retry in a moment.", undefined, usageHeaders);
     }
 
-    return NextResponse.json({ error: "REWRITE_FAILED" }, { status: 502, headers: usageHeaders });
+    return errorResponse(context, 502, "REWRITE_FAILED", "Unable to generate rewrite suggestions right now.", undefined, usageHeaders);
   }
 }

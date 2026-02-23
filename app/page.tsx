@@ -40,6 +40,8 @@ type GradeErrorResponse = {
   freeLimit?: number;
   error?: string;
   message?: string;
+  requestId?: string;
+  details?: Record<string, unknown>;
   field?: "rubric" | "assignment";
 };
 
@@ -540,6 +542,10 @@ export default function Home() {
   const [loadingStep, setLoadingStep] = useState<LoadingStep>("idle");
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
+  const [lastRequestId, setLastRequestId] = useState("");
+  const [openAiTimeoutCount, setOpenAiTimeoutCount] = useState(0);
+  const [showRedisWarning, setShowRedisWarning] = useState(false);
   const [showDailyLimitAlert, setShowDailyLimitAlert] = useState(false);
   const [dailyLimitValue, setDailyLimitValue] = useState<number | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
@@ -1071,7 +1077,15 @@ export default function Home() {
   }
 
   function mapApiError(data: GradeErrorResponse): string {
-    const message = data.error;
+    const message = data.code ?? data.error;
+
+    if (message === "OPENAI_TIMEOUT") {
+      return "The AI review is taking longer than expected. Please retry.";
+    }
+
+    if (message === "REDIS_UNAVAILABLE") {
+      return "We are temporarily verifying limits in safe mode. Please retry shortly.";
+    }
 
     if (message === "SERVICE_UNAVAILABLE") {
       return "Service is temporarily unavailable. Please try again shortly.";
@@ -1081,7 +1095,7 @@ export default function Home() {
       return "Please provide both a rubric and an assignment.";
     }
 
-    if (message === "TEXT_EXTRACTION_FAILED") {
+    if (message === "FILE_PARSE_FAILED" || message === "TEXT_EXTRACTION_FAILED") {
       const target = data.field === "rubric" ? "Rubric" : "Assignment";
       return `Text extraction failed for ${target}. Please upload a text-based PDF/DOCX or paste the text.`;
     }
@@ -1173,6 +1187,9 @@ export default function Home() {
 
     setGradingMode(selectedMode);
     setError("");
+    setErrorCode("");
+    setLastRequestId("");
+    setShowRedisWarning(false);
     setShowDailyLimitAlert(false);
     setDraftRestoreNotice("");
     setCreditCheckoutError("");
@@ -1272,9 +1289,15 @@ export default function Home() {
       syncCreditBalanceFromHeader(response);
 
       const apiErrorResponse = (data ?? {}) as GradeErrorResponse;
+      setLastRequestId(response.headers.get("x-request-id") ?? apiErrorResponse.requestId ?? "");
+      setShowRedisWarning(response.headers.get("x-rubricheck-warning") === "REDIS_UNAVAILABLE");
       const apiError =
         data && typeof data === "object" && "error" in data
           ? String((data as { error?: unknown }).error ?? "")
+          : "";
+      const apiCode =
+        data && typeof data === "object" && "code" in data
+          ? String((data as { code?: unknown }).code ?? "")
           : "";
       const apiMessage =
         data && typeof data === "object" && "message" in data
@@ -1307,8 +1330,14 @@ export default function Home() {
 
       if (!response.ok) {
         setError(mapApiError((data ?? {}) as GradeErrorResponse));
+        setErrorCode(apiCode || apiError);
+        if ((apiCode || apiError) === "OPENAI_TIMEOUT") {
+          setOpenAiTimeoutCount((prev) => prev + 1);
+        }
         return;
       }
+
+      setOpenAiTimeoutCount(0);
 
       if (!isGradeResult(data, selectedMode)) {
         setError("Something went wrong. Please try again.");
@@ -1711,9 +1740,41 @@ export default function Home() {
               </section>
             </div>
 
-            {error ? (
+            {showRedisWarning ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                We&apos;re running in a temporary reliability mode while usage services reconnect.
+              </div>
+            ) : null}
+            {errorCode === "OPENAI_TIMEOUT" ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p>{error}</p>
+                {openAiTimeoutCount >= 2 ? (
+                  <p className="mt-1 text-xs">Service is busy right now. Please wait a bit, then retry.</p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => void submitGrade(gradingMode)}
+                  className="mt-3 rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : null}
+            {errorCode === "FILE_PARSE_FAILED" ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                <p>{error}</p>
+                <ul className="mt-2 list-disc pl-5 text-xs">
+                  <li>Try again.</li>
+                  <li>Upload another format (DOCX/TXT).</li>
+                  <li>Switch to Paste Text.</li>
+                  <li>If it&apos;s a scanned PDF, run OCR first.</li>
+                </ul>
+              </div>
+            ) : null}
+            {error && errorCode !== "OPENAI_TIMEOUT" && errorCode !== "FILE_PARSE_FAILED" ? (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
+                {lastRequestId ? <p className="mt-1 text-xs">Request ID: {lastRequestId}</p> : null}
               </div>
             ) : null}
             {draftRestoreNotice ? (

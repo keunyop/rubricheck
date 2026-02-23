@@ -209,7 +209,7 @@ export async function evaluateAssignment(
     const normalizedResult = normalizeModelEvaluation(modelResult);
     return parseEvaluationByMode(mode, normalizedResult);
   } catch (error) {
-    if (error instanceof Error && error.message === "EVALUATION_FAILED") {
+    if (error instanceof Error && (error.message === "EVALUATION_FAILED" || error.message === "OPENAI_TIMEOUT")) {
       throw error;
     }
     console.error("EVALUATION_MODEL_CALL_FAILED", error);

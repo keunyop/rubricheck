@@ -6,6 +6,7 @@ import { buildFinalEvaluation, type FeedbackAccessTier } from "../../../lib/grad
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
 import { structureRubric } from "../../../lib/rubricStructuring";
 import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
+import { createRequestContext, errorResponse } from "../../../src/lib/apiError";
 import { shouldRefundReservedEvaluateCredit } from "../../../src/lib/evaluationCreditSettlement";
 import { buildFreeLimitReachedPayload } from "../../../src/lib/evaluateLimitPayload";
 import {
@@ -26,52 +27,30 @@ const JsonGradeRequestSchema = z.object({
 
 type FieldName = "rubric" | "assignment";
 
-function getUploadedFile(
-  formData: FormData,
-  fieldName: FieldName,
-): File | null {
+function getUploadedFile(formData: FormData, fieldName: FieldName): File | null {
   const value = formData.get(fieldName);
-
   if (!(value instanceof File)) {
     return null;
   }
-
   return value;
 }
 
-function getTextInput(
-  formData: FormData,
-  fieldName: "rubricText" | "assignmentText",
-): string | null {
+function getTextInput(formData: FormData, fieldName: "rubricText" | "assignmentText"): string | null {
   const value = formData.get(fieldName);
-
   if (typeof value !== "string") {
     return null;
   }
-
-  if (value.trim().length === 0) {
-    return null;
-  }
-
-  return value;
+  return value.trim().length > 0 ? value : null;
 }
 
-function validateFileSize(
-  file: File,
-  fieldName: FieldName,
-): NextResponse | null {
+function validateFileSize(file: File, fieldName: FieldName): { field: FieldName } | null {
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    return NextResponse.json({ error: "FILE_TOO_LARGE", field: fieldName }, { status: 400 });
+    return { field: fieldName };
   }
-
   return null;
 }
 
-async function resolveFieldText(
-  field: FieldName,
-  textValue: string | null,
-  file: File | null,
-): Promise<string> {
+async function resolveFieldText(field: FieldName, textValue: string | null, file: File | null): Promise<string> {
   if (textValue !== null) {
     return textValue;
   }
@@ -84,7 +63,7 @@ async function resolveFieldText(
     return await parseFile(file);
   } catch (error) {
     if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED") {
-      throw new Error(`TEXT_EXTRACTION_FAILED:${field}`);
+      throw new Error(`FILE_PARSE_FAILED:${field}`);
     }
 
     if (error instanceof Error && error.message === "UNSUPPORTED_FILE_TYPE") {
@@ -96,6 +75,8 @@ async function resolveFieldText(
 }
 
 export async function POST(request: Request) {
+  const context = createRequestContext(request);
+
   try {
     const contentType = request.headers.get("content-type") ?? "";
     let mode: GradingMode = "standard";
@@ -109,12 +90,12 @@ export async function POST(request: Request) {
       try {
         payload = await request.json();
       } catch {
-        return NextResponse.json({ error: "INVALID_JSON" }, { status: 400 });
+        return errorResponse(context, 400, "INVALID_JSON", "Request body must be valid JSON.");
       }
 
       const parsedRequest = JsonGradeRequestSchema.safeParse(payload);
       if (!parsedRequest.success) {
-        return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400 });
+        return errorResponse(context, 400, "INVALID_INPUT", "Please provide valid rubric and assignment inputs.", parsedRequest.error.flatten());
       }
 
       mode = parsedRequest.data.mode;
@@ -128,7 +109,7 @@ export async function POST(request: Request) {
       });
 
       if (!parsedRequest.success) {
-        return NextResponse.json({ error: "INVALID_MODE" }, { status: 400 });
+        return errorResponse(context, 400, "INVALID_MODE", "Invalid grading mode. Select Standard or Strict mode.");
       }
 
       mode = parsedRequest.data.mode;
@@ -141,23 +122,23 @@ export async function POST(request: Request) {
     if (rubricFile) {
       const rubricSizeError = validateFileSize(rubricFile, "rubric");
       if (rubricSizeError) {
-        return rubricSizeError;
+        return errorResponse(context, 400, "FILE_TOO_LARGE", "Rubric file is too large. Max size is 5MB.", rubricSizeError);
       }
     }
 
     if (assignmentFile) {
       const assignmentSizeError = validateFileSize(assignmentFile, "assignment");
       if (assignmentSizeError) {
-        return assignmentSizeError;
+        return errorResponse(context, 400, "FILE_TOO_LARGE", "Assignment file is too large. Max size is 5MB.", assignmentSizeError);
       }
     }
 
     if (!rubricTextInput && !rubricFile) {
-      return NextResponse.json({ error: "MISSING_INPUT" }, { status: 400 });
+      return errorResponse(context, 400, "MISSING_INPUT", "Please provide both a rubric and an assignment.");
     }
 
     if (!assignmentTextInput && !assignmentFile) {
-      return NextResponse.json({ error: "MISSING_INPUT" }, { status: 400 });
+      return errorResponse(context, 400, "MISSING_INPUT", "Please provide both a rubric and an assignment.");
     }
 
     const [rubricText, assignmentText] = await Promise.all([
@@ -169,12 +150,16 @@ export async function POST(request: Request) {
     try {
       structuredRubric = await structureRubric(rubricText);
     } catch (error) {
-      console.error("RUBRIC_STRUCTURE_FAILED", error);
-      return NextResponse.json({ error: "RUBRIC_STRUCTURE_FAILED" }, { status: 400 });
+      console.error("RUBRIC_STRUCTURE_FAILED", { requestId: context.requestId, error });
+      return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.");
     }
 
     const usage = await checkUsageLimit(request, "evaluate");
     const usageHeaders = buildUsageLimitHeaders(usage);
+    if (usage.degradedCode === "REDIS_UNAVAILABLE") {
+      usageHeaders["x-rubricheck-warning"] = "REDIS_UNAVAILABLE";
+    }
+
     const feedbackTier: FeedbackAccessTier = usage.billingSource === "pro" ? "pro" : "free";
 
     if (!usage.allowed) {
@@ -185,19 +170,19 @@ export async function POST(request: Request) {
         });
       }
 
-      return NextResponse.json(
-        {
-          error: usage.errorCode ?? usage.errorMessage ?? `Free daily limit reached (${usage.limit}). Upgrade to continue.`,
-          message: usage.errorMessage,
-        },
-        { status: 429, headers: usageHeaders },
-      );
+      if (usage.errorCode === "REDIS_UNAVAILABLE") {
+        return errorResponse(context, 503, "REDIS_UNAVAILABLE", usage.errorMessage ?? "Usage checks are temporarily unavailable. Please retry shortly.", undefined, usageHeaders);
+      }
+
+      return errorResponse(context, 429, usage.errorCode ?? "RATE_LIMITED", usage.errorMessage ?? `Free daily limit reached (${usage.limit}). Upgrade to continue.`, undefined, usageHeaders);
     }
 
     try {
       const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode);
       const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
-      return NextResponse.json(finalEvaluation, { headers: usageHeaders });
+      const headers = new Headers(usageHeaders);
+      headers.set("x-request-id", context.requestId);
+      return NextResponse.json(finalEvaluation, { headers });
     } catch (error) {
       if (
         shouldRefundReservedEvaluateCredit({
@@ -209,36 +194,52 @@ export async function POST(request: Request) {
         try {
           await refundUsageCreditReservation(usage);
         } catch (refundError) {
-          console.error("CREDIT_RESERVATION_REFUND_FAILED", refundError);
+          console.error("CREDIT_RESERVATION_REFUND_FAILED", { requestId: context.requestId, refundError });
         }
       }
-      console.error("EVALUATION_FAILED", error);
-      return NextResponse.json({ error: "EVALUATION_FAILED" }, { status: 500 });
+
+      if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
+        return errorResponse(
+          context,
+          504,
+          "OPENAI_TIMEOUT",
+          "Our AI reviewer is taking longer than usual. Please retry in a moment.",
+          undefined,
+          usageHeaders,
+        );
+      }
+
+      console.error("EVALUATION_FAILED", { requestId: context.requestId, error });
+      return errorResponse(context, 500, "EVALUATION_FAILED", "We hit an unexpected error while grading. Please retry.", undefined, usageHeaders);
     }
   } catch (error) {
     if (error instanceof Error && error.message === "UPSTASH_REDIS_CONFIG_MISSING") {
-      console.error("RATE_LIMIT_CONFIG_MISSING");
-      return NextResponse.json({ error: "SERVICE_UNAVAILABLE" }, { status: 503 });
+      return errorResponse(context, 503, "REDIS_UNAVAILABLE", "Usage verification is temporarily unavailable. Please retry shortly.");
     }
 
     if (error instanceof Error && error.message === "MISSING_INPUT") {
-      return NextResponse.json({ error: "MISSING_INPUT" }, { status: 400 });
+      return errorResponse(context, 400, "MISSING_INPUT", "Please provide both a rubric and an assignment.");
     }
 
     if (error instanceof Error && error.message.startsWith("UNSUPPORTED_FILE_TYPE:")) {
       const field = error.message.split(":")[1] as FieldName;
-      return NextResponse.json({ error: "UNSUPPORTED_FILE_TYPE", field }, { status: 400 });
+      return errorResponse(context, 400, "UNSUPPORTED_FILE_TYPE", "Unsupported file type. Upload PDF, DOCX, or TXT.", { field });
     }
 
-    if (error instanceof Error && error.message.startsWith("TEXT_EXTRACTION_FAILED:")) {
+    if (error instanceof Error && error.message.startsWith("FILE_PARSE_FAILED:")) {
       const field = error.message.split(":")[1] as FieldName;
-      return NextResponse.json({ error: "TEXT_EXTRACTION_FAILED", field }, { status: 400 });
+      return errorResponse(context, 400, "FILE_PARSE_FAILED", "We couldn't extract enough text from that file. Try again, upload another format, or paste text.", {
+        field,
+        hint: "If this is a scanned PDF, OCR may be required before upload.",
+      });
     }
 
     if (error instanceof FileParseValidationError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return errorResponse(context, 400, "FILE_PARSE_FAILED", "We couldn't parse the uploaded file. Try another format or paste text.", {
+        parseError: error.message,
+      });
     }
 
-    return NextResponse.json({ error: "Failed to process uploaded files" }, { status: 500 });
+    return errorResponse(context, 500, "INTERNAL_SERVER_ERROR", "Failed to process uploaded files.");
   }
 }
