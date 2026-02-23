@@ -12,6 +12,12 @@ import {
 } from "../../../../../src/lib/entitlementSession";
 import { verifyRestoreOtp } from "../../../../../src/lib/entitlementRestoreOtp";
 import { createRequestContext, errorResponse } from "../../../../../src/lib/apiError";
+import {
+  getPayloadSizeApprox,
+  hashEmail,
+  recordAbuseTelemetry,
+  shouldEnforceForSuspicious,
+} from "../../../../../src/lib/abuseTelemetry";
 
 export const runtime = "nodejs";
 
@@ -26,39 +32,63 @@ function normalizeOtpCode(value: unknown): string {
 
 export async function POST(request: Request) {
   const context = createRequestContext(request);
+  const startedAt = Date.now();
+  let email = "";
+
+  const respond = async (response: Response, outcome: "success" | "error") => {
+    const telemetry = await recordAbuseTelemetry({
+      requestId: context.requestId,
+      endpoint: "otp_verify",
+      request,
+      outcome,
+      email,
+      latencyMs: Date.now() - startedAt,
+      payloadSizeApprox: getPayloadSizeApprox(request),
+    });
+
+    if (shouldEnforceForSuspicious(telemetry.suspicious)) {
+      return errorResponse(context, 429, "ABUSE_BLOCKED", "Request blocked by abuse controls.");
+    }
+
+    return response;
+  };
+
   let payload: RestoreVerifyRequestBody;
 
   try {
     payload = (await request.json()) as RestoreVerifyRequestBody;
   } catch {
-    return errorResponse(context, 400, "INVALID_JSON", "Request body must be valid JSON.");
+    return respond(errorResponse(context, 400, "INVALID_JSON", "Request body must be valid JSON."), "error");
   }
 
-  const email = normalizeEmailInput(payload.email);
+  email = normalizeEmailInput(payload.email);
   const code = normalizeOtpCode(payload.code);
 
   if (!isValidEmail(email)) {
-    return errorResponse(context, 400, "INVALID_EMAIL", "Please enter a valid email.");
+    return respond(errorResponse(context, 400, "INVALID_EMAIL", "Please enter a valid email."), "error");
   }
 
   if (!/^\d{6}$/.test(code)) {
-    return errorResponse(context, 400, "INVALID_CODE", "Enter a valid 6-digit code.");
+    return respond(errorResponse(context, 400, "INVALID_CODE", "Enter a valid 6-digit code."), "error");
   }
 
   try {
     const isOtpValid = await verifyRestoreOtp(request, email, code);
     if (!isOtpValid) {
-      return errorResponse(context, 400, "INVALID_CODE", "Invalid or expired code.");
+      return respond(errorResponse(context, 400, "INVALID_CODE", "Invalid or expired code."), "error");
     }
 
     const resolved = await resolveActiveEntitlementByVerifiedEmail(email);
     if (!resolved) {
-      return NextResponse.json(
-        {
-          ok: false,
-          status: "not_active",
-        },
-        { headers: { "x-request-id": context.requestId } },
+      return respond(
+        NextResponse.json(
+          {
+            ok: false,
+            status: "not_active",
+          },
+          { headers: { "x-request-id": context.requestId } },
+        ),
+        "success",
       );
     }
 
@@ -82,10 +112,10 @@ export async function POST(request: Request) {
       maxAge: ENTITLEMENT_SESSION_TTL_SECONDS,
     });
 
-    return response;
+    return respond(response, "success");
   } catch (error) {
     if (error instanceof Error && error.message === "RESTORE_OTP_RATE_LIMITED") {
-      return errorResponse(context, 429, "RATE_LIMITED", "Too many attempts. Please wait and try again.");
+      return respond(errorResponse(context, 429, "RATE_LIMITED", "Too many attempts. Please wait and try again."), "error");
     }
 
     if (
@@ -95,10 +125,10 @@ export async function POST(request: Request) {
         error.message === "ENTITLEMENT_SESSION_SECRET_MISSING" ||
         error.message === "STRIPE_SECRET_KEY_MISSING")
     ) {
-      return errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Restore is temporarily unavailable. Please try again shortly.");
+      return respond(errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Restore is temporarily unavailable. Please try again shortly."), "error");
     }
 
-    console.error("ENTITLEMENT_RESTORE_VERIFY_FAILED", { requestId: context.requestId, error });
-    return errorResponse(context, 500, "ENTITLEMENT_RESTORE_VERIFY_FAILED", "Unable to verify restore right now.");
+    console.error("ENTITLEMENT_RESTORE_VERIFY_FAILED", { requestId: context.requestId, error, emailHash: hashEmail(email) });
+    return respond(errorResponse(context, 500, "ENTITLEMENT_RESTORE_VERIFY_FAILED", "Unable to verify restore right now."), "error");
   }
 }
