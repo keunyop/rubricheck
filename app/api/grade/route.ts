@@ -194,6 +194,14 @@ export async function POST(request: Request) {
         requestId: context.requestId,
       });
     } catch (error) {
+      if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
+        return errorResponse(
+          context,
+          504,
+          "OPENAI_TIMEOUT",
+          "Our AI reviewer is taking longer than usual. Please retry in a moment.",
+        );
+      }
       console.error("RUBRIC_STRUCTURE_FAILED", { requestId: context.requestId, error });
       return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.");
     }

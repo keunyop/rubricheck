@@ -166,7 +166,10 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     }
 
     return parsed.data;
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
+      throw error;
+    }
     throw new Error("RUBRIC_STRUCTURE_FAILED");
   }
 }

@@ -20,6 +20,27 @@ function asRecord(value: unknown): UnknownRecord | null {
   return value as UnknownRecord;
 }
 
+function isAbortLikeError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const normalizedName = error.name.toLowerCase();
+    const normalizedMessage = error.message.toLowerCase();
+    if (
+      normalizedName.includes("abort") ||
+      normalizedName.includes("timeout") ||
+      normalizedMessage.includes("aborted") ||
+      normalizedMessage.includes("timeout") ||
+      normalizedMessage.includes("timed out") ||
+      normalizedMessage.includes("openai_timeout")
+    ) {
+      return true;
+    }
+  }
+
+  const record = asRecord(error);
+  const errorType = typeof record?.type === "string" ? record.type.toLowerCase() : "";
+  return errorType.includes("abort") || errorType.includes("timeout");
+}
+
 function collectResponseTextCandidates(response: unknown): string[] {
   const candidates: string[] = [];
   const responseRecord = asRecord(response);
@@ -156,7 +177,7 @@ async function callJsonModel(
       signal: abortController.signal,
     });
   } catch (error) {
-    if (error instanceof Error && (error.name === "AbortError" || error.message.includes("OPENAI_TIMEOUT"))) {
+    if (abortController.signal.aborted || isAbortLikeError(error)) {
       throw new Error("OPENAI_TIMEOUT");
     }
 
