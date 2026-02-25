@@ -1504,7 +1504,7 @@ export default function Home() {
     <main
       className={`min-h-screen px-4 py-10 transition-colors md:py-14 ${
         themeMode === "dark"
-          ? "bg-[linear-gradient(160deg,#121110_0%,#1b1917_45%,#121110_100%)]"
+          ? "bg-[linear-gradient(160deg,#1f1f1f_0%,#232323_45%,#1f1f1f_100%)]"
           : "bg-[linear-gradient(160deg,#f8fafc_0%,#eef2ff_45%,#f8fafc_100%)]"
       }`}
     >
