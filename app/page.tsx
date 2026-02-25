@@ -6,19 +6,16 @@ import {
   Fragment,
   FormEvent,
   RefObject,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { ACTIVE_LANDING_COPY } from "../src/config/copy";
 import { PRO_CHECKOUT_DISPLAY, type ProCheckoutPlan } from "../src/config/proCheckout";
-import {
-  CREDIT_PACK_IDS,
-  getCreditPackLabel,
-  getCreditPackMarketingLabel,
-  getCreditPackPriceLabel,
-} from "../src/config/creditPacks";
 import { getEvaluateInterstitialDecision } from "../src/lib/evaluateInterstitial";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -84,9 +81,12 @@ type CheckoutResponse = {
   error?: string;
 };
 
-type CreditsBalanceResponse = {
-  balance?: number | null;
-  hasIdentity?: boolean;
+type AccountSummaryResponse = {
+  signedIn?: boolean;
+  email?: string | null;
+  plan?: "free" | "pro";
+  remainingEvaluations?: number | null;
+  creditsBalance?: number | null;
   error?: string;
 };
 
@@ -110,7 +110,6 @@ type RestoreVerifyResponse = {
 
 type PaywallMode = "restore" | "upgrade";
 type RestoreStep = "email" | "code";
-type InterstitialBillingTab = "pro" | "credits";
 type ThemeMode = "light" | "dark";
 
 const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
@@ -120,6 +119,7 @@ const IS_PRODUCTION_APP_ENV = NEXT_PUBLIC_APP_ENV === "production";
 const IS_PRODUCTION_DEPLOYMENT = NODE_ENV === "production" || NEXT_PUBLIC_VERCEL_ENV === "production";
 const SHOW_FAKE_GRADE_BUTTON = !IS_PRODUCTION_DEPLOYMENT && !IS_PRODUCTION_APP_ENV;
 const SHOW_PRO_FEATURES = !IS_PRODUCTION_APP_ENV;
+const SHOW_PRICING_BUTTON = NODE_ENV !== "production";
 
 const FOOTER_LEGAL_LINKS = [
   { label: "Privacy", href: "/legal/privacy" },
@@ -527,11 +527,9 @@ export default function Home() {
   const [showRedisWarning, setShowRedisWarning] = useState(false);
   const [showDailyLimitAlert, setShowDailyLimitAlert] = useState(false);
   const [dailyLimitValue, setDailyLimitValue] = useState<number | null>(null);
-  const [interstitialBillingTab, setInterstitialBillingTab] = useState<InterstitialBillingTab>("pro");
+  const [signedInEmail, setSignedInEmail] = useState("");
+  const [remainingEvaluations, setRemainingEvaluations] = useState<number | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
-  const [creditCheckoutEmail, setCreditCheckoutEmail] = useState("");
-  const [creditCheckoutError, setCreditCheckoutError] = useState("");
-  const [isCreatingCreditCheckout, setIsCreatingCreditCheckout] = useState(false);
   const [evaluationMessageIndex, setEvaluationMessageIndex] = useState(0);
   const [showRewritePaywall, setShowRewritePaywall] = useState(false);
   const [expandedRewriteSections, setExpandedRewriteSections] = useState<Record<string, boolean>>(
@@ -585,6 +583,39 @@ export default function Home() {
       setCreditBalance(parsed);
     }
   }
+
+  const refreshAccountSummary = useCallback(async () => {
+    try {
+      const response = await fetch("/api/account/summary", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const data: AccountSummaryResponse = await response.json().catch(() => ({}));
+      const email = typeof data.email === "string" ? data.email.trim() : "";
+      const remaining =
+        typeof data.remainingEvaluations === "number" && Number.isFinite(data.remainingEvaluations)
+          ? Math.max(0, Math.floor(data.remainingEvaluations))
+          : null;
+      const balance =
+        typeof data.creditsBalance === "number" && Number.isFinite(data.creditsBalance)
+          ? Math.max(0, Math.floor(data.creditsBalance))
+          : null;
+
+      if (response.ok && data.signedIn && email) {
+        setSignedInEmail(email);
+        setRemainingEvaluations(remaining);
+      } else {
+        setSignedInEmail("");
+        setRemainingEvaluations(null);
+      }
+
+      setCreditBalance(balance);
+    } catch {
+      setSignedInEmail("");
+      setRemainingEvaluations(null);
+      setCreditBalance(null);
+    }
+  }, []);
 
   function persistEvaluationDraftForCheckout() {
     if (typeof window === "undefined") {
@@ -723,37 +754,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    let canceled = false;
-
-    async function fetchCreditsBalance() {
-      try {
-        const response = await fetch("/api/credits", {
-          method: "GET",
-          cache: "no-store",
-        });
-        const data: CreditsBalanceResponse = await response.json().catch(() => ({}));
-        if (canceled) {
-          return;
-        }
-
-        if (typeof data.balance === "number" && Number.isFinite(data.balance) && data.balance >= 0) {
-          setCreditBalance(data.balance);
-        } else if (data.balance === null) {
-          setCreditBalance(null);
-        }
-      } catch {
-        if (!canceled) {
-          setCreditBalance(null);
-        }
-      }
-    }
-
-    void fetchCreditsBalance();
-
-    return () => {
-      canceled = true;
-    };
-  }, []);
+    void refreshAccountSummary();
+  }, [refreshAccountSummary]);
 
   useEffect(() => {
     if (loadingStep !== "evaluatingAssignment") {
@@ -928,39 +930,6 @@ export default function Home() {
       setDidCopyImage(false);
     } finally {
       setIsSharingImage(false);
-    }
-  }
-
-  async function handleBuyCredits(packId: (typeof CREDIT_PACK_IDS)[number]) {
-    setCreditCheckoutError("");
-    const normalizedEmail = creditCheckoutEmail.trim().toLowerCase();
-    if (!isValidEmail(normalizedEmail)) {
-      setCreditCheckoutError("Please enter a valid email for credit purchase.");
-      return;
-    }
-
-    setIsCreatingCreditCheckout(true);
-
-    try {
-      const response = await fetch("/api/checkout/credits", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ packId, email: normalizedEmail }),
-      });
-
-      const data: CheckoutResponse = await response.json().catch(() => ({}));
-      if (!response.ok || !data.url) {
-        throw new Error(data.error ?? "CREDIT_CHECKOUT_SESSION_FAILED");
-      }
-
-      persistEvaluationDraftForCheckout();
-      window.location.assign(data.url);
-    } catch {
-      setCreditCheckoutError("Unable to start credit checkout right now. Please try again.");
-    } finally {
-      setIsCreatingCreditCheckout(false);
     }
   }
 
@@ -1199,7 +1168,6 @@ export default function Home() {
     setShowRedisWarning(false);
     setShowDailyLimitAlert(false);
     setDraftRestoreNotice("");
-    setCreditCheckoutError("");
     setCheckoutError("");
     setDailyLimitValue(null);
     setGradeResult(null);
@@ -1294,6 +1262,7 @@ export default function Home() {
         ? await response.json()
         : { error: "INTERNAL_SERVER_ERROR" };
       syncCreditBalanceFromHeader(response);
+      void refreshAccountSummary();
 
       const apiErrorResponse = (data ?? {}) as GradeErrorResponse;
       setLastRequestId(response.headers.get("x-request-id") ?? apiErrorResponse.requestId ?? "");
@@ -1330,7 +1299,6 @@ export default function Home() {
 
       if (interstitialDecision.show) {
         setDailyLimitValue(interstitialDecision.freeLimit ?? FREE_EVALUATIONS_PER_DAY);
-        setInterstitialBillingTab("pro");
         setShowDailyLimitAlert(true);
         setError("");
         return;
@@ -1460,6 +1428,7 @@ export default function Home() {
         setRestoreCode("");
         setRestoreStep("email");
         setShowRewritePaywall(false);
+        void refreshAccountSummary();
         return;
       }
 
@@ -1513,15 +1482,37 @@ export default function Home() {
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-indigo-200/40 blur-3xl" />
           <div className="relative mb-6 border-b border-slate-100 pb-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="h-9 w-auto" />
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
                   {ACTIVE_LANDING_COPY.headline}
                 </h1>
-                <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
-                  Beta
-                </span>
               </div>
               <div className="inline-flex items-center gap-2">
+                {SHOW_PRICING_BUTTON ? (
+                  <Link
+                    href="/pricing"
+                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                  >
+                    Pricing
+                  </Link>
+                ) : null}
+                {signedInEmail ? (
+                  <div className="max-w-[13rem] rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-800">
+                    <p className="truncate">{signedInEmail}</p>
+                    <p className="mt-0.5">
+                      Remaining evaluations: {typeof remainingEvaluations === "number" ? remainingEvaluations : "-"}
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openRewritePaywall("restore")}
+                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                  >
+                    Log in
+                  </button>
+                )}
                 <div className="inline-flex rounded-full border border-slate-300 bg-slate-100 p-1">
                   <button
                     type="button"
@@ -1851,7 +1842,7 @@ export default function Home() {
                 disabled={isLoading}
                 className="shrink-0 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition-colors duration-150 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 md:px-4"
               >
-                <span>Strict Mode</span>
+                <span>🔥 Strict Mode</span>
               </button>
             </div>
             {SHOW_FAKE_GRADE_BUTTON ? (
@@ -1871,162 +1862,50 @@ export default function Home() {
         </section>
 
         {showDailyLimitAlert ? (
-          <section className="rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm md:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Daily free limit reached</h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  Continue with Pro for richer feedback and rewrite tools, or purchase one-time evaluation top-ups.
-                </p>
+          <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close daily limit warning"
+              onClick={() => setShowDailyLimitAlert(false)}
+              className="absolute inset-0 bg-slate-950/45"
+            />
+            <section
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="daily-limit-title"
+              className="relative w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 shadow-xl"
+            >
+              <div className="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+                Warning
               </div>
-              <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                {dailyLimitValue ?? FREE_EVALUATIONS_PER_DAY} free evaluations used
-              </span>
-            </div>
-
-            <div className="mt-4 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-              <button
-                type="button"
-                onClick={() => setInterstitialBillingTab("pro")}
-                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
-                  interstitialBillingTab === "pro"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Upgrade to Pro
-              </button>
-              <button
-                type="button"
-                onClick={() => setInterstitialBillingTab("credits")}
-                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
-                  interstitialBillingTab === "credits"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Evaluation Top-Ups
-              </button>
-            </div>
-
-            {interstitialBillingTab === "pro" ? (
-              <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
-                <h3 className="text-base font-semibold text-slate-900">Upgrade to Pro</h3>
-                <p className="mt-1 text-xs text-slate-600">
-                  30 evaluations/day + richer feedback + Rewrite tools that help improve your score.
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-slate-300 bg-slate-200 p-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setCheckoutPlan("monthly")}
-                    disabled={isCreatingCheckout}
-                    className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
-                      checkoutPlan === "monthly"
-                        ? "bg-slate-900 text-white shadow-sm"
-                        : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
-                    }`}
-                  >
-                    Monthly
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCheckoutPlan("annual")}
-                    disabled={isCreatingCheckout}
-                    className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
-                      checkoutPlan === "annual"
-                        ? "bg-slate-900 text-white shadow-sm"
-                        : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
-                    }`}
-                  >
-                    Annual
-                  </button>
-                </div>
-                <p className="mt-2 text-xs text-indigo-900">
-                  {selectedCheckoutPlanDisplay.price}
-                  <span className="ml-1 text-indigo-700">{selectedCheckoutPlanDisplay.periodLabel}</span>
-                </p>
-                <label htmlFor="interstitial-pro-email" className="mt-3 block">
-                  <span className="text-xs font-semibold text-slate-700">Email</span>
-                  <input
-                    id="interstitial-pro-email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    value={checkoutEmail}
-                    onChange={(event) => {
-                      setCheckoutEmail(event.target.value);
-                      setCheckoutError("");
-                    }}
-                    disabled={isCreatingCheckout}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                  />
-                </label>
-                {checkoutError ? (
-                  <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                    {checkoutError}
-                  </p>
-                ) : null}
+              <h2 id="daily-limit-title" className="mt-3 text-lg font-semibold text-slate-900">
+                Daily free limit reached
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                You used {dailyLimitValue ?? FREE_EVALUATIONS_PER_DAY} free evaluations today.
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                Check pricing options for Pro and one-time top-ups.
+              </p>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={handleUpgradeToPro}
-                  disabled={isCreatingCheckout || !checkoutEmail.trim()}
-                  className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => setShowDailyLimitAlert(false)}
+                  className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300"
                 >
-                  {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
+                  Close
                 </button>
-              </div>
-            ) : (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                <h3 className="text-base font-semibold text-slate-900">Evaluation Top-Ups</h3>
-                <p className="mt-1 text-xs text-slate-600">One-time purchase. No subscription. Credits apply to evaluate only.</p>
-                {typeof creditBalance === "number" ? (
-                  <p className="mt-1 text-xs text-slate-600">Current credits: {creditBalance}</p>
+                {SHOW_PRICING_BUTTON ? (
+                  <Link
+                    href="/pricing"
+                    className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                  >
+                    Go to Pricing
+                  </Link>
                 ) : null}
-                <label htmlFor="credit-checkout-email" className="mt-3 block">
-                  <span className="text-xs font-semibold text-slate-700">Email</span>
-                  <input
-                    id="credit-checkout-email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    value={creditCheckoutEmail}
-                    onChange={(event) => {
-                      setCreditCheckoutEmail(event.target.value);
-                      setCreditCheckoutError("");
-                    }}
-                    disabled={isCreatingCreditCheckout}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                  />
-                </label>
-                {creditCheckoutError ? (
-                  <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                    {creditCheckoutError}
-                  </p>
-                ) : null}
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {CREDIT_PACK_IDS.map((pack) => (
-                    <article key={`credit-pack-${pack}`} className="rounded-lg border border-slate-200 bg-white p-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-600">
-                        {getCreditPackMarketingLabel(pack)}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-slate-900">{getCreditPackLabel(pack)}</p>
-                      <p className="mt-0.5 text-xs text-slate-600">{getCreditPackPriceLabel(pack)}</p>
-                      <button
-                        type="button"
-                        onClick={() => void handleBuyCredits(pack)}
-                        disabled={isCreatingCreditCheckout || !creditCheckoutEmail.trim()}
-                        className="mt-2 w-full rounded-md bg-slate-800 px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isCreatingCreditCheckout ? "Redirecting..." : "Top up"}
-                      </button>
-                    </article>
-                  ))}
-                </div>
               </div>
-            )}
-          </section>
+            </section>
+          </div>
         ) : null}
 
         {gradeResult ? (
@@ -2579,7 +2458,7 @@ export default function Home() {
           </div>
         ) : null}
 
-        <footer className="mt-10 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-4 shadow-sm backdrop-blur">
+        <footer className="mt-10 px-1 py-2">
           <div className="flex flex-col gap-3 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
             <p>AI-generated estimate only. Not an official grade. RubriCheck.</p>
             <div className="flex flex-wrap items-center gap-3">

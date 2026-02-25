@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SubpageBackHomeLink } from "./components/SubpageBackHomeLink";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -107,6 +108,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }}
         />
+        <SubpageBackHomeLink />
         {children}
         <Analytics />
         <SpeedInsights />

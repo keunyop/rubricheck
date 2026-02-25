@@ -186,26 +186,6 @@ export async function POST(request: Request) {
       resolveFieldText("assignment", assignmentTextInput, assignmentFile),
     ]);
 
-    let structuredRubric;
-    try {
-      const cacheIdentity = await resolveRubricCacheIdentity(request);
-      structuredRubric = await structureRubric(rubricText, {
-        cacheIdentity,
-        requestId: context.requestId,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
-        return errorResponse(
-          context,
-          504,
-          "OPENAI_TIMEOUT",
-          "Our AI reviewer is taking longer than usual. Please retry in a moment.",
-        );
-      }
-      console.error("RUBRIC_STRUCTURE_FAILED", { requestId: context.requestId, error });
-      return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.");
-    }
-
     const usage = await checkUsageLimit(request, "evaluate");
     const usageHeaders = buildUsageLimitHeaders(usage);
     if (usage.degradedCode === "REDIS_UNAVAILABLE") {
@@ -227,6 +207,40 @@ export async function POST(request: Request) {
       }
 
       return errorResponse(context, 429, usage.errorCode ?? "RATE_LIMITED", usage.errorMessage ?? `Free daily limit reached (${usage.limit}). Upgrade to continue.`, undefined, usageHeaders);
+    }
+
+    let structuredRubric;
+    try {
+      const cacheIdentity = await resolveRubricCacheIdentity(request);
+      structuredRubric = await structureRubric(rubricText, {
+        cacheIdentity,
+        requestId: context.requestId,
+      });
+    } catch (error) {
+      if (
+        shouldRefundReservedEvaluateCredit({
+          billingSource: usage.billingSource,
+          hasReservation: Boolean(usage.creditReservation),
+          evaluationSucceeded: false,
+        })
+      ) {
+        try {
+          await refundUsageCreditReservation(usage);
+        } catch (refundError) {
+          console.error("CREDIT_RESERVATION_REFUND_FAILED", { requestId: context.requestId, refundError });
+        }
+      }
+
+      if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
+        return errorResponse(
+          context,
+          504,
+          "OPENAI_TIMEOUT",
+          "Our AI reviewer is taking longer than usual. Please retry in a moment.",
+        );
+      }
+      console.error("RUBRIC_STRUCTURE_FAILED", { requestId: context.requestId, error });
+      return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.");
     }
 
     try {
