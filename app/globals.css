@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f9fc;
+  --foreground: #0f172a;
 }
 
 @theme inline {
@@ -12,15 +12,111 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
+  min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "Segoe UI", Helvetica, Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] body {
+  --background: #141210;
+  --foreground: #e7e1d8;
+  --surface-base: #1c1916;
+  --surface-muted: #26221e;
+  --text-primary: #f2ece3;
+  --text-strong: #ddd4c8;
+  --text-normal: #c9beaf;
+  --text-dim: #9f9486;
+  --border-strong: #3d3731;
+  --input-bg: #171411;
+}
+
+html[data-theme="dark"] .bg-white,
+html[data-theme="dark"] .bg-white\/80,
+html[data-theme="dark"] .bg-white\/90 {
+  background-color: var(--surface-base) !important;
+}
+
+html[data-theme="dark"] .bg-slate-50,
+html[data-theme="dark"] .bg-slate-50\/70,
+html[data-theme="dark"] .bg-slate-50\/80,
+html[data-theme="dark"] .bg-slate-100,
+html[data-theme="dark"] .bg-slate-100\/80 {
+  background-color: var(--surface-muted) !important;
+}
+
+html[data-theme="dark"] .bg-indigo-50,
+html[data-theme="dark"] .bg-indigo-50\/40,
+html[data-theme="dark"] .bg-indigo-50\/50,
+html[data-theme="dark"] .bg-indigo-50\/60,
+html[data-theme="dark"] .bg-indigo-50\/70,
+html[data-theme="dark"] .bg-indigo-100 {
+  background-color: #2a241f !important;
+}
+
+html[data-theme="dark"] .text-slate-900 {
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="dark"] .text-slate-800 {
+  color: var(--text-strong) !important;
+}
+
+html[data-theme="dark"] .text-slate-700,
+html[data-theme="dark"] .text-slate-600 {
+  color: var(--text-normal) !important;
+}
+
+html[data-theme="dark"] .text-slate-500 {
+  color: var(--text-dim) !important;
+}
+
+html[data-theme="dark"] .border-slate-100,
+html[data-theme="dark"] .border-slate-200,
+html[data-theme="dark"] .border-slate-200\/80,
+html[data-theme="dark"] .border-slate-200\/90,
+html[data-theme="dark"] .border-slate-300,
+html[data-theme="dark"] .border-indigo-100,
+html[data-theme="dark"] .border-indigo-200,
+html[data-theme="dark"] .border-indigo-300,
+html[data-theme="dark"] .border-white\/70 {
+  border-color: var(--border-strong) !important;
+}
+
+html[data-theme="dark"] .shadow-sm,
+html[data-theme="dark"] .shadow-md,
+html[data-theme="dark"] .shadow-xl {
+  box-shadow: 0 14px 40px -28px rgba(0, 0, 0, 0.7) !important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background-color: var(--input-bg) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-primary) !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: var(--text-dim) !important;
+}
+
+html[data-theme="dark"] .ring-indigo-100 {
+  --tw-ring-color: rgba(184, 156, 121, 0.24) !important;
+}
+
+html[data-theme="dark"] .bg-indigo-200\/40 {
+  background-color: rgba(116, 98, 78, 0.2) !important;
 }

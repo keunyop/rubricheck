@@ -110,6 +110,8 @@ type RestoreVerifyResponse = {
 
 type PaywallMode = "restore" | "upgrade";
 type RestoreStep = "email" | "code";
+type InterstitialBillingTab = "pro" | "credits";
+type ThemeMode = "light" | "dark";
 
 const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
 const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ?? "";
@@ -119,35 +121,11 @@ const IS_PRODUCTION_DEPLOYMENT = NODE_ENV === "production" || NEXT_PUBLIC_VERCEL
 const SHOW_FAKE_GRADE_BUTTON = !IS_PRODUCTION_DEPLOYMENT && !IS_PRODUCTION_APP_ENV;
 const SHOW_PRO_FEATURES = !IS_PRODUCTION_APP_ENV;
 
-const LEGAL_POLICIES = [
-  {
-    title: "Privacy Policy",
-    paragraphs: [
-      "RubriCheck collects rubric text, assignment drafts, and account-related metadata to operate evaluation features, manage billing, and maintain service reliability.",
-      "We do not sell your personal data. Access to submitted content is limited to authorized systems and personnel for security, support, and quality improvement purposes.",
-    ],
-  },
-  {
-    title: "Terms of Service",
-    paragraphs: [
-      "By using RubriCheck, you agree to use the service responsibly and in compliance with applicable institutional rules and local laws.",
-      "RubriCheck provides AI-assisted educational guidance and does not guarantee grades, admissions outcomes, or official institutional decisions.",
-    ],
-  },
-  {
-    title: "AI Disclaimer",
-    paragraphs: [
-      "This is an AI-generated estimate, not official grading.",
-      "Always verify feedback with your rubric, assignment instructions, and instructor guidance before making final submission decisions.",
-    ],
-  },
-  {
-    title: "Data Retention Policy",
-    paragraphs: [
-      "Evaluation inputs and generated feedback are retained for up to 30 days to support access, abuse prevention, and troubleshooting.",
-      "Billing and transaction records are retained for the period required by accounting and legal obligations. Eligible data deletion requests can be submitted through support.",
-    ],
-  },
+const FOOTER_LEGAL_LINKS = [
+  { label: "Privacy", href: "/legal/privacy" },
+  { label: "Terms", href: "/legal/terms" },
+  { label: "AI Disclaimer", href: "/legal/ai-disclaimer" },
+  { label: "Data Retention", href: "/legal/data-retention" },
 ] as const;
 
 const FAKE_GRADE_RESULT: GradeResult = {
@@ -204,6 +182,7 @@ const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
 const rubricFileInputId = "rubric-file-input";
 const assignmentFileInputId = "assignment-file-input";
 const GRADING_MODE_STORAGE_KEY = "rubricheck_grading_mode";
+const THEME_MODE_STORAGE_KEY = "rubricheck_theme_mode";
 const LOCKED_DETAILED_FEEDBACK_NOTICE = "Detailed criterion breakdown is available with Pro.";
 const FREE_EVALUATIONS_PER_DAY = 3;
 const EVALUATION_DRAFT_STORAGE_KEY = "rubricheck_evaluation_draft_v1";
@@ -548,6 +527,7 @@ export default function Home() {
   const [showRedisWarning, setShowRedisWarning] = useState(false);
   const [showDailyLimitAlert, setShowDailyLimitAlert] = useState(false);
   const [dailyLimitValue, setDailyLimitValue] = useState<number | null>(null);
+  const [interstitialBillingTab, setInterstitialBillingTab] = useState<InterstitialBillingTab>("pro");
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [creditCheckoutEmail, setCreditCheckoutEmail] = useState("");
   const [creditCheckoutError, setCreditCheckoutError] = useState("");
@@ -574,6 +554,7 @@ export default function Home() {
   const [isStartingRestore, setIsStartingRestore] = useState(false);
   const [isVerifyingRestore, setIsVerifyingRestore] = useState(false);
   const [proRestoreNotice, setProRestoreNotice] = useState("");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [showEnvDebugFooter, setShowEnvDebugFooter] = useState(false);
   const [draftRestoreNotice, setDraftRestoreNotice] = useState("");
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -627,6 +608,32 @@ export default function Home() {
       // Ignore quota/private mode storage failures.
     }
   }
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const stored = window.localStorage.getItem(THEME_MODE_STORAGE_KEY);
+
+    if (stored === "light" || stored === "dark") {
+      setThemeMode(stored);
+      return;
+    }
+
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setThemeMode(prefersDark ? "dark" : "light");
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode);
+    const nextTheme = themeMode === "dark" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", nextTheme);
+  }, [themeMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1323,6 +1330,7 @@ export default function Home() {
 
       if (interstitialDecision.show) {
         setDailyLimitValue(interstitialDecision.freeLimit ?? FREE_EVALUATIONS_PER_DAY);
+        setInterstitialBillingTab("pro");
         setShowDailyLimitAlert(true);
         setError("");
         return;
@@ -1493,17 +1501,56 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-300 px-4 py-10 md:py-14">
-      <div className="mx-auto w-full max-w-5xl space-y-8">
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-          <div className="mb-6 border-b border-slate-100 pb-5">
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-                {ACTIVE_LANDING_COPY.headline}
-              </h1>
-              <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
-                Beta
-              </span>
+    <main
+      className={`min-h-screen px-4 py-10 transition-colors md:py-14 ${
+        themeMode === "dark"
+          ? "bg-[linear-gradient(160deg,#121110_0%,#1b1917_45%,#121110_100%)]"
+          : "bg-[linear-gradient(160deg,#f8fafc_0%,#eef2ff_45%,#f8fafc_100%)]"
+      }`}
+    >
+      <div className="mx-auto w-full max-w-6xl space-y-8">
+        <section className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
+          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-indigo-200/40 blur-3xl" />
+          <div className="relative mb-6 border-b border-slate-100 pb-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+                  {ACTIVE_LANDING_COPY.headline}
+                </h1>
+                <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
+                  Beta
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-2">
+                <div className="inline-flex rounded-full border border-slate-300 bg-slate-100 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setThemeMode("light")}
+                    aria-label="Switch to light mode"
+                    title="Light mode"
+                    className={`rounded-full px-3 py-1 text-base transition ${
+                      themeMode === "light"
+                        ? "bg-white shadow"
+                        : "opacity-80 hover:opacity-100"
+                    }`}
+                  >
+                    <span aria-hidden="true">🌞</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setThemeMode("dark")}
+                    aria-label="Switch to dark mode"
+                    title="Dark mode"
+                    className={`rounded-full px-3 py-1 text-base transition ${
+                      themeMode === "dark"
+                        ? "bg-slate-900 shadow"
+                        : "opacity-80 hover:opacity-100"
+                    }`}
+                  >
+                    <span aria-hidden="true">🌙</span>
+                  </button>
+                </div>
+              </div>
             </div>
             <p className="mt-2 text-sm text-slate-600 md:text-[15px]">
               {ACTIVE_LANDING_COPY.subtitle}
@@ -1513,10 +1560,10 @@ export default function Home() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <section
-                className={`rounded-2xl border bg-slate-100/80 p-4 transition md:p-5 ${
+                className={`rounded-2xl border border-slate-200/90 bg-white p-4 transition md:p-5 ${
                   rubricMode === "file" && rubricDragOver
                     ? "-translate-y-px border-indigo-200 shadow-md ring-2 ring-indigo-100"
-                    : "border-slate-200 shadow-sm"
+                    : "shadow-sm"
                 }`}
               >
                 <div className="mb-4 flex items-center justify-between gap-3">
@@ -1627,10 +1674,10 @@ export default function Home() {
               </section>
 
               <section
-                className={`rounded-2xl border bg-slate-100/80 p-4 transition md:p-5 ${
+                className={`rounded-2xl border border-slate-200/90 bg-white p-4 transition md:p-5 ${
                   assignmentMode === "file" && assignmentDragOver
                     ? "-translate-y-px border-indigo-200 shadow-md ring-2 ring-indigo-100"
-                    : "border-slate-200 shadow-sm"
+                    : "shadow-sm"
                 }`}
               >
                 <div className="mb-4 flex items-center justify-between gap-3">
@@ -1804,10 +1851,7 @@ export default function Home() {
                 disabled={isLoading}
                 className="shrink-0 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition-colors duration-150 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 md:px-4"
               >
-                <span className="inline-flex items-center gap-1">
-                  <span aria-hidden="true">{"\u{1F525}"}</span>
-                  <span>Strict Mode</span>
-                </span>
+                <span>Strict Mode</span>
               </button>
             </div>
             {SHOW_FAKE_GRADE_BUTTON ? (
@@ -1828,27 +1872,58 @@ export default function Home() {
 
         {showDailyLimitAlert ? (
           <section className="rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm md:p-6">
-            <h2 className="text-lg font-semibold text-slate-900">
-              You&apos;ve used today&apos;s {dailyLimitValue ?? FREE_EVALUATIONS_PER_DAY} free evaluations.
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Choose Credits for extra evaluations, or upgrade to Pro for Rewrite + more daily usage.
-            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Daily free limit reached</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Continue with Pro for richer feedback and rewrite tools, or purchase one-time evaluation top-ups.
+                </p>
+              </div>
+              <span className="inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                {dailyLimitValue ?? FREE_EVALUATIONS_PER_DAY} free evaluations used
+              </span>
+            </div>
 
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Primary</p>
-                <h3 className="mt-1 text-base font-semibold text-slate-900">Upgrade to Pro</h3>
-                <p className="mt-1 text-xs text-slate-600">30/day on evaluate, simulate, and rewrite.</p>
-                <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-white/90 p-1">
+            <div className="mt-4 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+              <button
+                type="button"
+                onClick={() => setInterstitialBillingTab("pro")}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  interstitialBillingTab === "pro"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Upgrade to Pro
+              </button>
+              <button
+                type="button"
+                onClick={() => setInterstitialBillingTab("credits")}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  interstitialBillingTab === "credits"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Evaluation Top-Ups
+              </button>
+            </div>
+
+            {interstitialBillingTab === "pro" ? (
+              <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
+                <h3 className="text-base font-semibold text-slate-900">Upgrade to Pro</h3>
+                <p className="mt-1 text-xs text-slate-600">
+                  30 evaluations/day + richer feedback + Rewrite tools that help improve your score.
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-slate-300 bg-slate-200 p-1.5">
                   <button
                     type="button"
                     onClick={() => setCheckoutPlan("monthly")}
                     disabled={isCreatingCheckout}
                     className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
                       checkoutPlan === "monthly"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-600 hover:text-slate-900"
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
                     }`}
                   >
                     Monthly
@@ -1859,8 +1934,8 @@ export default function Home() {
                     disabled={isCreatingCheckout}
                     className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
                       checkoutPlan === "annual"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-600 hover:text-slate-900"
+                        ? "bg-slate-900 text-white shadow-sm"
+                        : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
                     }`}
                   >
                     Annual
@@ -1901,10 +1976,10 @@ export default function Home() {
                   {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
                 </button>
               </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                <h3 className="text-base font-semibold text-slate-900">Buy Credits</h3>
-                <p className="mt-1 text-xs text-slate-600">Credits are for evaluate only (no subscription).</p>
+            ) : (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                <h3 className="text-base font-semibold text-slate-900">Evaluation Top-Ups</h3>
+                <p className="mt-1 text-xs text-slate-600">One-time purchase. No subscription. Credits apply to evaluate only.</p>
                 {typeof creditBalance === "number" ? (
                   <p className="mt-1 text-xs text-slate-600">Current credits: {creditBalance}</p>
                 ) : null}
@@ -1944,46 +2019,13 @@ export default function Home() {
                         disabled={isCreatingCreditCheckout || !creditCheckoutEmail.trim()}
                         className="mt-2 w-full rounded-md bg-slate-800 px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {isCreatingCreditCheckout ? "Redirecting..." : "Buy"}
+                        {isCreatingCreditCheckout ? "Redirecting..." : "Top up"}
                       </button>
                     </article>
                   ))}
                 </div>
               </div>
-            </div>
-
-            <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
-              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                <thead className="bg-slate-50">
-                  <tr className="text-slate-700">
-                    <th className="px-3 py-2 font-semibold">Plan</th>
-                    <th className="px-3 py-2 font-semibold">Evaluate</th>
-                    <th className="px-3 py-2 font-semibold">Strict Mode</th>
-                    <th className="px-3 py-2 font-semibold">Rewrite</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Free</td>
-                    <td className="px-3 py-2">3 evaluations/day</td>
-                    <td className="px-3 py-2">Yes</td>
-                    <td className="px-3 py-2">No</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Credits</td>
-                    <td className="px-3 py-2">Extra evaluations (no subscription)</td>
-                    <td className="px-3 py-2">Yes</td>
-                    <td className="px-3 py-2">No</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-medium">Pro</td>
-                    <td className="px-3 py-2">30/day</td>
-                    <td className="px-3 py-2">Yes</td>
-                    <td className="px-3 py-2">Yes</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            )}
           </section>
         ) : null}
 
@@ -1999,9 +2041,8 @@ export default function Home() {
                   Evaluation Summary
                 </h2>
                 {resultMode === "strict" ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
-                    <span aria-hidden="true">{"\u{1F525}"}</span>
-                    <span>Strict Mode</span>
+                  <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
+                    Strict Mode
                   </span>
                 ) : null}
               </div>
@@ -2450,15 +2491,15 @@ export default function Home() {
                   <p className="text-xs text-slate-600">
                     Choose a Pro billing plan, then continue to Stripe Checkout.
                   </p>
-                  <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-300 bg-slate-200 p-1.5">
                     <button
                       type="button"
                       onClick={() => setCheckoutPlan("monthly")}
                       disabled={isCreatingCheckout}
                       className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
                         checkoutPlan === "monthly"
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "text-slate-600 hover:text-slate-900"
+                          ? "bg-slate-900 text-white shadow-sm"
+                          : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
                       }`}
                     >
                       Monthly
@@ -2469,8 +2510,8 @@ export default function Home() {
                       disabled={isCreatingCheckout}
                       className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
                         checkoutPlan === "annual"
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "text-slate-600 hover:text-slate-900"
+                          ? "bg-slate-900 text-white shadow-sm"
+                          : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
                       }`}
                     >
                       Annual
@@ -2538,44 +2579,32 @@ export default function Home() {
           </div>
         ) : null}
 
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-sm md:p-6">
-          <h2 className="text-base font-semibold text-slate-900">Legal &amp; Trust Layer</h2>
-          <p className="mt-2 text-xs leading-5 text-slate-600 md:text-sm">
-            This is an AI-generated estimate, not official grading.
-          </p>
-          <div className="mt-3 space-y-2">
-            {LEGAL_POLICIES.map((policy) => (
-              <details
-                key={policy.title}
-                className="group rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
-              >
-                <summary className="cursor-pointer list-none text-sm font-medium text-slate-800 marker:hidden transition group-open:text-slate-900">
-                  {policy.title}
-                </summary>
-                <div className="mt-2 space-y-2 border-t border-slate-200 pt-2">
-                  {policy.paragraphs.map((paragraph) => (
-                    <p key={paragraph} className="text-sm leading-6 text-slate-700">
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
-              </details>
-            ))}
+        <footer className="mt-10 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-4 shadow-sm backdrop-blur">
+          <div className="flex flex-col gap-3 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
+            <p>AI-generated estimate only. Not an official grade. RubriCheck.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              {FOOTER_LEGAL_LINKS.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="font-medium text-slate-600 transition hover:text-slate-900"
+                >
+                  {link.label}
+                </a>
+              ))}
+              {feedbackUrl ? (
+                <a
+                  href={feedbackUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="font-medium text-slate-600 transition hover:text-slate-900"
+                >
+                  Feedback
+                </a>
+              ) : null}
+            </div>
           </div>
-        </section>
-
-        {feedbackUrl ? (
-          <footer className="pt-3 text-center text-xs text-slate-500">
-            <a
-              href={feedbackUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="font-medium text-slate-600 underline decoration-slate-300 underline-offset-4 transition hover:text-slate-800"
-            >
-              Feedback
-            </a>
-          </footer>
-        ) : null}
+        </footer>
         {showEnvDebugFooter ? (
           <footer className="pt-1 text-center text-[11px] text-slate-500">
             NEXT_PUBLIC_APP_ENV={NEXT_PUBLIC_APP_ENV || "(unset)"} | NODE_ENV={NODE_ENV || "(unset)"} |

@@ -131,9 +131,9 @@ export default function AbuseAdminPage() {
 
       {totals ? (
         <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="rounded border border-slate-200 bg-white p-4">Total: 1h {totals.total1h} · 24h {totals.total24h}</div>
-          <div className="rounded border border-slate-200 bg-white p-4">Suspicious: 1h {totals.suspicious1h} · 24h {totals.suspicious24h}</div>
-          <div className="rounded border border-slate-200 bg-white p-4">Errors: 1h {totals.errors1h} · 24h {totals.errors24h}</div>
+          <div className="rounded border border-slate-200 bg-white p-4">Total: 1h {totals.total1h} | 24h {totals.total24h}</div>
+          <div className="rounded border border-slate-200 bg-white p-4">Suspicious: 1h {totals.suspicious1h} | 24h {totals.suspicious24h}</div>
+          <div className="rounded border border-slate-200 bg-white p-4">Errors: 1h {totals.errors1h} | 24h {totals.errors24h}</div>
         </section>
       ) : null}
 

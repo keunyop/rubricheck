@@ -44,7 +44,6 @@ const WINDOW_SECONDS = 86400;
 export const FREE_EVALUATE_DAILY_LIMIT = 3;
 const PRODUCTION_FREE_EVALUATE_BYPASS_LIMIT = 9_999_999;
 const ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV = "ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT";
-const ENABLE_DEVELOPMENT_FREE_EVALUATE_LIMIT_ENV = "ENABLE_DEVELOPMENT_FREE_EVALUATE_LIMIT";
 
 const REDIS_FALLBACK_LIMIT = 2;
 const fallbackCounters = new Map<string, number>();
@@ -154,7 +153,7 @@ function isProductionFreeEvaluateLimitEnabled(): boolean {
   };
 
   if (process.env.NODE_ENV !== "production") {
-    return normalizeEnabledFlag(process.env[ENABLE_DEVELOPMENT_FREE_EVALUATE_LIMIT_ENV]);
+    return true;
   }
 
   return normalizeEnabledFlag(process.env[ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV]);

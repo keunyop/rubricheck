@@ -122,7 +122,7 @@ export default function BillingSuccessPage() {
       }
 
       setIsActivating(true);
-      setError("Payment received—activating your Pro access. Use Refresh or Restore Pro again in a moment.");
+      setError("Payment received - activating your Pro access. Use Refresh or Restore Pro again in a moment.");
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_VERIFY_FAILED";
       if (code === "INVALID_CODE") {
@@ -218,7 +218,7 @@ export default function BillingSuccessPage() {
 
             {isActivating ? (
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                Payment received—activating. If this takes longer than expected, tap Verify &amp; Restore Pro again.
+                Payment received - activating. If this takes longer than expected, tap Verify &amp; Restore Pro again.
               </p>
             ) : null}
 
