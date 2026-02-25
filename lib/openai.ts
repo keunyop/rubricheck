@@ -8,7 +8,9 @@ if (!apiKey) {
 
 const client = new OpenAI({ apiKey });
 
-const OPENAI_TIMEOUT_MS = Number.parseInt(process.env.OPENAI_TIMEOUT_MS ?? "30000", 10);
+const DEFAULT_OPENAI_TIMEOUT_MS = 180_000;
+const MIN_OPENAI_TIMEOUT_MS = 30_000;
+const MAX_OPENAI_TIMEOUT_MS = 600_000;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -142,6 +144,20 @@ type JsonModelOptions = {
 const DEFAULT_JSON_SYSTEM_INSTRUCTION =
   "Return a single valid JSON object only. Do not include markdown, code fences, or extra text.";
 
+function resolveOpenAiTimeoutMs(): number {
+  const raw = process.env.OPENAI_TIMEOUT_MS?.trim();
+  if (!raw) {
+    return DEFAULT_OPENAI_TIMEOUT_MS;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_OPENAI_TIMEOUT_MS;
+  }
+
+  return Math.max(MIN_OPENAI_TIMEOUT_MS, Math.min(MAX_OPENAI_TIMEOUT_MS, parsed));
+}
+
 async function callJsonModel(
   modelEnvKey: "STRUCTURE_MODEL" | "EVALUATION_MODEL",
   prompt: string,
@@ -153,7 +169,7 @@ async function callJsonModel(
     throw new Error(`${modelEnvKey}_MISSING`);
   }
 
-  const timeoutMs = Number.isFinite(OPENAI_TIMEOUT_MS) ? Math.max(25_000, Math.min(35_000, OPENAI_TIMEOUT_MS)) : 30_000;
+  const timeoutMs = resolveOpenAiTimeoutMs();
   const abortController = new AbortController();
   const timeoutHandle = setTimeout(() => {
     abortController.abort("OPENAI_TIMEOUT");

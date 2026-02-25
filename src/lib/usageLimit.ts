@@ -44,6 +44,7 @@ const WINDOW_SECONDS = 86400;
 export const FREE_EVALUATE_DAILY_LIMIT = 3;
 const PRODUCTION_FREE_EVALUATE_BYPASS_LIMIT = 9_999_999;
 const ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV = "ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT";
+const ENABLE_DEVELOPMENT_FREE_EVALUATE_LIMIT_ENV = "ENABLE_DEVELOPMENT_FREE_EVALUATE_LIMIT";
 
 const REDIS_FALLBACK_LIMIT = 2;
 const fallbackCounters = new Map<string, number>();
@@ -147,12 +148,16 @@ function getFreePlanLimitMessage(limit: number): string {
 }
 
 function isProductionFreeEvaluateLimitEnabled(): boolean {
+  const normalizeEnabledFlag = (value: string | undefined): boolean => {
+    const raw = value?.trim().toLowerCase();
+    return raw === "1" || raw === "true" || raw === "on";
+  };
+
   if (process.env.NODE_ENV !== "production") {
-    return true;
+    return normalizeEnabledFlag(process.env[ENABLE_DEVELOPMENT_FREE_EVALUATE_LIMIT_ENV]);
   }
 
-  const raw = process.env[ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV]?.trim().toLowerCase();
-  return raw === "1" || raw === "true" || raw === "on";
+  return normalizeEnabledFlag(process.env[ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV]);
 }
 
 async function resolveEffectivePlan(request: Request, user?: UserPlanPayload): Promise<PlanName> {
