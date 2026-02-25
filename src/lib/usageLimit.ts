@@ -42,6 +42,8 @@ export type UsageCheckResult = {
 
 const WINDOW_SECONDS = 86400;
 export const FREE_EVALUATE_DAILY_LIMIT = 3;
+const PRODUCTION_FREE_EVALUATE_BYPASS_LIMIT = 9_999_999;
+const ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV = "ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT";
 
 const REDIS_FALLBACK_LIMIT = 2;
 const fallbackCounters = new Map<string, number>();
@@ -144,6 +146,15 @@ function getFreePlanLimitMessage(limit: number): string {
   return `Free daily limit reached (${limit}). Upgrade to continue.`;
 }
 
+function isProductionFreeEvaluateLimitEnabled(): boolean {
+  if (process.env.NODE_ENV !== "production") {
+    return true;
+  }
+
+  const raw = process.env[ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV]?.trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "on";
+}
+
 async function resolveEffectivePlan(request: Request, user?: UserPlanPayload): Promise<PlanName> {
   const requestedPlan = getPlanFromUser(user);
   if (requestedPlan !== "free") {
@@ -234,6 +245,17 @@ async function checkPlanLimitedFeature(
 }
 
 async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageCheckResult> {
+  if (!isProductionFreeEvaluateLimitEnabled()) {
+    return {
+      allowed: true,
+      limit: PRODUCTION_FREE_EVALUATE_BYPASS_LIMIT,
+      remaining: PRODUCTION_FREE_EVALUATE_BYPASS_LIMIT,
+      plan: "free",
+      billingSource: "free",
+      creditsBalance: await getCreditBalanceForRequest(request),
+    };
+  }
+
   if (!hasRedisConfig()) {
     if (process.env.NODE_ENV !== "production") {
       return {
