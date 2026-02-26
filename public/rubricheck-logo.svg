@@ -1,8 +1,5 @@
-<svg width="240" height="64" viewBox="0 0 240 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="2" y="2" width="60" height="60" rx="16" fill="#EEF2FF"/>
-  <rect x="2" y="2" width="60" height="60" rx="16" stroke="#C7D2FE" stroke-width="2"/>
-  <path d="M18 34L28 44L46 22" stroke="#4F46E5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="72" y="13" width="136" height="11" rx="5.5" fill="#0F172A"/>
-  <rect x="72" y="29" width="150" height="9" rx="4.5" fill="#334155"/>
-  <rect x="72" y="43" width="108" height="8" rx="4" fill="#6366F1"/>
+<svg width="160" height="64" viewBox="0 0 160 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="13" width="136" height="11" rx="5.5" fill="#0F172A"/>
+  <rect x="0" y="29" width="150" height="9" rx="4.5" fill="#334155"/>
+  <rect x="0" y="43" width="108" height="8" rx="4" fill="#6366F1"/>
 </svg>

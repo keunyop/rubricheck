@@ -22,7 +22,8 @@ type UserPlanPayload = {
   plan?: string;
 };
 
-type FeatureLimitMap = Record<UsageFeature, number | null>;
+type PlanFeatureLimit = number | "unlimited" | null;
+type FeatureLimitMap = Record<UsageFeature, PlanFeatureLimit>;
 
 export type UsageErrorCode = typeof FREE_LIMIT_REACHED_CODE | "REDIS_UNAVAILABLE";
 
@@ -44,6 +45,7 @@ const WINDOW_SECONDS = 86400;
 export const FREE_EVALUATE_DAILY_LIMIT = 3;
 const PRODUCTION_FREE_EVALUATE_BYPASS_LIMIT = 9_999_999;
 const ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV = "ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT";
+const UNLIMITED_PLAN_SENTINEL = -1;
 
 const REDIS_FALLBACK_LIMIT = 2;
 const fallbackCounters = new Map<string, number>();
@@ -77,9 +79,9 @@ const PLAN_FEATURE_LIMITS: Record<PlanName, FeatureLimitMap> = {
     simulate: PLUS_DAILY_LIMIT,
   },
   pro: {
-    evaluate: PLUS_DAILY_LIMIT,
-    rewrite: PLUS_DAILY_LIMIT,
-    simulate: PLUS_DAILY_LIMIT,
+    evaluate: "unlimited",
+    rewrite: "unlimited",
+    simulate: "unlimited",
   },
   semester: {
     evaluate: PLUS_DAILY_LIMIT,
@@ -133,13 +135,13 @@ function getUtcDateKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getLimitForFeature(plan: PlanName, feature: UsageFeature): number | null {
+function getLimitForFeature(plan: PlanName, feature: UsageFeature): PlanFeatureLimit {
   return PLAN_FEATURE_LIMITS[plan][feature];
 }
 
 function getFeatureBlockedMessage(feature: UsageFeature): string {
   const label = feature.charAt(0).toUpperCase() + feature.slice(1);
-  return `${label} is a Pro feature. Restore Pro or upgrade to continue.`;
+  return `${label} is a Pro feature. Log in or upgrade to continue.`;
 }
 
 function getFreePlanLimitMessage(limit: number): string {
@@ -183,6 +185,16 @@ async function checkPlanLimitedFeature(
   plan: PlanName,
 ): Promise<UsageCheckResult> {
   const limit = getLimitForFeature(plan, feature);
+
+  if (limit === "unlimited") {
+    return {
+      allowed: true,
+      limit: UNLIMITED_PLAN_SENTINEL,
+      remaining: UNLIMITED_PLAN_SENTINEL,
+      plan,
+      billingSource: "pro",
+    };
+  }
 
   if (limit === null || limit <= 0) {
     return {
@@ -366,10 +378,12 @@ async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageChec
 }
 
 export function buildUsageLimitHeaders(result: Pick<UsageCheckResult, "limit" | "remaining" | "creditsBalance">): Record<string, string> {
-  const headers: Record<string, string> = {
-    "X-RateLimit-Limit": String(result.limit),
-    "X-RateLimit-Remaining": String(result.remaining),
-  };
+  const headers: Record<string, string> = {};
+
+  if (result.limit > 0 && result.remaining >= 0) {
+    headers["X-RateLimit-Limit"] = String(result.limit);
+    headers["X-RateLimit-Remaining"] = String(result.remaining);
+  }
 
   if (typeof result.creditsBalance === "number" && Number.isFinite(result.creditsBalance)) {
     headers["X-Credits-Balance"] = String(Math.max(0, Math.floor(result.creditsBalance)));

@@ -1,6 +1,6 @@
 import { Redis } from "@upstash/redis";
 
-import { FREE_DAILY_LIMIT, PLUS_DAILY_LIMIT } from "../../../../src/config/plans";
+import { FREE_DAILY_LIMIT } from "../../../../src/config/plans";
 import { createRequestContext, errorResponse, successJson } from "../../../../src/lib/apiError";
 import { getCreditEmailFromCookie } from "../../../../src/lib/creditSession";
 import { getCreditBalanceForRequest } from "../../../../src/lib/credits";
@@ -103,9 +103,8 @@ export async function GET(request: Request) {
     }
 
     const plan = getPlanFromEntitlementCookie(request) === "pro" ? "pro" : "free";
-    const dailyLimit = plan === "pro" ? PLUS_DAILY_LIMIT : FREE_DAILY_LIMIT;
-    const usageCount = await readEvaluateUsageCount(request, plan);
-    const remainingByPlan = usageCount === null ? null : Math.max(0, dailyLimit - usageCount);
+    const usageCount = plan === "free" ? await readEvaluateUsageCount(request, plan) : null;
+    const remainingByPlan = usageCount === null ? null : Math.max(0, FREE_DAILY_LIMIT - usageCount);
     const creditsBalance = await getCreditBalanceForRequest(request);
     const normalizedCreditsBalance =
       typeof creditsBalance === "number" && Number.isFinite(creditsBalance) ? Math.max(0, creditsBalance) : null;

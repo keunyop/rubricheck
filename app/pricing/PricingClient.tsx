@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { SubpageBackHomeLink } from "../components/SubpageBackHomeLink";
 
 import { CREDIT_PACK_IDS, getCreditPackLabel, getCreditPackMarketingLabel, getCreditPackPriceLabel } from "../../src/config/creditPacks";
 import { PRO_CHECKOUT_DISPLAY, type ProCheckoutPlan } from "../../src/config/proCheckout";
@@ -34,6 +35,7 @@ type RestoreVerifyResponse = {
 };
 
 type RestoreStep = "email" | "code";
+type PricingTab = "pro" | "topups";
 
 function isValidEmail(email: string): boolean {
   if (!email || email.length > 320) {
@@ -45,8 +47,10 @@ function isValidEmail(email: string): boolean {
 
 export function PricingClient() {
   const [signedInEmail, setSignedInEmail] = useState("");
+  const [accountPlan, setAccountPlan] = useState<"free" | "pro">("free");
   const [remainingEvaluations, setRemainingEvaluations] = useState<number | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [activePricingTab, setActivePricingTab] = useState<PricingTab>("pro");
 
   const [checkoutPlan, setCheckoutPlan] = useState<ProCheckoutPlan>("monthly");
   const [checkoutEmail, setCheckoutEmail] = useState("");
@@ -87,17 +91,20 @@ export function PricingClient() {
 
       if (response.ok && data.signedIn && email) {
         setSignedInEmail(email);
+        setAccountPlan(data.plan === "pro" ? "pro" : "free");
         setRemainingEvaluations(remaining);
         setCheckoutEmail((previous) => (previous.trim() ? previous : email));
         setCreditCheckoutEmail((previous) => (previous.trim() ? previous : email));
       } else {
         setSignedInEmail("");
+        setAccountPlan("free");
         setRemainingEvaluations(null);
       }
 
       setCreditBalance(balance);
     } catch {
       setSignedInEmail("");
+      setAccountPlan("free");
       setRemainingEvaluations(null);
       setCreditBalance(null);
     }
@@ -286,158 +293,184 @@ export function PricingClient() {
     <main className="min-h-screen bg-[linear-gradient(160deg,#f8fafc_0%,#eef2ff_45%,#f8fafc_100%)] px-4 py-10 md:py-14">
       <div className="mx-auto w-full max-w-5xl space-y-8">
         <section className="rounded-3xl border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-5">
-            <div className="flex items-center gap-3">
-              <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="h-9 w-auto" />
-              <div>
+          <SubpageBackHomeLink className="mb-3 inline-block text-sm font-medium text-indigo-700 transition hover:text-indigo-600" />
+          <div className="border-b border-slate-100 pb-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="mt-0.5 h-9 w-auto shrink-0" />
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Pricing</h1>
-                <p className="mt-2 text-sm text-slate-600 md:text-[15px]">
-                  Choose Pro subscription or one-time evaluation top-ups.
-                </p>
               </div>
-            </div>
-            <div className="inline-flex items-center gap-2">
-              {signedInEmail ? (
-                <div className="max-w-[13rem] rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-800">
-                  <p className="truncate">{signedInEmail}</p>
-                  <p className="mt-0.5">
-                    Remaining evaluations: {typeof remainingEvaluations === "number" ? remainingEvaluations : "-"}
-                  </p>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowLoginModal(true)}
-                  className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                >
-                  Log in
-                </button>
-              )}
-            </div>
-          </div>
-
-          <section className="mt-6 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-5">
-            <h2 className="text-lg font-semibold text-slate-900">Upgrade to Pro</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Up to 30 evaluations/day with richer feedback and rewrite tools.
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-slate-300 bg-slate-200 p-1.5">
-              <button
-                type="button"
-                onClick={() => setCheckoutPlan("monthly")}
-                disabled={isCreatingCheckout}
-                className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
-                  checkoutPlan === "monthly"
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => setCheckoutPlan("annual")}
-                disabled={isCreatingCheckout}
-                className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
-                  checkoutPlan === "annual"
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
-                }`}
-              >
-                Annual
-              </button>
-            </div>
-            <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
-              <p className="text-sm font-semibold text-indigo-900">
-                {selectedCheckoutPlanDisplay.price}
-                <span className="ml-1 text-xs font-medium text-indigo-700">
-                  {selectedCheckoutPlanDisplay.periodLabel}
-                </span>
-              </p>
-              {selectedCheckoutPlanDisplay.saveNote ? (
-                <p className="mt-1 text-xs text-indigo-700">{selectedCheckoutPlanDisplay.saveNote}</p>
-              ) : null}
-            </div>
-            <label htmlFor="pricing-upgrade-email" className="mt-3 block">
-              <span className="text-xs font-semibold text-slate-700">Email</span>
-              <input
-                id="pricing-upgrade-email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={checkoutEmail}
-                onChange={(event) => {
-                  setCheckoutEmail(event.target.value);
-                  setCheckoutError("");
-                }}
-                disabled={isCreatingCheckout}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-              />
-            </label>
-            {checkoutError ? (
-              <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                {checkoutError}
-              </p>
-            ) : null}
-            <button
-              type="button"
-              onClick={handleUpgradeToPro}
-              disabled={isCreatingCheckout || !checkoutEmail.trim()}
-              className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
-            </button>
-          </section>
-
-          <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-            <h2 className="text-lg font-semibold text-slate-900">Evaluation Top-Ups</h2>
-            <p className="mt-1 text-sm text-slate-600">One-time purchase. Credits apply to Evaluate only.</p>
-            {typeof creditBalance === "number" ? (
-              <p className="mt-1 text-xs text-slate-600">Current credits: {creditBalance}</p>
-            ) : null}
-            <label htmlFor="pricing-credit-email" className="mt-3 block">
-              <span className="text-xs font-semibold text-slate-700">Email</span>
-              <input
-                id="pricing-credit-email"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={creditCheckoutEmail}
-                onChange={(event) => {
-                  setCreditCheckoutEmail(event.target.value);
-                  setCreditCheckoutError("");
-                }}
-                disabled={isCreatingCreditCheckout}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-              />
-            </label>
-            {creditCheckoutError ? (
-              <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                {creditCheckoutError}
-              </p>
-            ) : null}
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
-              {CREDIT_PACK_IDS.map((packId) => (
-                <article key={packId} className="rounded-xl border border-slate-200 bg-white p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-600">
-                    {getCreditPackMarketingLabel(packId)}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{getCreditPackLabel(packId)}</p>
-                  <p className="mt-1 text-xs text-slate-600">{getCreditPackPriceLabel(packId)}</p>
+              <div className="inline-flex items-center gap-2">
+                {signedInEmail ? (
+                  <div className="max-w-[13rem] rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-800">
+                    <p className="truncate">{signedInEmail}</p>
+                    <p className="mt-0.5">{accountPlan === "pro" ? "Unlimited evaluations" : `Remaining evaluations: ${typeof remainingEvaluations === "number" ? remainingEvaluations : "-"}`}</p>
+                  </div>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => void handleBuyCredits(packId)}
-                    disabled={isCreatingCreditCheckout || !creditCheckoutEmail.trim()}
-                    className="mt-3 w-full rounded-md bg-slate-800 px-2 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => setShowLoginModal(true)}
+                    className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                   >
-                    {isCreatingCreditCheckout ? "Redirecting..." : "Top up"}
+                    Log in
                   </button>
-                </article>
-              ))}
+                )}
+              </div>
             </div>
-          </section>
+            <p className="mt-2 text-left text-sm text-slate-600 md:text-[15px]">
+              Choose Pro subscription or one-time evaluation top-ups.
+            </p>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-2 rounded-xl border border-slate-300 bg-slate-100 p-1.5">
+            <button
+              type="button"
+              onClick={() => setActivePricingTab("pro")}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                activePricingTab === "pro"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Upgrade to Pro
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivePricingTab("topups")}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                activePricingTab === "topups"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Evaluation Top-Ups
+            </button>
+          </div>
+
+          {activePricingTab === "pro" ? (
+            <section className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-5">
+              <h2 className="text-lg font-semibold text-slate-900">Upgrade to Pro</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Unlimited evaluations with richer feedback and rewrite suggestions for better scores.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-slate-300 bg-slate-200 p-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCheckoutPlan("monthly")}
+                  disabled={isCreatingCheckout}
+                  className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                    checkoutPlan === "monthly"
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCheckoutPlan("annual")}
+                  disabled={isCreatingCheckout}
+                  className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                    checkoutPlan === "annual"
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
+                  }`}
+                >
+                  Annual
+                </button>
+              </div>
+              <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
+                <p className="text-2xl font-bold text-indigo-900">
+                  {selectedCheckoutPlanDisplay.price}
+                  <span className="ml-1 text-sm font-semibold text-indigo-700">
+                    {selectedCheckoutPlanDisplay.periodLabel}
+                  </span>
+                </p>
+                {selectedCheckoutPlanDisplay.saveNote ? (
+                  <p className="mt-1 text-sm text-indigo-700">{selectedCheckoutPlanDisplay.saveNote}</p>
+                ) : null}
+              </div>
+              <label htmlFor="pricing-upgrade-email" className="mt-3 block">
+                <span className="text-xs font-semibold text-slate-700">Email</span>
+                <input
+                  id="pricing-upgrade-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={checkoutEmail}
+                  onChange={(event) => {
+                    setCheckoutEmail(event.target.value);
+                    setCheckoutError("");
+                  }}
+                  disabled={isCreatingCheckout}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </label>
+              {checkoutError ? (
+                <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {checkoutError}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleUpgradeToPro}
+                disabled={isCreatingCheckout || !checkoutEmail.trim()}
+                className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
+              </button>
+            </section>
+          ) : (
+            <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+              <h2 className="text-lg font-semibold text-slate-900">Evaluation Top-Ups</h2>
+              <p className="mt-1 text-sm text-slate-600">One-time purchase. Credits apply to Evaluate only.</p>
+              {typeof creditBalance === "number" ? (
+                <p className="mt-1 text-sm text-slate-600">Current credits: {creditBalance}</p>
+              ) : null}
+              <label htmlFor="pricing-credit-email" className="mt-3 block">
+                <span className="text-xs font-semibold text-slate-700">Email</span>
+                <input
+                  id="pricing-credit-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={creditCheckoutEmail}
+                  onChange={(event) => {
+                    setCreditCheckoutEmail(event.target.value);
+                    setCreditCheckoutError("");
+                  }}
+                  disabled={isCreatingCreditCheckout}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </label>
+              {creditCheckoutError ? (
+                <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {creditCheckoutError}
+                </p>
+              ) : null}
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                {CREDIT_PACK_IDS.map((packId) => (
+                  <article key={packId} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                      {getCreditPackMarketingLabel(packId)}
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900">{getCreditPackLabel(packId)}</p>
+                    <p className="mt-1 text-base font-medium text-slate-700">{getCreditPackPriceLabel(packId)}</p>
+                    <button
+                      type="button"
+                      onClick={() => void handleBuyCredits(packId)}
+                      disabled={isCreatingCreditCheckout || !creditCheckoutEmail.trim()}
+                      className="mt-3 w-full rounded-md bg-slate-800 px-2 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isCreatingCreditCheckout ? "Redirecting..." : "Top up"}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
         </section>
       </div>
 
@@ -456,10 +489,10 @@ export function PricingClient() {
             className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
           >
             <h3 id="pricing-login-title" className="text-lg font-semibold text-slate-900">
-              Log in (Restore Pro)
+              Log in
             </h3>
             <p className="mt-2 text-sm text-slate-600">
-              We will send a one-time code to verify ownership before restoring your Pro session.
+              We will send a one-time code to verify ownership before logging you in.
             </p>
             <label htmlFor="pricing-restore-email" className="mt-4 block">
               <span className="text-xs font-semibold text-slate-700">Email</span>

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { SubpageBackHomeLink } from "./components/SubpageBackHomeLink";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -60,6 +59,11 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+  icons: {
+    icon: "/rubricheck-tab-icon.svg",
+    shortcut: "/rubricheck-tab-icon.svg",
+    apple: "/rubricheck-tab-icon.svg",
+  },
 };
 
 const webAppJsonLd = {
@@ -78,37 +82,20 @@ const webAppJsonLd = {
   },
 };
 
-const themeInitScript = `
-  (function () {
-    try {
-      var storedMode = localStorage.getItem("rubricheck_theme_mode");
-      var mode = (storedMode === "light" || storedMode === "dark")
-        ? storedMode
-        : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-      var nextTheme = mode === "dark" ? "dark" : "light";
-      document.documentElement.setAttribute("data-theme", nextTheme);
-    } catch (_error) {
-      document.documentElement.setAttribute("data-theme", "light");
-    }
-  })();
-`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppJsonLd) }}
         />
-        <SubpageBackHomeLink />
         {children}
         <Analytics />
         <SpeedInsights />

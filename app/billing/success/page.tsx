@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
 
 type RestoreStartResponse = {
   ok?: boolean;
@@ -122,7 +122,7 @@ export default function BillingSuccessPage() {
       }
 
       setIsActivating(true);
-      setError("Payment received - activating your Pro access. Use Refresh or Restore Pro again in a moment.");
+      setError("Payment received - activating your Pro access. Use Refresh or log in again in a moment.");
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_VERIFY_FAILED";
       if (code === "INVALID_CODE") {
@@ -142,9 +142,10 @@ export default function BillingSuccessPage() {
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-20">
       <section className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold text-slate-900">Payment successful</h1>
+        <SubpageBackHomeLink />
+        <h1 className="mt-3 text-2xl font-semibold text-slate-900">Payment successful</h1>
         <p className="mt-3 text-sm text-slate-600">
-          Verify your checkout email to restore Pro on this device.
+          Verify your checkout email to log in to Pro on this device.
         </p>
 
         {step === "email" ? (
@@ -218,7 +219,7 @@ export default function BillingSuccessPage() {
 
             {isActivating ? (
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                Payment received - activating. If this takes longer than expected, tap Verify &amp; Restore Pro again.
+                Payment received - activating. If this takes longer than expected, tap Verify &amp; Log in again.
               </p>
             ) : null}
 
@@ -241,18 +242,11 @@ export default function BillingSuccessPage() {
                 disabled={isSubmitting || isActivated}
                 className="inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? "Verifying..." : isActivated ? "Restored" : "Verify & Restore Pro"}
+                {isSubmitting ? "Verifying..." : isActivated ? "Logged in" : "Verify & Log in"}
               </button>
             </div>
           </form>
         )}
-
-        <Link
-          href="/"
-          className="mt-6 inline-flex rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600"
-        >
-          Back to RubriCheck
-        </Link>
       </section>
     </main>
   );

@@ -53,6 +53,12 @@ type EvaluationDraftSnapshot = {
   savedAt: number;
 };
 
+type StoredEvaluationResultSnapshot = {
+  gradeResult: GradeResult;
+  resultMode: GradingMode | null;
+  savedAt: number;
+};
+
 type CriteriaResult = {
   name: string;
   max_score: number;
@@ -110,7 +116,6 @@ type RestoreVerifyResponse = {
 
 type PaywallMode = "restore" | "upgrade";
 type RestoreStep = "email" | "code";
-type ThemeMode = "light" | "dark";
 
 const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
 const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ?? "";
@@ -182,11 +187,12 @@ const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
 const rubricFileInputId = "rubric-file-input";
 const assignmentFileInputId = "assignment-file-input";
 const GRADING_MODE_STORAGE_KEY = "rubricheck_grading_mode";
-const THEME_MODE_STORAGE_KEY = "rubricheck_theme_mode";
 const LOCKED_DETAILED_FEEDBACK_NOTICE = "Detailed criterion breakdown is available with Pro.";
 const FREE_EVALUATIONS_PER_DAY = 3;
 const EVALUATION_DRAFT_STORAGE_KEY = "rubricheck_evaluation_draft_v1";
 const EVALUATION_DRAFT_TTL_MS = 1000 * 60 * 60 * 24;
+const EVALUATION_RESULT_STORAGE_KEY = "rubricheck_evaluation_result_v1";
+const EVALUATION_RESULT_TTL_MS = 1000 * 60 * 60 * 24;
 
 function splitDetailedBreakdownBullets(value: string): string[] {
   return value
@@ -528,6 +534,7 @@ export default function Home() {
   const [showDailyLimitAlert, setShowDailyLimitAlert] = useState(false);
   const [dailyLimitValue, setDailyLimitValue] = useState<number | null>(null);
   const [signedInEmail, setSignedInEmail] = useState("");
+  const [accountPlan, setAccountPlan] = useState<"free" | "pro">("free");
   const [remainingEvaluations, setRemainingEvaluations] = useState<number | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [evaluationMessageIndex, setEvaluationMessageIndex] = useState(0);
@@ -544,6 +551,7 @@ export default function Home() {
   const [hasProAccess, setHasProAccess] = useState(false);
   const [entitlementStatus, setEntitlementStatus] = useState<"active" | "needs_restore">("needs_restore");
   const [paywallMode, setPaywallMode] = useState<PaywallMode>("restore");
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [restoreStep, setRestoreStep] = useState<RestoreStep>("email");
   const [restoreEmail, setRestoreEmail] = useState("");
   const [restoreCode, setRestoreCode] = useState("");
@@ -552,7 +560,6 @@ export default function Home() {
   const [isStartingRestore, setIsStartingRestore] = useState(false);
   const [isVerifyingRestore, setIsVerifyingRestore] = useState(false);
   const [proRestoreNotice, setProRestoreNotice] = useState("");
-  const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [showEnvDebugFooter, setShowEnvDebugFooter] = useState(false);
   const [draftRestoreNotice, setDraftRestoreNotice] = useState("");
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -603,15 +610,18 @@ export default function Home() {
 
       if (response.ok && data.signedIn && email) {
         setSignedInEmail(email);
+        setAccountPlan(data.plan === "pro" ? "pro" : "free");
         setRemainingEvaluations(remaining);
       } else {
         setSignedInEmail("");
+        setAccountPlan("free");
         setRemainingEvaluations(null);
       }
 
       setCreditBalance(balance);
     } catch {
       setSignedInEmail("");
+      setAccountPlan("free");
       setRemainingEvaluations(null);
       setCreditBalance(null);
     }
@@ -645,37 +655,71 @@ export default function Home() {
       return;
     }
 
-    const stored = window.localStorage.getItem(THEME_MODE_STORAGE_KEY);
-
-    if (stored === "light" || stored === "dark") {
-      setThemeMode(stored);
-      return;
-    }
-
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setThemeMode(prefersDark ? "dark" : "light");
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    window.localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode);
-    const nextTheme = themeMode === "dark" ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", nextTheme);
-  }, [themeMode]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
     const storedMode = window.localStorage.getItem(GRADING_MODE_STORAGE_KEY);
     if (storedMode === "standard" || storedMode === "strict") {
       setGradingMode(storedMode);
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const rawStoredResult = window.localStorage.getItem(EVALUATION_RESULT_STORAGE_KEY);
+    if (!rawStoredResult) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(rawStoredResult) as Partial<StoredEvaluationResultSnapshot>;
+      const savedAt = typeof parsed.savedAt === "number" ? parsed.savedAt : 0;
+      if (!savedAt || Date.now() - savedAt > EVALUATION_RESULT_TTL_MS) {
+        window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+        return;
+      }
+
+      const storedMode =
+        parsed.resultMode === "standard" || parsed.resultMode === "strict" ? parsed.resultMode : null;
+      const candidateResult = parsed.gradeResult;
+      if (!candidateResult || typeof candidateResult !== "object") {
+        return;
+      }
+
+      const modeForValidation = storedMode ?? "standard";
+      if (!isGradeResult(candidateResult, modeForValidation)) {
+        return;
+      }
+
+      setGradeResult(candidateResult);
+      setResultMode(storedMode);
+    } catch {
+      window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!gradeResult) {
+      window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+      return;
+    }
+
+    const snapshot: StoredEvaluationResultSnapshot = {
+      gradeResult,
+      resultMode,
+      savedAt: Date.now(),
+    };
+
+    try {
+      window.localStorage.setItem(EVALUATION_RESULT_STORAGE_KEY, JSON.stringify(snapshot));
+    } catch {
+      // Ignore quota/private mode storage failures.
+    }
+  }, [gradeResult, resultMode]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -830,6 +874,8 @@ export default function Home() {
     if (!SHOW_PRO_FEATURES) {
       return;
     }
+
+    setShowLoginModal(false);
 
     if (hasProAccess) {
       setCheckoutError("");
@@ -1424,9 +1470,10 @@ export default function Home() {
       if (data.ok === true && data.plan === "pro" && data.status === "active") {
         setHasProAccess(true);
         setEntitlementStatus("active");
-        setProRestoreNotice("Pro restored on this device.");
+        setProRestoreNotice("Logged in on this device.");
         setRestoreCode("");
         setRestoreStep("email");
+        setShowLoginModal(false);
         setShowRewritePaywall(false);
         void refreshAccountSummary();
         return;
@@ -1470,13 +1517,7 @@ export default function Home() {
   }
 
   return (
-    <main
-      className={`min-h-screen px-4 py-10 transition-colors md:py-14 ${
-        themeMode === "dark"
-          ? "bg-[linear-gradient(160deg,#1f1f1f_0%,#232323_45%,#1f1f1f_100%)]"
-          : "bg-[linear-gradient(160deg,#f8fafc_0%,#eef2ff_45%,#f8fafc_100%)]"
-      }`}
-    >
+    <main className="min-h-screen bg-[linear-gradient(160deg,#f8fafc_0%,#eef2ff_45%,#f8fafc_100%)] px-4 py-10 md:py-14">
       <div className="mx-auto w-full max-w-6xl space-y-8">
         <section className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-indigo-200/40 blur-3xl" />
@@ -1492,7 +1533,7 @@ export default function Home() {
                 {SHOW_PRICING_BUTTON ? (
                   <Link
                     href="/pricing"
-                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                    className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                   >
                     Pricing
                   </Link>
@@ -1500,47 +1541,23 @@ export default function Home() {
                 {signedInEmail ? (
                   <div className="max-w-[13rem] rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-800">
                     <p className="truncate">{signedInEmail}</p>
-                    <p className="mt-0.5">
-                      Remaining evaluations: {typeof remainingEvaluations === "number" ? remainingEvaluations : "-"}
-                    </p>
+                    <p className="mt-0.5">{accountPlan === "pro" ? "Unlimited evaluations" : `Remaining evaluations: ${typeof remainingEvaluations === "number" ? remainingEvaluations : "-"}`}</p>
                   </div>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => openRewritePaywall("restore")}
-                    className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                    onClick={() => {
+                      setRestoreStep("email");
+                      setRestoreCode("");
+                      setRestoreError("");
+                      setRestoreInfo("");
+                      setShowLoginModal(true);
+                    }}
+                    className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                   >
                     Log in
                   </button>
                 )}
-                <div className="inline-flex rounded-full border border-slate-300 bg-slate-100 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setThemeMode("light")}
-                    aria-label="Switch to light mode"
-                    title="Light mode"
-                    className={`rounded-full px-3 py-1 text-base transition ${
-                      themeMode === "light"
-                        ? "bg-white shadow"
-                        : "opacity-80 hover:opacity-100"
-                    }`}
-                  >
-                    <span aria-hidden="true">🌞</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setThemeMode("dark")}
-                    aria-label="Switch to dark mode"
-                    title="Dark mode"
-                    className={`rounded-full px-3 py-1 text-base transition ${
-                      themeMode === "dark"
-                        ? "bg-slate-900 shadow"
-                        : "opacity-80 hover:opacity-100"
-                    }`}
-                  >
-                    <span aria-hidden="true">🌙</span>
-                  </button>
-                </div>
               </div>
             </div>
             <p className="mt-2 text-sm text-slate-600 md:text-[15px]">
@@ -1821,18 +1838,11 @@ export default function Home() {
               </div>
             ) : null}
 
-            {isLoading ? (
-              <div className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 md:text-sm">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-                <span className="leading-5">{loadingMessage}</span>
-              </div>
-            ) : null}
-
             <div className="flex items-stretch gap-2">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="min-w-0 flex-1 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-500 active:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                className="min-w-0 flex-1 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-400 active:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Grade my assignment
               </button>
@@ -1840,11 +1850,17 @@ export default function Home() {
                 type="button"
                 onClick={handleStrictSubmit}
                 disabled={isLoading}
-                className="shrink-0 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition-colors duration-150 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 md:px-4"
+                className="shrink-0 min-w-[9.25rem] rounded-xl border border-rose-300 bg-rose-50 px-5 py-2 text-xs font-semibold text-rose-700 transition-colors duration-150 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span>🔥 Strict Mode</span>
               </button>
             </div>
+            {isLoading ? (
+              <div className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 md:text-sm">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                <span className="leading-5">{loadingMessage}</span>
+              </div>
+            ) : null}
             {SHOW_FAKE_GRADE_BUTTON ? (
               <button
                 type="button"
@@ -1921,7 +1937,7 @@ export default function Home() {
                 </h2>
                 {resultMode === "strict" ? (
                   <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
-                    Strict Mode
+                    🔥 Strict Mode
                   </span>
                 ) : null}
               </div>
@@ -1981,7 +1997,7 @@ export default function Home() {
                       onClick={() => openRewritePaywall("restore")}
                       className="inline-flex w-full items-center justify-center rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
                     >
-                      Restore Pro
+                      Log in
                     </button>
                     <button
                       type="button"
@@ -1996,8 +2012,8 @@ export default function Home() {
                   {hasProAccess
                     ? "Pro entitlement is active. Rewrite/simulate gates now use your Pro session."
                     : entitlementStatus === "needs_restore"
-                      ? "Already subscribed? Restore Pro with email verification, or upgrade to Pro."
-                      : "Pro helps you improve specific criteria with ready-to-use paragraph rewrites."}
+                      ? "Already subscribed? Log in with email verification, or upgrade to Pro."
+                      : "Pro unlocks rewrite suggestions focused on improving your score."}
                 </p>
                 {proRestoreNotice ? (
                   <p className="mt-2 text-xs font-medium text-emerald-700 md:text-sm">{proRestoreNotice}</p>
@@ -2090,7 +2106,7 @@ export default function Home() {
                                     ) : (
                                       <>
                                         <p className="text-sm text-slate-600">
-                                          Rewrite Mode is a Pro feature. Restore Pro or upgrade to unlock it.
+                                          Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock.
                                         </p>
                                         <div className="mt-3 flex flex-wrap gap-2">
                                           <button
@@ -2098,7 +2114,7 @@ export default function Home() {
                                             onClick={() => openRewritePaywall("restore")}
                                             className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
                                           >
-                                            Restore Pro
+                                            Log in
                                           </button>
                                           <button
                                             type="button"
@@ -2200,7 +2216,7 @@ export default function Home() {
                             ) : (
                               <>
                                 <p className="text-sm text-slate-600">
-                                  Rewrite Mode is a Pro feature. Restore Pro or upgrade to unlock it.
+                                  Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock.
                                 </p>
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   <button
@@ -2208,7 +2224,7 @@ export default function Home() {
                                     onClick={() => openRewritePaywall("restore")}
                                     className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
                                   >
-                                    Restore Pro
+                                    Log in
                                   </button>
                                   <button
                                     type="button"
@@ -2231,6 +2247,113 @@ export default function Home() {
           </section>
         ) : null}
 
+        {showLoginModal ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close login modal"
+              onClick={() => setShowLoginModal(false)}
+              className="absolute inset-0 bg-slate-950/45"
+            />
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="main-login-title"
+              className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            >
+              <h3 id="main-login-title" className="text-lg font-semibold text-slate-900">
+                Log in
+              </h3>
+              <p className="mt-2 text-sm text-slate-600">
+                We will send a one-time code to verify ownership before logging you in.
+              </p>
+              <label htmlFor="main-restore-email" className="mt-4 block">
+                <span className="text-xs font-semibold text-slate-700">Email</span>
+                <input
+                  id="main-restore-email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={restoreEmail}
+                  onChange={(event) => {
+                    setRestoreEmail(event.target.value);
+                    setRestoreError("");
+                  }}
+                  disabled={isStartingRestore || isVerifyingRestore}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                />
+              </label>
+              {restoreStep === "code" ? (
+                <label htmlFor="main-restore-code" className="mt-3 block">
+                  <span className="text-xs font-semibold text-slate-700">Verification code</span>
+                  <input
+                    id="main-restore-code"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    placeholder="123456"
+                    value={restoreCode}
+                    onChange={(event) => {
+                      setRestoreCode(event.target.value.replace(/\D/g, "").slice(0, 6));
+                      setRestoreError("");
+                    }}
+                    disabled={isStartingRestore || isVerifyingRestore}
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm tracking-[0.2em] text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  />
+                </label>
+              ) : null}
+              {restoreInfo ? (
+                <p className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+                  {restoreInfo}
+                </p>
+              ) : null}
+              {restoreError ? (
+                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {restoreError}
+                </p>
+              ) : null}
+              <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                {restoreStep === "code" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRestoreStep("email");
+                        setRestoreCode("");
+                        setRestoreError("");
+                        setRestoreInfo("");
+                      }}
+                      disabled={isStartingRestore || isVerifyingRestore}
+                      className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleVerifyRestorePro()}
+                      disabled={isStartingRestore || isVerifyingRestore || !restoreCode.trim()}
+                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isVerifyingRestore ? "Verifying..." : "Verify & Log in"}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void handleStartRestorePro()}
+                    disabled={isStartingRestore || isVerifyingRestore || !restoreEmail.trim()}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isStartingRestore ? "Sending..." : "Send code"}
+                  </button>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
+
         {SHOW_PRO_FEATURES && showRewritePaywall && !hasProAccess ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <button
@@ -2246,10 +2369,10 @@ export default function Home() {
               className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
             >
               <h3 id="rewrite-mode-title" className="text-lg font-semibold text-slate-900">
-                Unlock Rewrite Mode
+                Unlock Rewrite Suggestions
               </h3>
               <p className="mt-2 text-sm text-slate-600">
-                Already subscribed? Restore Pro. New to Pro? Upgrade with Stripe.
+                Already subscribed? Log in. New to Pro? Upgrade with Stripe.
               </p>
               <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
                 <button
@@ -2261,7 +2384,7 @@ export default function Home() {
                       : "text-slate-600 hover:text-slate-900"
                   }`}
                 >
-                  Restore Pro
+                  Log in
                 </button>
                 <button
                   type="button"
@@ -2279,7 +2402,7 @@ export default function Home() {
               {paywallMode === "restore" ? (
                 <div className="mt-4 space-y-3">
                   <p className="text-xs text-slate-600">
-                    We will send a one-time code to verify ownership before restoring your Pro session.
+                    We will send a one-time code to verify ownership before logging you in.
                   </p>
                   <label htmlFor="restore-email" className="block">
                     <span className="text-xs font-semibold text-slate-700">Email</span>
@@ -2350,7 +2473,7 @@ export default function Home() {
                           disabled={isStartingRestore || isVerifyingRestore || !restoreCode.trim()}
                           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {isVerifyingRestore ? "Verifying..." : "Verify & Restore"}
+                          {isVerifyingRestore ? "Verifying..." : "Verify & Log in"}
                         </button>
                       </>
                     ) : (
