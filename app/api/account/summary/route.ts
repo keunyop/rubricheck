@@ -110,8 +110,7 @@ export async function GET(request: Request) {
     const creditsBalance = await getCreditBalanceForRequest(request);
     const normalizedCreditsBalance =
       typeof creditsBalance === "number" && Number.isFinite(creditsBalance) ? Math.max(0, creditsBalance) : null;
-    const hasUsableCreditSession = Boolean(creditEmail) && (normalizedCreditsBalance ?? 0) > 0;
-    const email = entitlementEmail ?? (hasUsableCreditSession ? creditEmail : null);
+    const email = entitlementEmail ?? creditEmail ?? null;
     const signedIn = Boolean(email);
 
     if (!signedIn) {

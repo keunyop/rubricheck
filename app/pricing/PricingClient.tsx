@@ -42,14 +42,7 @@ type RestoreVerifyResponse = {
 type RestoreStep = "email" | "code";
 type PricingTab = "pro" | "topups";
 
-const AVATAR_COLOR_CLASS_NAMES = [
-  "border-blue-200 bg-blue-100 text-blue-700",
-  "border-emerald-200 bg-emerald-100 text-emerald-700",
-  "border-amber-200 bg-amber-100 text-amber-700",
-  "border-rose-200 bg-rose-100 text-rose-700",
-  "border-sky-200 bg-sky-100 text-sky-700",
-  "border-violet-200 bg-violet-100 text-violet-700",
-] as const;
+const EMAIL_AVATAR_CLASS_NAME = "border-indigo-200 bg-indigo-100 text-indigo-700";
 const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
 const SHOW_BETA_BADGE = NEXT_PUBLIC_APP_ENV === "production";
 
@@ -72,24 +65,19 @@ function getEmailInitial(email: string): string {
 }
 
 function getEmailInitialAvatarClassName(email: string): string {
-  const normalizedEmail = email.trim().toLowerCase();
-  let hash = 0;
-  for (let index = 0; index < normalizedEmail.length; index += 1) {
-    hash = (hash * 31 + normalizedEmail.charCodeAt(index)) % 9973;
+  if (!email.trim()) {
+    return EMAIL_AVATAR_CLASS_NAME;
   }
 
-  return AVATAR_COLOR_CLASS_NAMES[Math.abs(hash) % AVATAR_COLOR_CLASS_NAMES.length];
+  return EMAIL_AVATAR_CLASS_NAME;
 }
 
 function getEvaluationStatusChip(plan: "free" | "pro", remainingEvaluations: number | null): {
   label: string;
   toneClassName: string;
-} {
+} | null {
   if (plan === "pro") {
-    return {
-      label: "Pro",
-      toneClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    };
+    return null;
   }
 
   if (typeof remainingEvaluations === "number") {
@@ -413,7 +401,10 @@ export function PricingClient() {
         return;
       }
 
-      setRestoreError("No active Pro subscription found for this email.");
+      setRestoreCode("");
+      setRestoreStep("email");
+      setShowLoginModal(false);
+      await refreshAccountSummary();
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_VERIFY_FAILED";
       if (code === "INVALID_CODE") {
@@ -464,15 +455,17 @@ export function PricingClient() {
                     >
                       <span
                         aria-hidden="true"
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
                       >
                         {getEmailInitial(signedInEmail)}
                       </span>
-                      <p
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${evaluationStatusChip.toneClassName}`}
-                      >
-                        {evaluationStatusChip.label}
-                      </p>
+                      {evaluationStatusChip ? (
+                        <p
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${evaluationStatusChip.toneClassName}`}
+                        >
+                          {evaluationStatusChip.label}
+                        </p>
+                      ) : null}
                       <span className="sr-only">{signedInEmail}</span>
                     </button>
                     {showAccountMenu ? (

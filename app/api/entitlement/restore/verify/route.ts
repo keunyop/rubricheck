@@ -10,6 +10,11 @@ import {
   ENTITLEMENT_SESSION_TTL_SECONDS,
   createEntitlementSessionToken,
 } from "../../../../../src/lib/entitlementSession";
+import {
+  CREDIT_SESSION_COOKIE_NAME,
+  CREDIT_SESSION_TTL_SECONDS,
+  createCreditSessionToken,
+} from "../../../../../src/lib/creditSession";
 import { verifyRestoreOtp } from "../../../../../src/lib/entitlementRestoreOtp";
 import { createRequestContext, errorResponse } from "../../../../../src/lib/apiError";
 import {
@@ -79,17 +84,39 @@ export async function POST(request: Request) {
     }
 
     const resolved = await resolveActiveEntitlementByVerifiedEmail(email);
+    const creditToken = createCreditSessionToken({ email });
+    const isSecureCookie = process.env.NODE_ENV === "production";
+
     if (!resolved) {
-      return respond(
-        NextResponse.json(
-          {
-            ok: false,
-            status: "not_active",
-          },
-          { headers: { "x-request-id": context.requestId } },
-        ),
-        "success",
+      const response = NextResponse.json(
+        {
+          ok: true,
+          status: "signed_in",
+          plan: "free",
+        },
+        { headers: { "x-request-id": context.requestId } },
       );
+
+      response.cookies.set({
+        name: ENTITLEMENT_SESSION_COOKIE_NAME,
+        value: "",
+        httpOnly: true,
+        secure: isSecureCookie,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 0,
+      });
+      response.cookies.set({
+        name: CREDIT_SESSION_COOKIE_NAME,
+        value: creditToken,
+        httpOnly: true,
+        secure: isSecureCookie,
+        sameSite: "lax",
+        path: "/",
+        maxAge: CREDIT_SESSION_TTL_SECONDS,
+      });
+
+      return respond(response, "success");
     }
 
     const token = createEntitlementSessionToken({ email, plan: "pro" });
@@ -106,10 +133,19 @@ export async function POST(request: Request) {
       name: ENTITLEMENT_SESSION_COOKIE_NAME,
       value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureCookie,
       sameSite: "lax",
       path: "/",
       maxAge: ENTITLEMENT_SESSION_TTL_SECONDS,
+    });
+    response.cookies.set({
+      name: CREDIT_SESSION_COOKIE_NAME,
+      value: creditToken,
+      httpOnly: true,
+      secure: isSecureCookie,
+      sameSite: "lax",
+      path: "/",
+      maxAge: CREDIT_SESSION_TTL_SECONDS,
     });
 
     return respond(response, "success");
@@ -123,6 +159,7 @@ export async function POST(request: Request) {
       (error.message === "UPSTASH_REDIS_CONFIG_MISSING" ||
         error.message === "ENTITLEMENT_OTP_SECRET_MISSING" ||
         error.message === "ENTITLEMENT_SESSION_SECRET_MISSING" ||
+        error.message === "CREDIT_SESSION_SECRET_MISSING" ||
         error.message === "STRIPE_SECRET_KEY_MISSING")
     ) {
       return respond(errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Restore is temporarily unavailable. Please try again shortly."), "error");

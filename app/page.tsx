@@ -126,8 +126,6 @@ const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase(
 const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ?? "";
 const NODE_ENV = process.env.NODE_ENV?.trim().toLowerCase() ?? "";
 const IS_PRODUCTION_APP_ENV = NEXT_PUBLIC_APP_ENV === "production";
-const IS_PRODUCTION_DEPLOYMENT = NODE_ENV === "production" || NEXT_PUBLIC_VERCEL_ENV === "production";
-const SHOW_FAKE_GRADE_BUTTON = !IS_PRODUCTION_DEPLOYMENT && !IS_PRODUCTION_APP_ENV;
 const SHOW_PRO_FEATURES = !IS_PRODUCTION_APP_ENV;
 const SHOW_PRICING_BUTTON = NODE_ENV !== "production";
 const SHOW_BETA_BADGE = IS_PRODUCTION_APP_ENV;
@@ -138,44 +136,6 @@ const FOOTER_LEGAL_LINKS = [
   { label: "AI Disclaimer", href: "/legal/ai-disclaimer" },
   { label: "Data Retention", href: "/legal/data-retention" },
 ] as const;
-
-const FAKE_GRADE_RESULT: GradeResult = {
-  title: "Demo Submission",
-  overall_range: [84, 90],
-  summary:
-    "Your draft is logically organized and mostly aligned with the rubric. Clarifying evidence and tightening transitions should raise scoring consistency.",
-  top_improvements: [
-    "Add one concrete supporting example for each major claim.",
-    "Strengthen paragraph transitions to improve flow between sections.",
-    "Make the conclusion explicitly tie back to rubric criteria.",
-  ],
-  criteria: [
-    {
-      name: "Thesis & Focus",
-      max_score: 25,
-      estimated_range: [20, 23],
-      feedback: "Clear thesis, but narrow the scope slightly to keep argument focus consistent.",
-    },
-    {
-      name: "Evidence & Analysis",
-      max_score: 35,
-      estimated_range: [27, 31],
-      feedback: "Core reasoning is sound. Add one or two concrete examples for stronger support.",
-    },
-    {
-      name: "Organization & Coherence",
-      max_score: 20,
-      estimated_range: [17, 19],
-      feedback: "Structure is readable; clearer transitions would further improve coherence.",
-    },
-    {
-      name: "Language & Mechanics",
-      max_score: 20,
-      estimated_range: [18, 19],
-      feedback: "Mostly polished writing with minor phrasing and punctuation opportunities.",
-    },
-  ],
-};
 
 const loadingStepLabels: Record<Exclude<LoadingStep, "idle">, string> = {
   uploading: "Uploading...",
@@ -199,14 +159,7 @@ const EVALUATION_DRAFT_STORAGE_KEY = "rubricheck_evaluation_draft_v1";
 const EVALUATION_DRAFT_TTL_MS = 1000 * 60 * 60 * 24;
 const EVALUATION_RESULT_STORAGE_KEY = "rubricheck_evaluation_result_v1";
 const EVALUATION_RESULT_TTL_MS = 1000 * 60 * 60 * 24;
-const AVATAR_COLOR_CLASS_NAMES = [
-  "border-blue-200 bg-blue-100 text-blue-700",
-  "border-emerald-200 bg-emerald-100 text-emerald-700",
-  "border-amber-200 bg-amber-100 text-amber-700",
-  "border-rose-200 bg-rose-100 text-rose-700",
-  "border-sky-200 bg-sky-100 text-sky-700",
-  "border-violet-200 bg-violet-100 text-violet-700",
-] as const;
+const EMAIL_AVATAR_CLASS_NAME = "border-indigo-200 bg-indigo-100 text-indigo-700";
 
 function splitDetailedBreakdownBullets(value: string): string[] {
   return value
@@ -223,6 +176,15 @@ function formatOverallScoreDisplay(range: [number, number]): string {
   }
 
   return `${low}~${high}`;
+}
+
+function formatEstimatedRangeDisplay(range: [number, number], separator: "~" | "-"): string {
+  const [low, high] = range;
+  if (low === high) {
+    return String(low);
+  }
+
+  return `${low}${separator}${high}`;
 }
 
 function formatFileSize(bytes: number): string {
@@ -276,24 +238,19 @@ function getEmailInitial(email: string): string {
 }
 
 function getEmailInitialAvatarClassName(email: string): string {
-  const normalizedEmail = email.trim().toLowerCase();
-  let hash = 0;
-  for (let index = 0; index < normalizedEmail.length; index += 1) {
-    hash = (hash * 31 + normalizedEmail.charCodeAt(index)) % 9973;
+  if (!email.trim()) {
+    return EMAIL_AVATAR_CLASS_NAME;
   }
 
-  return AVATAR_COLOR_CLASS_NAMES[Math.abs(hash) % AVATAR_COLOR_CLASS_NAMES.length];
+  return EMAIL_AVATAR_CLASS_NAME;
 }
 
 function getEvaluationStatusChip(plan: "free" | "pro", remainingEvaluations: number | null): {
   label: string;
   toneClassName: string;
-} {
+} | null {
   if (plan === "pro") {
-    return {
-      label: "Pro",
-      toneClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    };
+    return null;
   }
 
   if (typeof remainingEvaluations === "number") {
@@ -440,7 +397,8 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
 
   const criteriaLines = result.criteria.map((item) => {
     ctx.font = "700 30px system-ui, -apple-system, Segoe UI, sans-serif";
-    const titleText = `${item.name} (${item.estimated_range[0]}~${item.estimated_range[1]} / ${item.max_score})`;
+    const estimatedRangeText = formatEstimatedRangeDisplay(item.estimated_range, "~");
+    const titleText = `${item.name} (${estimatedRangeText} / ${item.max_score})`;
     const titleLines = wrapCanvasText(ctx, titleText, contentWidth - 40);
 
     ctx.font = "400 28px system-ui, -apple-system, Segoe UI, sans-serif";
@@ -1610,9 +1568,14 @@ export default function Home() {
         return;
       }
 
+      setHasProAccess(false);
       setEntitlementStatus("needs_restore");
-      setRestoreError("No active Pro subscription found for this email. Upgrade to continue.");
+      setProRestoreNotice("Logged in on this device.");
+      setRestoreCode("");
+      setRestoreStep("email");
+      setShowLoginModal(false);
       setPaywallMode("upgrade");
+      void refreshAccountSummary();
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_VERIFY_FAILED";
       if (code === "INVALID_CODE") {
@@ -1632,20 +1595,6 @@ export default function Home() {
     } finally {
       setIsVerifyingRestore(false);
     }
-  }
-
-  function handleRunFakeGrade() {
-    setError("");
-    setShowDailyLimitAlert(false);
-    setDailyLimitValue(null);
-    setShowRewritePaywall(false);
-    setExpandedRewriteSections({});
-    setIsSharingImage(false);
-    setDidCopyImage(false);
-    setLoadingStep("idle");
-    setShouldFocusEvaluationHeading(true);
-    setGradeResult(FAKE_GRADE_RESULT);
-    setResultMode("standard");
   }
 
   return (
@@ -1670,9 +1619,13 @@ export default function Home() {
                 {SHOW_PRICING_BUTTON ? (
                   <Link
                     href="/pricing"
-                    className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                      accountPlan === "pro"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:text-emerald-800"
+                        : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900"
+                    }`}
                   >
-                    Pricing
+                    {accountPlan === "pro" ? "Pro" : "Pricing"}
                   </Link>
                 ) : null}
                 {signedInEmail ? (
@@ -1687,15 +1640,17 @@ export default function Home() {
                     >
                       <span
                         aria-hidden="true"
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
                       >
                         {getEmailInitial(signedInEmail)}
                       </span>
-                      <p
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${evaluationStatusChip.toneClassName}`}
-                      >
-                        {evaluationStatusChip.label}
-                      </p>
+                      {evaluationStatusChip ? (
+                        <p
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${evaluationStatusChip.toneClassName}`}
+                        >
+                          {evaluationStatusChip.label}
+                        </p>
+                      ) : null}
                       <span className="sr-only">{signedInEmail}</span>
                     </button>
                     {showAccountMenu ? (
@@ -2027,16 +1982,6 @@ export default function Home() {
                 <span className="leading-5">{loadingMessage}</span>
               </div>
             ) : null}
-            {SHOW_FAKE_GRADE_BUTTON ? (
-              <button
-                type="button"
-                onClick={handleRunFakeGrade}
-                disabled={isLoading}
-                className="w-full rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Run fake grade (dev)
-              </button>
-            ) : null}
           </form>
         </section>
 
@@ -2223,7 +2168,7 @@ export default function Home() {
                           <td className="px-4 py-3 align-top">{item.max_score}</td>
                           <td className="px-4 py-3 align-top">
                             <span className="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-sm font-medium text-indigo-700">
-                              {item.estimated_range[0]}&ndash;{item.estimated_range[1]}
+                              {formatEstimatedRangeDisplay(item.estimated_range, "-")}
                             </span>
                           </td>
                           <td className="max-w-[22rem] whitespace-normal break-words px-4 py-3 align-top">
@@ -2349,7 +2294,7 @@ export default function Home() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <h4 className="text-sm font-semibold text-slate-900">{item.name}</h4>
                       <span className="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-sm font-medium text-indigo-700">
-                        {item.estimated_range[0]}&ndash;{item.estimated_range[1]}
+                        {formatEstimatedRangeDisplay(item.estimated_range, "-")}
                       </span>
                     </div>
                     <p className="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -2803,8 +2748,8 @@ export default function Home() {
         {showEnvDebugFooter ? (
           <footer className="pt-1 text-center text-[11px] text-slate-500">
             NEXT_PUBLIC_APP_ENV={NEXT_PUBLIC_APP_ENV || "(unset)"} | NODE_ENV={NODE_ENV || "(unset)"} |
-            NEXT_PUBLIC_VERCEL_ENV={NEXT_PUBLIC_VERCEL_ENV || "(unset)"} | SHOW_FAKE_GRADE_BUTTON=
-            {String(SHOW_FAKE_GRADE_BUTTON)} | SHOW_PRO_FEATURES={String(SHOW_PRO_FEATURES)}
+            NEXT_PUBLIC_VERCEL_ENV={NEXT_PUBLIC_VERCEL_ENV || "(unset)"} | SHOW_PRO_FEATURES=
+            {String(SHOW_PRO_FEATURES)}
           </footer>
         ) : null}
       </div>
