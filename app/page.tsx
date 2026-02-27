@@ -104,6 +104,7 @@ type EntitlementStatusResponse = {
 type RestoreStartResponse = {
   ok?: boolean;
   message?: string;
+  code?: string;
   error?: string;
 };
 
@@ -111,6 +112,8 @@ type RestoreVerifyResponse = {
   ok?: boolean;
   plan?: string;
   status?: string;
+  code?: string;
+  message?: string;
   error?: string;
 };
 
@@ -125,6 +128,7 @@ const IS_PRODUCTION_DEPLOYMENT = NODE_ENV === "production" || NEXT_PUBLIC_VERCEL
 const SHOW_FAKE_GRADE_BUTTON = !IS_PRODUCTION_DEPLOYMENT && !IS_PRODUCTION_APP_ENV;
 const SHOW_PRO_FEATURES = !IS_PRODUCTION_APP_ENV;
 const SHOW_PRICING_BUTTON = NODE_ENV !== "production";
+const SHOW_BETA_BADGE = IS_PRODUCTION_APP_ENV;
 
 const FOOTER_LEGAL_LINKS = [
   { label: "Privacy", href: "/legal/privacy" },
@@ -193,6 +197,14 @@ const EVALUATION_DRAFT_STORAGE_KEY = "rubricheck_evaluation_draft_v1";
 const EVALUATION_DRAFT_TTL_MS = 1000 * 60 * 60 * 24;
 const EVALUATION_RESULT_STORAGE_KEY = "rubricheck_evaluation_result_v1";
 const EVALUATION_RESULT_TTL_MS = 1000 * 60 * 60 * 24;
+const AVATAR_COLOR_CLASS_NAMES = [
+  "border-blue-200 bg-blue-100 text-blue-700",
+  "border-emerald-200 bg-emerald-100 text-emerald-700",
+  "border-amber-200 bg-amber-100 text-amber-700",
+  "border-rose-200 bg-rose-100 text-rose-700",
+  "border-sky-200 bg-sky-100 text-sky-700",
+  "border-violet-200 bg-violet-100 text-violet-700",
+] as const;
 
 function splitDetailedBreakdownBullets(value: string): string[] {
   return value
@@ -249,6 +261,57 @@ function isValidEmail(email: string): boolean {
   }
 
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function getEmailInitial(email: string): string {
+  const normalizedEmail = email.trim();
+  if (!normalizedEmail) {
+    return "?";
+  }
+
+  const firstCharacter = normalizedEmail.charAt(0).toUpperCase();
+  return /^[A-Z0-9]$/.test(firstCharacter) ? firstCharacter : "?";
+}
+
+function getEmailInitialAvatarClassName(email: string): string {
+  const normalizedEmail = email.trim().toLowerCase();
+  let hash = 0;
+  for (let index = 0; index < normalizedEmail.length; index += 1) {
+    hash = (hash * 31 + normalizedEmail.charCodeAt(index)) % 9973;
+  }
+
+  return AVATAR_COLOR_CLASS_NAMES[Math.abs(hash) % AVATAR_COLOR_CLASS_NAMES.length];
+}
+
+function getEvaluationStatusChip(plan: "free" | "pro", remainingEvaluations: number | null): {
+  label: string;
+  toneClassName: string;
+} {
+  if (plan === "pro") {
+    return {
+      label: "Unlimited evaluations",
+      toneClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (typeof remainingEvaluations === "number") {
+    if (remainingEvaluations <= 0) {
+      return {
+        label: "No evaluations left today",
+        toneClassName: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    }
+
+    return {
+      label: `${remainingEvaluations} evaluations left`,
+      toneClassName: "border-sky-200 bg-sky-50 text-sky-700",
+    };
+  }
+
+  return {
+    label: "Remaining evaluations -",
+    toneClassName: "border-slate-200 bg-slate-50 text-slate-600",
+  };
 }
 
 function restoreBrowserFocus() {
@@ -536,7 +599,6 @@ export default function Home() {
   const [signedInEmail, setSignedInEmail] = useState("");
   const [accountPlan, setAccountPlan] = useState<"free" | "pro">("free");
   const [remainingEvaluations, setRemainingEvaluations] = useState<number | null>(null);
-  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [evaluationMessageIndex, setEvaluationMessageIndex] = useState(0);
   const [showRewritePaywall, setShowRewritePaywall] = useState(false);
   const [expandedRewriteSections, setExpandedRewriteSections] = useState<Record<string, boolean>>(
@@ -561,8 +623,12 @@ export default function Home() {
   const [isVerifyingRestore, setIsVerifyingRestore] = useState(false);
   const [proRestoreNotice, setProRestoreNotice] = useState("");
   const [showEnvDebugFooter, setShowEnvDebugFooter] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [shouldFocusEvaluationHeading, setShouldFocusEvaluationHeading] = useState(false);
+  const evaluationStatusChip = getEvaluationStatusChip(accountPlan, remainingEvaluations);
   const [draftRestoreNotice, setDraftRestoreNotice] = useState("");
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
 
   const isLoading = loadingStep !== "idle";
   const selectedCheckoutPlanDisplay = PRO_CHECKOUT_DISPLAY[checkoutPlan];
@@ -579,18 +645,6 @@ export default function Home() {
     return loadingStepLabels[loadingStep];
   }, [evaluationMessageIndex, loadingStep]);
 
-  function syncCreditBalanceFromHeader(response: Response) {
-    const raw = response.headers.get("x-credits-balance");
-    if (!raw) {
-      return;
-    }
-
-    const parsed = Number.parseInt(raw, 10);
-    if (Number.isFinite(parsed) && parsed >= 0) {
-      setCreditBalance(parsed);
-    }
-  }
-
   const refreshAccountSummary = useCallback(async () => {
     try {
       const response = await fetch("/api/account/summary", {
@@ -603,11 +657,6 @@ export default function Home() {
         typeof data.remainingEvaluations === "number" && Number.isFinite(data.remainingEvaluations)
           ? Math.max(0, Math.floor(data.remainingEvaluations))
           : null;
-      const balance =
-        typeof data.creditsBalance === "number" && Number.isFinite(data.creditsBalance)
-          ? Math.max(0, Math.floor(data.creditsBalance))
-          : null;
-
       if (response.ok && data.signedIn && email) {
         setSignedInEmail(email);
         setAccountPlan(data.plan === "pro" ? "pro" : "free");
@@ -617,15 +666,21 @@ export default function Home() {
         setAccountPlan("free");
         setRemainingEvaluations(null);
       }
-
-      setCreditBalance(balance);
     } catch {
       setSignedInEmail("");
       setAccountPlan("free");
       setRemainingEvaluations(null);
-      setCreditBalance(null);
     }
   }, []);
+
+  function openLoginModal() {
+    setShowAccountMenu(false);
+    setRestoreStep("email");
+    setRestoreCode("");
+    setRestoreError("");
+    setRestoreInfo("");
+    setShowLoginModal(true);
+  }
 
   function persistEvaluationDraftForCheckout() {
     if (typeof window === "undefined") {
@@ -821,10 +876,15 @@ export default function Home() {
       return;
     }
 
+    if (!shouldFocusEvaluationHeading) {
+      return;
+    }
+
+    setShouldFocusEvaluationHeading(false);
     evaluationHeadingRef.current.focus();
     evaluationHeadingRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     window.getSelection()?.removeAllRanges();
-  }, [gradeResult]);
+  }, [gradeResult, shouldFocusEvaluationHeading]);
 
   useEffect(() => {
     return () => {
@@ -833,6 +893,33 @@ export default function Home() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!showAccountMenu) {
+      return;
+    }
+
+    const handleDocumentPointerDown = (event: MouseEvent) => {
+      const targetNode = event.target as Node | null;
+      if (!targetNode || !accountMenuRef.current?.contains(targetNode)) {
+        setShowAccountMenu(false);
+      }
+    };
+
+    const handleDocumentKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowAccountMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDocumentPointerDown);
+    document.addEventListener("keydown", handleDocumentKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentPointerDown);
+      document.removeEventListener("keydown", handleDocumentKeyDown);
+    };
+  }, [showAccountMenu]);
 
   useEffect(() => {
     if (!SHOW_PRO_FEATURES) {
@@ -1216,6 +1303,7 @@ export default function Home() {
     setDraftRestoreNotice("");
     setCheckoutError("");
     setDailyLimitValue(null);
+    setShouldFocusEvaluationHeading(false);
     setGradeResult(null);
     setResultMode(null);
     setShowRewritePaywall(false);
@@ -1307,7 +1395,6 @@ export default function Home() {
       const data: unknown = contentType.includes("application/json")
         ? await response.json()
         : { error: "INTERNAL_SERVER_ERROR" };
-      syncCreditBalanceFromHeader(response);
       void refreshAccountSummary();
 
       const apiErrorResponse = (data ?? {}) as GradeErrorResponse;
@@ -1366,6 +1453,7 @@ export default function Home() {
         return;
       }
 
+      setShouldFocusEvaluationHeading(true);
       setGradeResult(data);
       setResultMode(selectedMode);
     } catch {
@@ -1385,6 +1473,30 @@ export default function Home() {
 
   function handleStrictSubmit() {
     void submitGrade("strict");
+  }
+
+  async function handleLogout() {
+    setShowAccountMenu(false);
+
+    try {
+      await fetch("/api/account/logout", { method: "POST" });
+    } catch {
+      // Ignore network/logout failures and reset local session state.
+    }
+
+    setSignedInEmail("");
+    setAccountPlan("free");
+    setRemainingEvaluations(null);
+    setHasProAccess(false);
+    setEntitlementStatus("needs_restore");
+    setProRestoreNotice("");
+    setShowLoginModal(false);
+    setShowRewritePaywall(false);
+    setRestoreStep("email");
+    setRestoreCode("");
+    setRestoreError("");
+    setRestoreInfo("");
+    void refreshAccountSummary();
   }
 
   async function handleStartRestorePro() {
@@ -1409,7 +1521,7 @@ export default function Home() {
 
       const data: RestoreStartResponse = await response.json().catch(() => ({}));
       if (!response.ok || data.ok !== true) {
-        throw new Error(data.error ?? "ENTITLEMENT_RESTORE_START_FAILED");
+        throw new Error(data.error ?? data.code ?? "ENTITLEMENT_RESTORE_START_FAILED");
       }
 
       setRestoreEmail(normalizedEmail);
@@ -1464,7 +1576,7 @@ export default function Home() {
 
       const data: RestoreVerifyResponse = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.error ?? "ENTITLEMENT_RESTORE_VERIFY_FAILED");
+        throw new Error(data.error ?? data.code ?? "ENTITLEMENT_RESTORE_VERIFY_FAILED");
       }
 
       if (data.ok === true && data.plan === "pro" && data.status === "active") {
@@ -1512,6 +1624,7 @@ export default function Home() {
     setIsSharingImage(false);
     setDidCopyImage(false);
     setLoadingStep("idle");
+    setShouldFocusEvaluationHeading(true);
     setGradeResult(FAKE_GRADE_RESULT);
     setResultMode("standard");
   }
@@ -1528,6 +1641,11 @@ export default function Home() {
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
                   {ACTIVE_LANDING_COPY.headline}
                 </h1>
+                {SHOW_BETA_BADGE ? (
+                  <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                    Beta
+                  </span>
+                ) : null}
               </div>
               <div className="inline-flex items-center gap-2">
                 {SHOW_PRICING_BUTTON ? (
@@ -1539,20 +1657,49 @@ export default function Home() {
                   </Link>
                 ) : null}
                 {signedInEmail ? (
-                  <div className="max-w-[13rem] rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-800">
-                    <p className="truncate">{signedInEmail}</p>
-                    <p className="mt-0.5">{accountPlan === "pro" ? "Unlimited evaluations" : `Remaining evaluations: ${typeof remainingEvaluations === "number" ? remainingEvaluations : "-"}`}</p>
+                  <div ref={accountMenuRef} className="relative">
+                    <button
+                      type="button"
+                      title={signedInEmail}
+                      aria-haspopup="menu"
+                      aria-expanded={showAccountMenu}
+                      onClick={() => setShowAccountMenu((previous) => !previous)}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-2.5 py-1.5 shadow-sm transition hover:border-slate-300"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
+                      >
+                        {getEmailInitial(signedInEmail)}
+                      </span>
+                      <p
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${evaluationStatusChip.toneClassName}`}
+                      >
+                        {evaluationStatusChip.label}
+                      </p>
+                      <span className="sr-only">{signedInEmail}</span>
+                    </button>
+                    {showAccountMenu ? (
+                      <div
+                        role="menu"
+                        className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+                      >
+                        <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => void handleLogout()}
+                          className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                        >
+                          Log out
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => {
-                      setRestoreStep("email");
-                      setRestoreCode("");
-                      setRestoreError("");
-                      setRestoreInfo("");
-                      setShowLoginModal(true);
-                    }}
+                    onClick={openLoginModal}
                     className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                   >
                     Log in
@@ -1872,9 +2019,6 @@ export default function Home() {
               </button>
             ) : null}
           </form>
-          {typeof creditBalance === "number" ? (
-            <p className="mt-3 text-xs text-slate-600">Current credits: {creditBalance}</p>
-          ) : null}
         </section>
 
         {showDailyLimitAlert ? (
@@ -1992,13 +2136,15 @@ export default function Home() {
                   </p>
                 ) : (
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <button
-                      type="button"
-                      onClick={() => openRewritePaywall("restore")}
-                      className="inline-flex w-full items-center justify-center rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
-                    >
-                      Log in
-                    </button>
+                    {!signedInEmail ? (
+                      <button
+                        type="button"
+                        onClick={openLoginModal}
+                        className="inline-flex w-full items-center justify-center rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
+                      >
+                        Log in
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => openRewritePaywall("upgrade")}
@@ -2011,6 +2157,8 @@ export default function Home() {
                 <p className="mt-2 text-xs leading-5 text-indigo-900/80 md:text-sm">
                   {hasProAccess
                     ? "Pro entitlement is active. Rewrite/simulate gates now use your Pro session."
+                    : signedInEmail
+                      ? "You're logged in on this device. Upgrade to Pro to unlock rewrite/simulate."
                     : entitlementStatus === "needs_restore"
                       ? "Already subscribed? Log in with email verification, or upgrade to Pro."
                       : "Pro unlocks rewrite suggestions focused on improving your score."}
@@ -2109,13 +2257,15 @@ export default function Home() {
                                           Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock.
                                         </p>
                                         <div className="mt-3 flex flex-wrap gap-2">
-                                          <button
-                                            type="button"
-                                            onClick={() => openRewritePaywall("restore")}
-                                            className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                          >
-                                            Log in
-                                          </button>
+                                          {!signedInEmail ? (
+                                            <button
+                                              type="button"
+                                              onClick={openLoginModal}
+                                              className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                                            >
+                                              Log in
+                                            </button>
+                                          ) : null}
                                           <button
                                             type="button"
                                             onClick={() => openRewritePaywall("upgrade")}
@@ -2219,13 +2369,15 @@ export default function Home() {
                                   Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock.
                                 </p>
                                 <div className="mt-3 flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => openRewritePaywall("restore")}
-                                    className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                  >
-                                    Log in
-                                  </button>
+                                  {!signedInEmail ? (
+                                    <button
+                                      type="button"
+                                      onClick={openLoginModal}
+                                      className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                                    >
+                                      Log in
+                                    </button>
+                                  ) : null}
                                   <button
                                     type="button"
                                     onClick={() => openRewritePaywall("upgrade")}

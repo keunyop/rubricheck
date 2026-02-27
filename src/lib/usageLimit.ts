@@ -135,6 +135,27 @@ function getUtcDateKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getFreeEvaluateUsageKey(request: Request): string {
+  return `rubricheck:usage:${getRequestIp(request)}:${getUtcDateKey()}:evaluate_free`;
+}
+
+function getFreeEvaluateDisabledKey(request: Request): string {
+  return `rubricheck:usage:${getRequestIp(request)}:${getUtcDateKey()}:evaluate_free_disabled`;
+}
+
+async function markFreeEvaluateDisabledForDay(redis: Redis, request: Request): Promise<void> {
+  const key = getFreeEvaluateDisabledKey(request);
+  const result = await redis.set(key, "1", { nx: true, ex: WINDOW_SECONDS });
+  if (result !== "OK") {
+    await redis.expire(key, WINDOW_SECONDS);
+  }
+}
+
+async function isFreeEvaluateDisabledForDay(redis: Redis, request: Request): Promise<boolean> {
+  const raw = await redis.get(getFreeEvaluateDisabledKey(request));
+  return raw !== null && raw !== undefined;
+}
+
 function getLimitForFeature(plan: PlanName, feature: UsageFeature): PlanFeatureLimit {
   return PLAN_FEATURE_LIMITS[plan][feature];
 }
@@ -289,39 +310,75 @@ async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageChec
 
   try {
     const redis = getRedisClient();
-    const ip = getRequestIp(request);
-    const freeKey = `rubricheck:usage:${ip}:${getUtcDateKey()}:evaluate_free`;
+    const currentCreditBalance = Math.max(0, (await getCreditBalanceForRequest(request)) ?? 0);
+
+    if (currentCreditBalance > 0) {
+      await markFreeEvaluateDisabledForDay(redis, request);
+      const creditReservation = await reserveOneCreditForRequest(request);
+      if (creditReservation.reserved && creditReservation.reservation) {
+        return {
+          allowed: true,
+          limit: FREE_EVALUATE_DAILY_LIMIT,
+          remaining: 0,
+          plan: "free",
+          billingSource: "credit",
+          creditsBalance: creditReservation.balanceAfter,
+          creditReservation: creditReservation.reservation,
+        };
+      }
+
+      return {
+        allowed: false,
+        limit: FREE_EVALUATE_DAILY_LIMIT,
+        remaining: 0,
+        plan: "free",
+        billingSource: "free",
+        errorCode: "FREE_LIMIT_REACHED",
+        action: "SHOW_INTERSTITIAL",
+        errorMessage: getFreePlanLimitMessage(FREE_EVALUATE_DAILY_LIMIT),
+        creditsBalance: creditReservation.balanceAfter,
+      };
+    }
+
+    const isFreeDisabledForToday = await isFreeEvaluateDisabledForDay(redis, request);
+    if (isFreeDisabledForToday) {
+      return {
+        allowed: false,
+        limit: FREE_EVALUATE_DAILY_LIMIT,
+        remaining: 0,
+        plan: "free",
+        billingSource: "free",
+        errorCode: "FREE_LIMIT_REACHED",
+        action: "SHOW_INTERSTITIAL",
+        errorMessage: getFreePlanLimitMessage(FREE_EVALUATE_DAILY_LIMIT),
+        creditsBalance: 0,
+      };
+    }
+
+    const freeKey = getFreeEvaluateUsageKey(request);
     const freeCount = await redis.incr(freeKey);
 
-  if (freeCount === 1) {
-    await redis.expire(freeKey, WINDOW_SECONDS);
-  }
+    if (freeCount === 1) {
+      await redis.expire(freeKey, WINDOW_SECONDS);
+    }
 
-  if (freeCount <= FREE_EVALUATE_DAILY_LIMIT) {
     const freeDecision = decideFreeEvaluateAccess({
       freeCount,
       freeLimit: FREE_EVALUATE_DAILY_LIMIT,
       creditsAvailable: 0,
     });
 
-    return {
-      allowed: freeDecision.allowed,
-      limit: FREE_EVALUATE_DAILY_LIMIT,
-      remaining: Math.max(0, FREE_EVALUATE_DAILY_LIMIT - freeCount),
-      plan: "free",
-      billingSource: "free",
-      creditsBalance: await getCreditBalanceForRequest(request),
-    };
-  }
+    if (freeDecision.allowed) {
+      return {
+        allowed: true,
+        limit: FREE_EVALUATE_DAILY_LIMIT,
+        remaining: Math.max(0, FREE_EVALUATE_DAILY_LIMIT - freeCount),
+        plan: "free",
+        billingSource: "free",
+        creditsBalance: 0,
+      };
+    }
 
-  const currentCreditBalance = await getCreditBalanceForRequest(request);
-  const creditDecision = decideFreeEvaluateAccess({
-    freeCount,
-    freeLimit: FREE_EVALUATE_DAILY_LIMIT,
-    creditsAvailable: Math.max(0, currentCreditBalance ?? 0),
-  });
-
-  if (!creditDecision.allowed) {
     return {
       allowed: false,
       limit: FREE_EVALUATE_DAILY_LIMIT,
@@ -331,34 +388,8 @@ async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageChec
       errorCode: "FREE_LIMIT_REACHED",
       action: "SHOW_INTERSTITIAL",
       errorMessage: getFreePlanLimitMessage(FREE_EVALUATE_DAILY_LIMIT),
-      creditsBalance: Math.max(0, currentCreditBalance ?? 0),
+      creditsBalance: 0,
     };
-  }
-
-  const creditReservation = await reserveOneCreditForRequest(request);
-  if (creditReservation.reserved && creditReservation.reservation) {
-    return {
-      allowed: true,
-      limit: FREE_EVALUATE_DAILY_LIMIT,
-      remaining: 0,
-      plan: "free",
-      billingSource: "credit",
-      creditsBalance: creditReservation.balanceAfter,
-      creditReservation: creditReservation.reservation,
-    };
-  }
-
-  return {
-    allowed: false,
-    limit: FREE_EVALUATE_DAILY_LIMIT,
-    remaining: 0,
-    plan: "free",
-    billingSource: "free",
-    errorCode: "FREE_LIMIT_REACHED",
-    action: "SHOW_INTERSTITIAL",
-    errorMessage: getFreePlanLimitMessage(FREE_EVALUATE_DAILY_LIMIT),
-    creditsBalance: creditReservation.balanceAfter,
-  };
   } catch {
     const fallback = checkRedisFallbackAllowance(request, "evaluate");
     return {

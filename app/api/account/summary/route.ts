@@ -52,6 +52,11 @@ function getUtcDateKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getFreeEvaluateDisabledKey(request: Request): string {
+  const ip = getRequestIp(request);
+  return `rubricheck:usage:${ip}:${getUtcDateKey()}:evaluate_free_disabled`;
+}
+
 function parseCount(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) {
     return Math.max(0, Math.floor(value));
@@ -83,13 +88,30 @@ async function readEvaluateUsageCount(request: Request, plan: "free" | "pro"): P
   }
 }
 
+async function readFreeEvaluateDisabledForToday(request: Request): Promise<boolean | null> {
+  if (!hasRedisConfig()) {
+    return null;
+  }
+
+  try {
+    const raw = await getRedisClient().get(getFreeEvaluateDisabledKey(request));
+    return raw !== null && raw !== undefined;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: Request) {
   const context = createRequestContext(request);
 
   try {
     const entitlementEmail = getEntitlementEmailFromCookie(request);
     const creditEmail = getCreditEmailFromCookie(request);
-    const email = entitlementEmail ?? creditEmail;
+    const creditsBalance = await getCreditBalanceForRequest(request);
+    const normalizedCreditsBalance =
+      typeof creditsBalance === "number" && Number.isFinite(creditsBalance) ? Math.max(0, creditsBalance) : null;
+    const hasUsableCreditSession = Boolean(creditEmail) && (normalizedCreditsBalance ?? 0) > 0;
+    const email = entitlementEmail ?? (hasUsableCreditSession ? creditEmail : null);
     const signedIn = Boolean(email);
 
     if (!signedIn) {
@@ -98,25 +120,23 @@ export async function GET(request: Request) {
         email: null,
         plan: "free",
         remainingEvaluations: null,
-        creditsBalance: null,
+        creditsBalance: normalizedCreditsBalance,
       });
     }
 
     const plan = getPlanFromEntitlementCookie(request) === "pro" ? "pro" : "free";
     const usageCount = plan === "free" ? await readEvaluateUsageCount(request, plan) : null;
+    const isFreeDisabledForToday = plan === "free" ? await readFreeEvaluateDisabledForToday(request) : null;
     const remainingByPlan = usageCount === null ? null : Math.max(0, FREE_DAILY_LIMIT - usageCount);
-    const creditsBalance = await getCreditBalanceForRequest(request);
-    const normalizedCreditsBalance =
-      typeof creditsBalance === "number" && Number.isFinite(creditsBalance) ? Math.max(0, creditsBalance) : null;
 
     const remainingEvaluations =
-      remainingByPlan === null
-        ? plan === "free"
+      plan === "free"
+        ? (normalizedCreditsBalance ?? 0) > 0
           ? normalizedCreditsBalance
-          : null
-        : plan === "free"
-          ? remainingByPlan + (normalizedCreditsBalance ?? 0)
-          : remainingByPlan;
+          : isFreeDisabledForToday
+            ? 0
+            : remainingByPlan
+        : remainingByPlan;
 
     return successJson(context, {
       signedIn: true,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { SubpageBackHomeLink } from "../components/SubpageBackHomeLink";
 
@@ -24,6 +24,7 @@ type AccountSummaryResponse = {
 type RestoreStartResponse = {
   ok?: boolean;
   message?: string;
+  code?: string;
   error?: string;
 };
 
@@ -31,11 +32,24 @@ type RestoreVerifyResponse = {
   ok?: boolean;
   plan?: string;
   status?: string;
+  code?: string;
+  message?: string;
   error?: string;
 };
 
 type RestoreStep = "email" | "code";
 type PricingTab = "pro" | "topups";
+
+const AVATAR_COLOR_CLASS_NAMES = [
+  "border-blue-200 bg-blue-100 text-blue-700",
+  "border-emerald-200 bg-emerald-100 text-emerald-700",
+  "border-amber-200 bg-amber-100 text-amber-700",
+  "border-rose-200 bg-rose-100 text-rose-700",
+  "border-sky-200 bg-sky-100 text-sky-700",
+  "border-violet-200 bg-violet-100 text-violet-700",
+] as const;
+const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
+const SHOW_BETA_BADGE = NEXT_PUBLIC_APP_ENV === "production";
 
 function isValidEmail(email: string): boolean {
   if (!email || email.length > 320) {
@@ -45,11 +59,63 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function getEmailInitial(email: string): string {
+  const normalizedEmail = email.trim();
+  if (!normalizedEmail) {
+    return "?";
+  }
+
+  const firstCharacter = normalizedEmail.charAt(0).toUpperCase();
+  return /^[A-Z0-9]$/.test(firstCharacter) ? firstCharacter : "?";
+}
+
+function getEmailInitialAvatarClassName(email: string): string {
+  const normalizedEmail = email.trim().toLowerCase();
+  let hash = 0;
+  for (let index = 0; index < normalizedEmail.length; index += 1) {
+    hash = (hash * 31 + normalizedEmail.charCodeAt(index)) % 9973;
+  }
+
+  return AVATAR_COLOR_CLASS_NAMES[Math.abs(hash) % AVATAR_COLOR_CLASS_NAMES.length];
+}
+
+function getEvaluationStatusChip(plan: "free" | "pro", remainingEvaluations: number | null): {
+  label: string;
+  toneClassName: string;
+} {
+  if (plan === "pro") {
+    return {
+      label: "Unlimited evaluations",
+      toneClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  if (typeof remainingEvaluations === "number") {
+    if (remainingEvaluations <= 0) {
+      return {
+        label: "No evaluations left today",
+        toneClassName: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    }
+
+    return {
+      label: `${remainingEvaluations} evaluations left`,
+      toneClassName: "border-sky-200 bg-sky-50 text-sky-700",
+    };
+  }
+
+  return {
+    label: "Remaining evaluations -",
+    toneClassName: "border-slate-200 bg-slate-50 text-slate-600",
+  };
+}
+
 export function PricingClient() {
   const [signedInEmail, setSignedInEmail] = useState("");
   const [accountPlan, setAccountPlan] = useState<"free" | "pro">("free");
   const [remainingEvaluations, setRemainingEvaluations] = useState<number | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [activePricingTab, setActivePricingTab] = useState<PricingTab>("pro");
 
   const [checkoutPlan, setCheckoutPlan] = useState<ProCheckoutPlan>("monthly");
@@ -71,6 +137,8 @@ export function PricingClient() {
   const [isVerifyingRestore, setIsVerifyingRestore] = useState(false);
 
   const selectedCheckoutPlanDisplay = PRO_CHECKOUT_DISPLAY[checkoutPlan];
+  const evaluationStatusChip = getEvaluationStatusChip(accountPlan, remainingEvaluations);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
 
   const refreshAccountSummary = useCallback(async () => {
     try {
@@ -110,15 +178,77 @@ export function PricingClient() {
     }
   }, []);
 
+  function openLoginModal() {
+    setShowAccountMenu(false);
+    setRestoreStep("email");
+    setRestoreCode("");
+    setRestoreError("");
+    setRestoreInfo("");
+    setShowLoginModal(true);
+  }
+
   useEffect(() => {
     void refreshAccountSummary();
   }, [refreshAccountSummary]);
 
+  useEffect(() => {
+    if (!showAccountMenu) {
+      return;
+    }
+
+    const handleDocumentPointerDown = (event: MouseEvent) => {
+      const targetNode = event.target as Node | null;
+      if (!targetNode || !accountMenuRef.current?.contains(targetNode)) {
+        setShowAccountMenu(false);
+      }
+    };
+
+    const handleDocumentKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowAccountMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDocumentPointerDown);
+    document.addEventListener("keydown", handleDocumentKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentPointerDown);
+      document.removeEventListener("keydown", handleDocumentKeyDown);
+    };
+  }, [showAccountMenu]);
+
+  async function handleLogout() {
+    setShowAccountMenu(false);
+
+    try {
+      await fetch("/api/account/logout", { method: "POST" });
+    } catch {
+      // Ignore network/logout failures and reset local session state.
+    }
+
+    setSignedInEmail("");
+    setAccountPlan("free");
+    setRemainingEvaluations(null);
+    setCreditBalance(null);
+    setShowLoginModal(false);
+    setRestoreStep("email");
+    setRestoreCode("");
+    setRestoreError("");
+    setRestoreInfo("");
+    await refreshAccountSummary();
+  }
+
   async function handleUpgradeToPro() {
     setCheckoutError("");
     const normalizedEmail = checkoutEmail.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setCheckoutError("Please enter your email before continuing.");
+      return;
+    }
+
     if (!isValidEmail(normalizedEmail)) {
-      setCheckoutError("Please enter a valid email for Stripe checkout.");
+      setCheckoutError("Please enter a valid email address.");
       return;
     }
 
@@ -148,8 +278,13 @@ export function PricingClient() {
   async function handleBuyCredits(packId: (typeof CREDIT_PACK_IDS)[number]) {
     setCreditCheckoutError("");
     const normalizedEmail = creditCheckoutEmail.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setCreditCheckoutError("Please enter your email before continuing.");
+      return;
+    }
+
     if (!isValidEmail(normalizedEmail)) {
-      setCreditCheckoutError("Please enter a valid email for credit purchase.");
+      setCreditCheckoutError("Please enter a valid email address.");
       return;
     }
 
@@ -199,7 +334,7 @@ export function PricingClient() {
 
       const data: RestoreStartResponse = await response.json().catch(() => ({}));
       if (!response.ok || data.ok !== true) {
-        throw new Error(data.error ?? "ENTITLEMENT_RESTORE_START_FAILED");
+        throw new Error(data.error ?? data.code ?? "ENTITLEMENT_RESTORE_START_FAILED");
       }
 
       setRestoreEmail(normalizedEmail);
@@ -256,7 +391,7 @@ export function PricingClient() {
 
       const data: RestoreVerifyResponse = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.error ?? "ENTITLEMENT_RESTORE_VERIFY_FAILED");
+        throw new Error(data.error ?? data.code ?? "ENTITLEMENT_RESTORE_VERIFY_FAILED");
       }
 
       if (data.ok === true && data.plan === "pro" && data.status === "active") {
@@ -299,17 +434,57 @@ export function PricingClient() {
               <div className="flex items-start gap-3">
                 <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="mt-0.5 h-9 w-auto shrink-0" />
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Pricing</h1>
+                {SHOW_BETA_BADGE ? (
+                  <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                    Beta
+                  </span>
+                ) : null}
               </div>
               <div className="inline-flex items-center gap-2">
                 {signedInEmail ? (
-                  <div className="max-w-[13rem] rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-800">
-                    <p className="truncate">{signedInEmail}</p>
-                    <p className="mt-0.5">{accountPlan === "pro" ? "Unlimited evaluations" : `Remaining evaluations: ${typeof remainingEvaluations === "number" ? remainingEvaluations : "-"}`}</p>
+                  <div ref={accountMenuRef} className="relative">
+                    <button
+                      type="button"
+                      title={signedInEmail}
+                      aria-haspopup="menu"
+                      aria-expanded={showAccountMenu}
+                      onClick={() => setShowAccountMenu((previous) => !previous)}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-2.5 py-1.5 shadow-sm transition hover:border-slate-300"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
+                      >
+                        {getEmailInitial(signedInEmail)}
+                      </span>
+                      <p
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${evaluationStatusChip.toneClassName}`}
+                      >
+                        {evaluationStatusChip.label}
+                      </p>
+                      <span className="sr-only">{signedInEmail}</span>
+                    </button>
+                    {showAccountMenu ? (
+                      <div
+                        role="menu"
+                        className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+                      >
+                        <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => void handleLogout()}
+                          className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                        >
+                          Log out
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setShowLoginModal(true)}
+                    onClick={openLoginModal}
                     className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                   >
                     Log in
@@ -380,9 +555,9 @@ export function PricingClient() {
                 </button>
               </div>
               <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
-                <p className="text-2xl font-bold text-indigo-900">
+                <p className="text-4xl font-bold leading-tight text-indigo-900">
                   {selectedCheckoutPlanDisplay.price}
-                  <span className="ml-1 text-sm font-semibold text-indigo-700">
+                  <span className="ml-1 text-base font-semibold text-indigo-700">
                     {selectedCheckoutPlanDisplay.periodLabel}
                   </span>
                 </p>
@@ -415,7 +590,7 @@ export function PricingClient() {
               <button
                 type="button"
                 onClick={handleUpgradeToPro}
-                disabled={isCreatingCheckout || !checkoutEmail.trim()}
+                disabled={isCreatingCheckout}
                 className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
@@ -423,10 +598,10 @@ export function PricingClient() {
             </section>
           ) : (
             <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-              <h2 className="text-lg font-semibold text-slate-900">Evaluation Top-Ups</h2>
-              <p className="mt-1 text-sm text-slate-600">One-time purchase. Credits apply to Evaluate only.</p>
+              <h2 className="text-xl font-semibold text-slate-900">Evaluation Top-Ups</h2>
+              <p className="mt-1 text-base text-slate-600">One-time purchase. Credits apply to Evaluate only.</p>
               {typeof creditBalance === "number" ? (
-                <p className="mt-1 text-sm text-slate-600">Current credits: {creditBalance}</p>
+                <p className="mt-1 text-base text-slate-600">Current credits: {creditBalance}</p>
               ) : null}
               <label htmlFor="pricing-credit-email" className="mt-3 block">
                 <span className="text-xs font-semibold text-slate-700">Email</span>
@@ -450,19 +625,23 @@ export function PricingClient() {
                   {creditCheckoutError}
                 </p>
               ) : null}
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
                 {CREDIT_PACK_IDS.map((packId) => (
-                  <article key={packId} className="rounded-xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+                  <article
+                    key={packId}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+                  >
+                    <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
                       {getCreditPackMarketingLabel(packId)}
                     </p>
-                    <p className="mt-1 text-lg font-semibold text-slate-900">{getCreditPackLabel(packId)}</p>
-                    <p className="mt-1 text-base font-medium text-slate-700">{getCreditPackPriceLabel(packId)}</p>
+                    <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{getCreditPackLabel(packId)}</p>
+                    <p className="mt-2 text-3xl font-bold text-slate-900">{getCreditPackPriceLabel(packId)}</p>
+                    <p className="mt-2 text-sm text-slate-600">One-time payment</p>
                     <button
                       type="button"
                       onClick={() => void handleBuyCredits(packId)}
-                      disabled={isCreatingCreditCheckout || !creditCheckoutEmail.trim()}
-                      className="mt-3 w-full rounded-md bg-slate-800 px-2 py-1.5 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={isCreatingCreditCheckout}
+                      className="mt-4 w-full rounded-lg bg-slate-800 px-3 py-2 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isCreatingCreditCheckout ? "Redirecting..." : "Top up"}
                     </button>
