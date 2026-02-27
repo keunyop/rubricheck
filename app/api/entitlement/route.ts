@@ -2,6 +2,7 @@ import { getCreditEmailFromCookie } from "../../../src/lib/creditSession";
 import {
   getAccountEntitlementByEmail,
   hasAccountEntitlementStore,
+  isAccountEntitlementStoreUnavailableError,
   isActiveProAccountEntitlement,
 } from "../../../src/lib/accountEntitlements";
 import { getEntitlementEmailFromCookie, getPlanFromEntitlementCookie } from "../../../src/lib/entitlementSession";
@@ -23,9 +24,14 @@ export async function GET(request: Request) {
 
       return successJson(context, { plan: "free", status: "needs_restore" });
     } catch (error) {
-      console.error("ENTITLEMENT_DB_LOOKUP_FAILED", { requestId: context.requestId, error });
+      if (!isAccountEntitlementStoreUnavailableError(error)) {
+        console.error("ENTITLEMENT_DB_LOOKUP_FAILED", { requestId: context.requestId, error });
+      }
       if (cookiePlan === "pro") {
         return successJson(context, { plan: "pro", status: "active" });
+      }
+      if (isAccountEntitlementStoreUnavailableError(error)) {
+        return successJson(context, { plan: "free", status: "needs_restore" });
       }
       return errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Entitlement lookup is temporarily unavailable.");
     }

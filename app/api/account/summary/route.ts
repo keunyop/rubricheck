@@ -7,6 +7,7 @@ import { getCreditBalanceForRequest } from "../../../../src/lib/credits";
 import {
   getAccountEntitlementByEmail,
   hasAccountEntitlementStore,
+  isAccountEntitlementStoreUnavailableError,
   isActiveProAccountEntitlement,
 } from "../../../../src/lib/accountEntitlements";
 import { getEntitlementEmailFromCookie, getPlanFromEntitlementCookie } from "../../../../src/lib/entitlementSession";
@@ -148,10 +149,12 @@ export async function GET(request: Request) {
         const entitlement = await getAccountEntitlementByEmail(email);
         plan = isActiveProAccountEntitlement(entitlement) ? "pro" : "free";
       } catch (lookupError) {
-        console.error("ACCOUNT_SUMMARY_ENTITLEMENT_LOOKUP_FAILED", {
-          requestId: context.requestId,
-          lookupError,
-        });
+        if (!isAccountEntitlementStoreUnavailableError(lookupError)) {
+          console.error("ACCOUNT_SUMMARY_ENTITLEMENT_LOOKUP_FAILED", {
+            requestId: context.requestId,
+            lookupError,
+          });
+        }
       }
     }
 

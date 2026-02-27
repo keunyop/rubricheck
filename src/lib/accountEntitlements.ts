@@ -87,6 +87,36 @@ function parseAccountEntitlement(value: unknown): AccountEntitlementRecord | nul
   };
 }
 
+function isMissingEntitlementRpcError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message;
+  return (
+    message.includes("SUPABASE_RPC_FAILED:rubricheck_get_account_entitlement_by_email") ||
+    message.includes("SUPABASE_RPC_FAILED:rubricheck_upsert_account_entitlement") ||
+    message.includes("PGRST202")
+  );
+}
+
+function isMissingEntitlementTableError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return message.includes("account_entitlements") && message.includes("does not exist");
+}
+
+export function isAccountEntitlementStoreUnavailableError(error: unknown): boolean {
+  if (error instanceof Error && error.message === "ACCOUNT_ENTITLEMENT_STORE_UNAVAILABLE") {
+    return true;
+  }
+
+  return isMissingEntitlementRpcError(error) || isMissingEntitlementTableError(error);
+}
+
 export function hasAccountEntitlementStore(): boolean {
   return hasSupabaseConfig();
 }
@@ -122,12 +152,19 @@ export async function upsertAccountEntitlement(params: {
     throw new Error("INVALID_CURRENT_PERIOD_END");
   }
 
-  await callSupabaseRpc<null>("rubricheck_upsert_account_entitlement", {
-    p_customer_id: customerId,
-    p_email: params.email ? normalizeEmail(params.email) : null,
-    p_status: params.status,
-    p_current_period_end: Math.floor(params.currentPeriodEnd),
-  });
+  try {
+    await callSupabaseRpc<null>("rubricheck_upsert_account_entitlement", {
+      p_customer_id: customerId,
+      p_email: params.email ? normalizeEmail(params.email) : null,
+      p_status: params.status,
+      p_current_period_end: Math.floor(params.currentPeriodEnd),
+    });
+  } catch (error) {
+    if (isAccountEntitlementStoreUnavailableError(error)) {
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function getAccountEntitlementByEmail(email: string): Promise<AccountEntitlementRecord | null> {
@@ -140,9 +177,17 @@ export async function getAccountEntitlementByEmail(email: string): Promise<Accou
     return null;
   }
 
-  const raw = await callSupabaseRpc<unknown>("rubricheck_get_account_entitlement_by_email", {
-    p_email: normalizedEmail,
-  });
+  let raw: unknown;
+  try {
+    raw = await callSupabaseRpc<unknown>("rubricheck_get_account_entitlement_by_email", {
+      p_email: normalizedEmail,
+    });
+  } catch (error) {
+    if (isAccountEntitlementStoreUnavailableError(error)) {
+      throw new Error("ACCOUNT_ENTITLEMENT_STORE_UNAVAILABLE");
+    }
+    throw error;
+  }
 
   return parseAccountEntitlement(raw);
 }
