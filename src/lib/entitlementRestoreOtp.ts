@@ -21,6 +21,10 @@ type OtpRecord = {
   failedAttempts: number;
 };
 
+export type StartRestoreOtpResult = {
+  devCode?: string;
+};
+
 type InMemoryRateLimitRecord = {
   count: number;
   expiresAt: number;
@@ -242,7 +246,7 @@ async function sendOtpEmail(email: string, code: string): Promise<void> {
   throw new Error("OTP_EMAIL_PROVIDER_NOT_CONFIGURED");
 }
 
-export async function startRestoreOtp(request: Request, email: string): Promise<void> {
+export async function startRestoreOtp(request: Request, email: string): Promise<StartRestoreOtpResult> {
   const normalizedEmail = normalizeEmailInput(email);
   const ip = getRequestIp(request);
 
@@ -273,7 +277,7 @@ export async function startRestoreOtp(request: Request, email: string): Promise<
     };
     inMemoryOtpStore.set(getOtpCodeKey(normalizedEmail), record);
     await sendOtpEmail(normalizedEmail, code);
-    return;
+    return isProductionEnvironment() ? {} : { devCode: code };
   }
 
   const [emailRateCount, ipRateCount] = await Promise.all([
@@ -299,6 +303,7 @@ export async function startRestoreOtp(request: Request, email: string): Promise<
   });
 
   await sendOtpEmail(normalizedEmail, code);
+  return isProductionEnvironment() ? {} : { devCode: code };
 }
 
 export async function verifyRestoreOtp(request: Request, email: string, code: string): Promise<boolean> {

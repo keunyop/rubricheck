@@ -52,9 +52,23 @@ function getUtcDateKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getFreeUsageActor(request: Request): string {
+  const entitlementEmail = getEntitlementEmailFromCookie(request);
+  if (entitlementEmail) {
+    return `email:${entitlementEmail}`;
+  }
+
+  const creditEmail = getCreditEmailFromCookie(request);
+  if (creditEmail) {
+    return `email:${creditEmail}`;
+  }
+
+  return `ip:${getRequestIp(request)}`;
+}
+
 function getFreeEvaluateDisabledKey(request: Request): string {
-  const ip = getRequestIp(request);
-  return `rubricheck:usage:${ip}:${getUtcDateKey()}:evaluate_free_disabled`;
+  const actor = getFreeUsageActor(request);
+  return `rubricheck:usage:${actor}:${getUtcDateKey()}:evaluate_free_disabled`;
 }
 
 function parseCount(value: unknown): number {
@@ -78,9 +92,9 @@ async function readEvaluateUsageCount(request: Request, plan: "free" | "pro"): P
   }
 
   try {
-    const ip = getRequestIp(request);
+    const actor = plan === "free" ? getFreeUsageActor(request) : `ip:${getRequestIp(request)}`;
     const featureKey = plan === "pro" ? "evaluate" : "evaluate_free";
-    const key = `rubricheck:usage:${ip}:${getUtcDateKey()}:${featureKey}`;
+    const key = `rubricheck:usage:${actor}:${getUtcDateKey()}:${featureKey}`;
     const rawCount = await getRedisClient().get(key);
     return parseCount(rawCount);
   } catch {

@@ -26,6 +26,7 @@ type AccountSummaryResponse = {
 type RestoreStartResponse = {
   ok?: boolean;
   message?: string;
+  devCode?: string;
   code?: string;
   error?: string;
 };
@@ -75,9 +76,12 @@ function getEmailInitialAvatarClassName(email: string): string {
 function getEvaluationStatusChip(plan: "free" | "pro", remainingEvaluations: number | null): {
   label: string;
   toneClassName: string;
-} | null {
+} {
   if (plan === "pro") {
-    return null;
+    return {
+      label: "Pro",
+      toneClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
   }
 
   if (typeof remainingEvaluations === "number") {
@@ -276,6 +280,11 @@ export function PricingClient() {
 
   async function handleBuyCredits(packId: (typeof CREDIT_PACK_IDS)[number]) {
     setCreditCheckoutError("");
+    if (accountPlan === "pro") {
+      setCreditCheckoutError("Top-up purchases are disabled while this account is on Pro.");
+      return;
+    }
+
     const normalizedEmail = creditCheckoutEmail.trim().toLowerCase();
     if (!normalizedEmail) {
       setCreditCheckoutError("Please enter your email before continuing.");
@@ -338,7 +347,12 @@ export function PricingClient() {
 
       setRestoreEmail(normalizedEmail);
       setRestoreStep("code");
-      setRestoreInfo("Verification code sent. Check your inbox.");
+      if (typeof data.devCode === "string" && /^\d{6}$/.test(data.devCode)) {
+        setRestoreCode(data.devCode);
+        setRestoreInfo(`Development code: ${data.devCode}`);
+      } else {
+        setRestoreInfo(data.message ?? "Verification code sent. Check your inbox.");
+      }
       setRestoreError("");
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_START_FAILED";
@@ -459,13 +473,11 @@ export function PricingClient() {
                       >
                         {getEmailInitial(signedInEmail)}
                       </span>
-                      {evaluationStatusChip ? (
-                        <p
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${evaluationStatusChip.toneClassName}`}
-                        >
-                          {evaluationStatusChip.label}
-                        </p>
-                      ) : null}
+                      <p
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${evaluationStatusChip.toneClassName}`}
+                      >
+                        {evaluationStatusChip.label}
+                      </p>
                       <span className="sr-only">{signedInEmail}</span>
                     </button>
                     {showAccountMenu ? (
@@ -608,6 +620,11 @@ export function PricingClient() {
             <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
               <h2 className="text-xl font-semibold text-slate-900">Evaluation Top-Ups</h2>
               <p className="mt-1 text-base text-slate-600">One-time purchase. Credits apply to Evaluate only.</p>
+              {accountPlan === "pro" ? (
+                <p className="mt-1 text-sm font-medium text-amber-700">
+                  Top-up purchases are disabled while this account is on Pro.
+                </p>
+              ) : null}
               {typeof creditBalance === "number" ? (
                 <p className="mt-1 text-base text-slate-600">Current credits: {creditBalance}</p>
               ) : null}
@@ -624,7 +641,7 @@ export function PricingClient() {
                     setCreditCheckoutEmail(event.target.value);
                     setCreditCheckoutError("");
                   }}
-                  disabled={isCreatingCreditCheckout}
+                  disabled={isCreatingCreditCheckout || accountPlan === "pro"}
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                 />
               </label>
@@ -648,7 +665,7 @@ export function PricingClient() {
                     <button
                       type="button"
                       onClick={() => void handleBuyCredits(packId)}
-                      disabled={isCreatingCreditCheckout}
+                      disabled={isCreatingCreditCheckout || accountPlan === "pro"}
                       className="mt-4 w-full rounded-lg bg-slate-800 px-3 py-2 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isCreatingCreditCheckout ? "Redirecting..." : "Top up"}

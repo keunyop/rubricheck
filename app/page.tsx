@@ -106,6 +106,7 @@ type EntitlementStatusResponse = {
 type RestoreStartResponse = {
   ok?: boolean;
   message?: string;
+  devCode?: string;
   code?: string;
   error?: string;
 };
@@ -1504,7 +1505,12 @@ export default function Home() {
       setRestoreEmail(normalizedEmail);
       setCheckoutEmail((previous) => previous || normalizedEmail);
       setRestoreStep("code");
-      setRestoreInfo(data.message ?? "If that email can receive recovery codes, a code has been sent.");
+      if (typeof data.devCode === "string" && /^\d{6}$/.test(data.devCode)) {
+        setRestoreCode(data.devCode);
+        setRestoreInfo(`Development code: ${data.devCode}`);
+      } else {
+        setRestoreInfo(data.message ?? "If that email can receive recovery codes, a code has been sent.");
+      }
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_START_FAILED";
       if (code === "RATE_LIMITED") {

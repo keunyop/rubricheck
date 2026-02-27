@@ -12,8 +12,9 @@ import {
   reserveOneCreditForRequest,
   type CreditReservation,
 } from "./credits.ts";
+import { getCreditEmailFromCookie } from "./creditSession.ts";
 import { decideFreeEvaluateAccess } from "./evaluationCreditsPolicy.ts";
-import { getPlanFromEntitlementCookie } from "./entitlementSession.ts";
+import { getEntitlementEmailFromCookie, getPlanFromEntitlementCookie } from "./entitlementSession.ts";
 
 export type UsageFeature = "evaluate" | "rewrite" | "simulate";
 export type UsageAction = typeof SHOW_INTERSTITIAL_ACTION;
@@ -135,12 +136,26 @@ function getUtcDateKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getFreeUsageActor(request: Request): string {
+  const entitlementEmail = getEntitlementEmailFromCookie(request);
+  if (entitlementEmail) {
+    return `email:${entitlementEmail}`;
+  }
+
+  const creditEmail = getCreditEmailFromCookie(request);
+  if (creditEmail) {
+    return `email:${creditEmail}`;
+  }
+
+  return `ip:${getRequestIp(request)}`;
+}
+
 function getFreeEvaluateUsageKey(request: Request): string {
-  return `rubricheck:usage:${getRequestIp(request)}:${getUtcDateKey()}:evaluate_free`;
+  return `rubricheck:usage:${getFreeUsageActor(request)}:${getUtcDateKey()}:evaluate_free`;
 }
 
 function getFreeEvaluateDisabledKey(request: Request): string {
-  return `rubricheck:usage:${getRequestIp(request)}:${getUtcDateKey()}:evaluate_free_disabled`;
+  return `rubricheck:usage:${getFreeUsageActor(request)}:${getUtcDateKey()}:evaluate_free_disabled`;
 }
 
 async function markFreeEvaluateDisabledForDay(redis: Redis, request: Request): Promise<void> {

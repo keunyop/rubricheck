@@ -11,8 +11,13 @@ import {
 export const runtime = "nodejs";
 
 type RestoreStartRequestBody = { email?: unknown };
+type RestoreStartSuccessResponse = {
+  ok: true;
+  message: string;
+  devCode?: string;
+};
 
-const GENERIC_START_RESPONSE = {
+const GENERIC_START_RESPONSE: RestoreStartSuccessResponse = {
   ok: true,
   message: "If that email can receive recovery codes, a code has been sent.",
 };
@@ -54,8 +59,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    await startRestoreOtp(request, email);
-    return respond(successJson(context, GENERIC_START_RESPONSE), "success");
+    const result = await startRestoreOtp(request, email);
+    const payload: RestoreStartSuccessResponse = {
+      ...GENERIC_START_RESPONSE,
+      ...(result.devCode ? { devCode: result.devCode } : {}),
+    };
+    return respond(successJson(context, payload), "success");
   } catch (error) {
     if (error instanceof Error && error.message === "RESTORE_OTP_RATE_LIMITED") {
       return respond(errorResponse(context, 429, "RATE_LIMITED", "Too many requests. Please wait and try again."), "error");
