@@ -14,6 +14,11 @@ import {
 } from "./credits.ts";
 import { getCreditEmailFromCookie } from "./creditSession.ts";
 import { decideFreeEvaluateAccess } from "./evaluationCreditsPolicy.ts";
+import {
+  getAccountEntitlementByEmail,
+  hasAccountEntitlementStore,
+  isActiveProAccountEntitlement,
+} from "./accountEntitlements";
 import { getEntitlementEmailFromCookie, getPlanFromEntitlementCookie } from "./entitlementSession.ts";
 
 export type UsageFeature = "evaluate" | "rewrite" | "simulate";
@@ -201,6 +206,16 @@ async function resolveEffectivePlan(request: Request, user?: UserPlanPayload): P
   const requestedPlan = getPlanFromUser(user);
   if (requestedPlan !== "free") {
     return requestedPlan;
+  }
+
+  const signedInEmail = getEntitlementEmailFromCookie(request) ?? getCreditEmailFromCookie(request);
+  if (signedInEmail && hasAccountEntitlementStore()) {
+    try {
+      const entitlement = await getAccountEntitlementByEmail(signedInEmail);
+      return isActiveProAccountEntitlement(entitlement) ? "pro" : "free";
+    } catch {
+      // Fallback to cookie-based plan if DB lookup is temporarily unavailable.
+    }
   }
 
   try {

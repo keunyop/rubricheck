@@ -20,6 +20,7 @@ import {
   persistWebhookFailure,
 } from "../../../../src/lib/stripeWebhookEvents";
 import { createRequestContext, errorResponse } from "../../../../src/lib/apiError";
+import { upsertAccountEntitlement } from "../../../../src/lib/accountEntitlements";
 
 export const runtime = "nodejs";
 
@@ -187,7 +188,15 @@ async function persistEntitlement(params: {
   entitlement: EntitlementRecord;
   email?: string | null;
 }): Promise<void> {
-  const ops: Promise<void>[] = [setEntitlementForCustomer(params.customerId, params.entitlement)];
+  const ops: Promise<void>[] = [
+    setEntitlementForCustomer(params.customerId, params.entitlement),
+    upsertAccountEntitlement({
+      customerId: params.customerId,
+      email: params.email ?? null,
+      status: params.entitlement.status === "active" ? "active" : "canceled",
+      currentPeriodEnd: params.entitlement.currentPeriodEnd,
+    }),
+  ];
 
   const normalizedEmail = params.email?.trim().toLowerCase();
   if (normalizedEmail) {

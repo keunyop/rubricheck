@@ -154,6 +154,7 @@ Credits, payment lots, usage allocation, and webhook idempotency are stored in S
 2. In Supabase SQL Editor, run:
    - `supabase/credits_mvp.sql`
 3. Verify tables were created:
+   - `account_entitlements`
    - `credit_payments`
    - `credit_lots`
    - `credit_usage_events`

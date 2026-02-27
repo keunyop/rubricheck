@@ -8,6 +8,7 @@ import {
   createEntitlementSessionToken,
   getPlanFromEntitlementCookie,
 } from "../../../../src/lib/entitlementSession";
+import { upsertAccountEntitlement } from "../../../../src/lib/accountEntitlements";
 
 export const runtime = "nodejs";
 
@@ -66,6 +67,18 @@ function isActiveProSubscription(subscription: Stripe.Subscription): boolean {
   }
 
   return subscription.status === "active" || subscription.status === "trialing";
+}
+
+function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {
+  const periodEnds = subscription.items.data
+    .map((item) => item.current_period_end)
+    .filter((value) => Number.isFinite(value));
+
+  if (periodEnds.length > 0) {
+    return Math.max(...periodEnds);
+  }
+
+  return subscription.cancel_at ?? subscription.ended_at ?? Math.floor(Date.now() / 1000);
 }
 
 function getSessionCustomerEmail(session: Stripe.Checkout.Session): string | null {
@@ -157,6 +170,22 @@ export async function POST(request: Request) {
     const email = getSessionCustomerEmail(session);
     if (!email || !isValidEmail(email)) {
       return errorResponse(context, 409, "SESSION_EMAIL_MISSING", "Checkout email is unavailable for activation.");
+    }
+
+    const customerId =
+      typeof session.customer === "string"
+        ? session.customer
+        : session.customer && !("deleted" in session.customer && session.customer.deleted === true)
+          ? session.customer.id
+          : null;
+
+    if (customerId) {
+      await upsertAccountEntitlement({
+        customerId,
+        email,
+        status: "active",
+        currentPeriodEnd: getCurrentPeriodEnd(subscription),
+      });
     }
 
     const token = createEntitlementSessionToken({ email, plan: "pro" });

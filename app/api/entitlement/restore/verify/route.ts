@@ -23,6 +23,7 @@ import {
   recordAbuseTelemetry,
   shouldEnforceForSuspicious,
 } from "../../../../../src/lib/abuseTelemetry";
+import { upsertAccountEntitlement } from "../../../../../src/lib/accountEntitlements";
 
 export const runtime = "nodejs";
 
@@ -118,6 +119,13 @@ export async function POST(request: Request) {
 
       return respond(response, "success");
     }
+
+    await upsertAccountEntitlement({
+      customerId: resolved.customerId,
+      email,
+      status: resolved.entitlement.status === "active" ? "active" : "canceled",
+      currentPeriodEnd: resolved.entitlement.currentPeriodEnd,
+    });
 
     const token = createEntitlementSessionToken({ email, plan: "pro" });
     const response = NextResponse.json(

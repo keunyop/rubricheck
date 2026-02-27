@@ -78,6 +78,15 @@ create table if not exists public.billing_webhook_failures (
   failed_at timestamptz not null default now()
 );
 
+create table if not exists public.account_entitlements (
+  customer_id text primary key,
+  email text,
+  plan text not null check (plan in ('pro')),
+  status text not null check (status in ('active', 'canceled')),
+  current_period_end bigint not null check (current_period_end >= 0),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists credit_lots_owner_created_idx
   on public.credit_lots (owner_type, owner_id, created_at, id);
 
@@ -86,6 +95,9 @@ create index if not exists credit_usage_events_owner_created_idx
 
 create index if not exists billing_webhook_failures_event_id_idx
   on public.billing_webhook_failures (event_id);
+
+create index if not exists account_entitlements_email_idx
+  on public.account_entitlements (email, updated_at desc);
 
 create or replace function public.rubricheck_mark_billing_event_processed(
   p_scope text,
@@ -463,6 +475,89 @@ begin
 end;
 $$;
 
+create or replace function public.rubricheck_upsert_account_entitlement(
+  p_customer_id text,
+  p_email text default null,
+  p_status text default 'active',
+  p_current_period_end bigint default 0
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_customer_id text := trim(coalesce(p_customer_id, ''));
+  v_email text := nullif(lower(trim(coalesce(p_email, ''))), '');
+  v_status text := lower(trim(coalesce(p_status, 'active')));
+  v_current_period_end bigint := greatest(coalesce(p_current_period_end, 0), 0);
+begin
+  if v_customer_id = '' then
+    raise exception 'INVALID_CUSTOMER_ID';
+  end if;
+
+  if v_status not in ('active', 'canceled') then
+    raise exception 'INVALID_STATUS';
+  end if;
+
+  insert into public.account_entitlements (
+    customer_id,
+    email,
+    plan,
+    status,
+    current_period_end,
+    updated_at
+  )
+  values (
+    v_customer_id,
+    v_email,
+    'pro',
+    v_status,
+    v_current_period_end,
+    now()
+  )
+  on conflict (customer_id) do update
+  set email = coalesce(excluded.email, public.account_entitlements.email),
+      status = excluded.status,
+      current_period_end = excluded.current_period_end,
+      updated_at = now();
+end;
+$$;
+
+create or replace function public.rubricheck_get_account_entitlement_by_email(
+  p_email text
+)
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  with normalized as (
+    select nullif(lower(trim(coalesce(p_email, ''))), '') as email
+  )
+  select to_jsonb(candidate)
+  from (
+    select
+      e.customer_id,
+      e.email,
+      e.plan,
+      e.status,
+      e.current_period_end,
+      extract(epoch from e.updated_at)::bigint as updated_at_epoch
+    from public.account_entitlements e
+    join normalized n on e.email = n.email
+    where n.email is not null
+    order by
+      case
+        when e.status = 'active' and e.current_period_end >= extract(epoch from now())::bigint then 0
+        else 1
+      end asc,
+      e.current_period_end desc,
+      e.updated_at desc
+    limit 1
+  ) as candidate;
+$$;
+
 revoke all on function public.rubricheck_mark_billing_event_processed(text, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_credit_balance(text, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_migrate_credit_owner(text, text) from public, anon, authenticated;
@@ -470,6 +565,8 @@ revoke all on function public.rubricheck_grant_credit_purchase(text, text, integ
 revoke all on function public.rubricheck_reserve_one_credit(text, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_refund_credit_reservation(uuid, text, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_log_webhook_failure(text, text, text, text, text, text, text) from public, anon, authenticated;
+revoke all on function public.rubricheck_upsert_account_entitlement(text, text, text, bigint) from public, anon, authenticated;
+revoke all on function public.rubricheck_get_account_entitlement_by_email(text) from public, anon, authenticated;
 
 grant execute on function public.rubricheck_mark_billing_event_processed(text, text) to service_role;
 grant execute on function public.rubricheck_credit_balance(text, text) to service_role;
@@ -478,3 +575,5 @@ grant execute on function public.rubricheck_grant_credit_purchase(text, text, in
 grant execute on function public.rubricheck_reserve_one_credit(text, text) to service_role;
 grant execute on function public.rubricheck_refund_credit_reservation(uuid, text, text) to service_role;
 grant execute on function public.rubricheck_log_webhook_failure(text, text, text, text, text, text, text) to service_role;
+grant execute on function public.rubricheck_upsert_account_entitlement(text, text, text, bigint) to service_role;
+grant execute on function public.rubricheck_get_account_entitlement_by_email(text) to service_role;

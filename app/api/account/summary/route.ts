@@ -4,6 +4,11 @@ import { FREE_DAILY_LIMIT } from "../../../../src/config/plans";
 import { createRequestContext, errorResponse, successJson } from "../../../../src/lib/apiError";
 import { getCreditEmailFromCookie } from "../../../../src/lib/creditSession";
 import { getCreditBalanceForRequest } from "../../../../src/lib/credits";
+import {
+  getAccountEntitlementByEmail,
+  hasAccountEntitlementStore,
+  isActiveProAccountEntitlement,
+} from "../../../../src/lib/accountEntitlements";
 import { getEntitlementEmailFromCookie, getPlanFromEntitlementCookie } from "../../../../src/lib/entitlementSession";
 
 export const runtime = "nodejs";
@@ -137,7 +142,19 @@ export async function GET(request: Request) {
       });
     }
 
-    const plan = getPlanFromEntitlementCookie(request) === "pro" ? "pro" : "free";
+    let plan: "free" | "pro" = getPlanFromEntitlementCookie(request) === "pro" ? "pro" : "free";
+    if (email && hasAccountEntitlementStore()) {
+      try {
+        const entitlement = await getAccountEntitlementByEmail(email);
+        plan = isActiveProAccountEntitlement(entitlement) ? "pro" : "free";
+      } catch (lookupError) {
+        console.error("ACCOUNT_SUMMARY_ENTITLEMENT_LOOKUP_FAILED", {
+          requestId: context.requestId,
+          lookupError,
+        });
+      }
+    }
+
     const usageCount = plan === "free" ? await readEvaluateUsageCount(request, plan) : null;
     const isFreeDisabledForToday = plan === "free" ? await readFreeEvaluateDisabledForToday(request) : null;
     const remainingByPlan = usageCount === null ? null : Math.max(0, FREE_DAILY_LIMIT - usageCount);
