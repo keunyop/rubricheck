@@ -24,7 +24,7 @@ function buildSchemaDescription(mode: GradingMode, detailLevel: EvaluationDetail
       "feedback": "string",
       "evidence": ${evidenceShape},
       "detailed_breakdown": "string (optional)",
-      "example_revisions": ["string", "string"] (optional)
+      "example_revisions": ["string", "string"]
     }
   ],
   "top_improvements": ["string", "string", "string"]
@@ -54,7 +54,7 @@ function buildRules(mode: GradingMode, detailLevel: EvaluationDetailLevel): stri
           "- rationale must be one line, <= 220 chars.",
           "- feedback must be one line, <= 1200 chars.",
           "- detailed_breakdown is optional; if included, keep it concise (<= 900 chars).",
-          "- example_revisions is optional; if included, provide 1-2 short revision ideas.",
+          "- example_revisions is required and must provide 1-2 short revision ideas.",
         ]
       : [
           "- rationale must be one line, <= 220 chars.",

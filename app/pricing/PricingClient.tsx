@@ -9,6 +9,8 @@ import { PRO_CHECKOUT_DISPLAY, type ProCheckoutPlan } from "../../src/config/pro
 
 type CheckoutResponse = {
   url?: string;
+  code?: string;
+  message?: string;
   error?: string;
 };
 
@@ -85,7 +87,7 @@ function getEvaluationStatusChip(plan: "free" | "pro", remainingEvaluations: num
 } {
   if (plan === "pro") {
     return {
-      label: "Unlimited evaluations",
+      label: "Pro",
       toneClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
     };
   }
@@ -236,11 +238,15 @@ export function PricingClient() {
     setRestoreCode("");
     setRestoreError("");
     setRestoreInfo("");
-    await refreshAccountSummary();
   }
 
   async function handleUpgradeToPro() {
     setCheckoutError("");
+    if (accountPlan === "pro") {
+      setCheckoutError("This account is already on Pro. No additional checkout is needed.");
+      return;
+    }
+
     const normalizedEmail = checkoutEmail.trim().toLowerCase();
     if (!normalizedEmail) {
       setCheckoutError("Please enter your email before continuing.");
@@ -264,12 +270,17 @@ export function PricingClient() {
 
       const data: CheckoutResponse = await response.json().catch(() => ({}));
       if (!response.ok || !data.url) {
-        throw new Error(data.error ?? "CHECKOUT_SESSION_FAILED");
+        throw new Error(data.code ?? data.error ?? "CHECKOUT_SESSION_FAILED");
       }
 
       window.location.assign(data.url);
-    } catch {
-      setCheckoutError("Unable to start checkout right now. Please try again.");
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "CHECKOUT_SESSION_FAILED";
+      if (code === "ALREADY_PRO_ACTIVE") {
+        setCheckoutError("This email already has an active Pro subscription. Please log in instead of purchasing again.");
+      } else {
+        setCheckoutError("Unable to start checkout right now. Please try again.");
+      }
     } finally {
       setIsCreatingCheckout(false);
     }
@@ -449,7 +460,7 @@ export function PricingClient() {
                       aria-haspopup="menu"
                       aria-expanded={showAccountMenu}
                       onClick={() => setShowAccountMenu((previous) => !previous)}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-2.5 py-1.5 shadow-sm transition hover:border-slate-300"
+                      className="inline-flex items-center gap-2 px-0.5 py-0.5 transition hover:opacity-90"
                     >
                       <span
                         aria-hidden="true"
@@ -525,14 +536,18 @@ export function PricingClient() {
           {activePricingTab === "pro" ? (
             <section className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-5">
               <h2 className="text-lg font-semibold text-slate-900">Upgrade to Pro</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Unlimited evaluations with richer feedback and rewrite suggestions for better scores.
-              </p>
+              {accountPlan === "pro" ? (
+                <p className="mt-1 text-sm text-emerald-700">Pro is already active for this account.</p>
+              ) : (
+                <p className="mt-1 text-sm text-slate-600">
+                  Unlimited evaluations with richer feedback and rewrite suggestions for better scores.
+                </p>
+              )}
               <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-slate-300 bg-slate-200 p-1.5">
                 <button
                   type="button"
                   onClick={() => setCheckoutPlan("monthly")}
-                  disabled={isCreatingCheckout}
+                  disabled={isCreatingCheckout || accountPlan === "pro"}
                   className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
                     checkoutPlan === "monthly"
                       ? "bg-slate-900 text-white shadow-sm"
@@ -544,7 +559,7 @@ export function PricingClient() {
                 <button
                   type="button"
                   onClick={() => setCheckoutPlan("annual")}
-                  disabled={isCreatingCheckout}
+                  disabled={isCreatingCheckout || accountPlan === "pro"}
                   className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
                     checkoutPlan === "annual"
                       ? "bg-slate-900 text-white shadow-sm"
@@ -578,7 +593,7 @@ export function PricingClient() {
                     setCheckoutEmail(event.target.value);
                     setCheckoutError("");
                   }}
-                  disabled={isCreatingCheckout}
+                  disabled={isCreatingCheckout || accountPlan === "pro"}
                   className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
                 />
               </label>
@@ -590,10 +605,10 @@ export function PricingClient() {
               <button
                 type="button"
                 onClick={handleUpgradeToPro}
-                disabled={isCreatingCheckout}
+                disabled={isCreatingCheckout || accountPlan === "pro"}
                 className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
+                {accountPlan === "pro" ? "Already on Pro" : isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
               </button>
             </section>
           ) : (

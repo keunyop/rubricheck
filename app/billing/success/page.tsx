@@ -1,11 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
 
 type RestoreStartResponse = {
   ok?: boolean;
   message?: string;
+  code?: string;
   error?: string;
 };
 
@@ -13,6 +15,17 @@ type RestoreVerifyResponse = {
   ok?: boolean;
   plan?: string;
   status?: string;
+  code?: string;
+  message?: string;
+  error?: string;
+};
+
+type CheckoutActivateResponse = {
+  ok?: boolean;
+  plan?: string;
+  status?: string;
+  code?: string;
+  message?: string;
   error?: string;
 };
 
@@ -26,7 +39,9 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export default function BillingSuccessPage() {
+function BillingSuccessClient() {
+  const searchParams = useSearchParams();
+  const checkoutSessionId = searchParams.get("session_id")?.trim() ?? "";
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -35,6 +50,76 @@ export default function BillingSuccessPage() {
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
   const [isActivating, setIsActivating] = useState(false);
+  const [isAutoActivating, setIsAutoActivating] = useState(Boolean(checkoutSessionId));
+  const [didTryAutoActivation, setDidTryAutoActivation] = useState(false);
+
+  useEffect(() => {
+    if (!checkoutSessionId) {
+      setIsAutoActivating(false);
+      setDidTryAutoActivation(true);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function activateFromCheckoutSession() {
+      setError("");
+      setInfo("Activating your Pro access...");
+      setIsActivating(true);
+      setIsAutoActivating(true);
+
+      try {
+        const response = await fetch("/api/checkout/activate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sessionId: checkoutSessionId }),
+        });
+
+        const data: CheckoutActivateResponse = await response.json().catch(() => ({}));
+        if (cancelled) {
+          return;
+        }
+
+        if (response.ok && data.ok === true && data.plan === "pro" && data.status === "active") {
+          setIsActivated(true);
+          setIsActivating(false);
+          setInfo("Pro is now active on this device.");
+          return;
+        }
+
+        if (response.ok && data.ok === false && data.status === "pending") {
+          setIsActivating(true);
+          setInfo("Payment received. Activation is still processing, so you can verify by email below.");
+          return;
+        }
+
+        setIsActivating(false);
+        setInfo("");
+        setError("Automatic activation was unavailable. Verify your checkout email below.");
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        setIsActivating(false);
+        setInfo("");
+        setError("Automatic activation failed. Verify your checkout email below.");
+      } finally {
+        if (!cancelled) {
+          setIsAutoActivating(false);
+          setDidTryAutoActivation(true);
+        }
+      }
+    }
+
+    void activateFromCheckoutSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutSessionId]);
 
   async function handleSendCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,7 +145,7 @@ export default function BillingSuccessPage() {
 
       const data: RestoreStartResponse = await response.json().catch(() => ({}));
       if (!response.ok || data.ok !== true) {
-        throw new Error(data.error ?? "ENTITLEMENT_RESTORE_START_FAILED");
+        throw new Error(data.error ?? data.code ?? "ENTITLEMENT_RESTORE_START_FAILED");
       }
 
       setEmail(normalizedEmail);
@@ -112,7 +197,7 @@ export default function BillingSuccessPage() {
 
       const data: RestoreVerifyResponse = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.error ?? "ENTITLEMENT_RESTORE_VERIFY_FAILED");
+        throw new Error(data.error ?? data.code ?? "ENTITLEMENT_RESTORE_VERIFY_FAILED");
       }
 
       if (data.ok === true && data.plan === "pro" && data.status === "active") {
@@ -145,10 +230,24 @@ export default function BillingSuccessPage() {
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">Payment successful</h1>
         <p className="mt-3 text-sm text-slate-600">
-          Verify your checkout email to log in to Pro on this device.
+          {checkoutSessionId
+            ? "We're activating your Pro access on this device automatically."
+            : "Verify your checkout email to log in on this device."}
         </p>
 
-        {step === "email" ? (
+        {isAutoActivating ? (
+          <p className="mt-5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+            Processing your checkout session...
+          </p>
+        ) : null}
+
+        {isActivated ? (
+          <p className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            Pro is active on this device. You can go back and continue using Pro features.
+          </p>
+        ) : null}
+
+        {step === "email" && (!checkoutSessionId || didTryAutoActivation) && !isActivated ? (
           <form className="mt-5 space-y-3" onSubmit={handleSendCode}>
             <label htmlFor="restore-email" className="block">
               <span className="text-xs font-semibold text-slate-700">Checkout email</span>
@@ -163,7 +262,7 @@ export default function BillingSuccessPage() {
                   setEmail(event.target.value);
                   setError("");
                 }}
-                disabled={isSubmitting || isActivated}
+                disabled={isSubmitting || isActivated || isAutoActivating}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
               />
             </label>
@@ -174,13 +273,13 @@ export default function BillingSuccessPage() {
 
             <button
               type="submit"
-              disabled={isSubmitting || isActivated}
+              disabled={isSubmitting || isActivated || isAutoActivating}
               className="inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? "Sending..." : "Send verification code"}
             </button>
           </form>
-        ) : (
+        ) : !isAutoActivating && !isActivated ? (
           <form className="mt-5 space-y-3" onSubmit={handleVerify}>
             <label htmlFor="restore-code" className="block">
               <span className="text-xs font-semibold text-slate-700">Verification code</span>
@@ -196,7 +295,7 @@ export default function BillingSuccessPage() {
                   setCode(event.target.value.replace(/\D/g, "").slice(0, 6));
                   setError("");
                 }}
-                disabled={isSubmitting || isActivated}
+                disabled={isSubmitting || isActivated || isAutoActivating}
                 className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm tracking-[0.2em] text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
               />
             </label>
@@ -213,7 +312,7 @@ export default function BillingSuccessPage() {
 
             {isActivated ? (
               <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                Pro restored on this device.
+                You are now logged in on this device.
               </p>
             ) : null}
 
@@ -232,22 +331,40 @@ export default function BillingSuccessPage() {
                   setError("");
                   setInfo("");
                 }}
-                disabled={isSubmitting || isActivated}
+                disabled={isSubmitting || isActivated || isAutoActivating}
                 className="inline-flex rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Back
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || isActivated}
+                disabled={isSubmitting || isActivated || isAutoActivating}
                 className="inline-flex rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? "Verifying..." : isActivated ? "Logged in" : "Verify & Log in"}
               </button>
             </div>
           </form>
-        )}
+        ) : null}
       </section>
     </main>
+  );
+}
+
+export default function BillingSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-slate-50 px-4 py-20">
+          <section className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+            <SubpageBackHomeLink />
+            <h1 className="mt-3 text-2xl font-semibold text-slate-900">Payment successful</h1>
+            <p className="mt-3 text-sm text-slate-600">Loading checkout status...</p>
+          </section>
+        </main>
+      }
+    >
+      <BillingSuccessClient />
+    </Suspense>
   );
 }

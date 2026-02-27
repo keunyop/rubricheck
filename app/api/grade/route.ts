@@ -244,7 +244,9 @@ export async function POST(request: Request) {
     }
 
     try {
-      const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode);
+      const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode, {
+        detailLevel: feedbackTier === "pro" ? "detailed" : "diagnostic",
+      });
       const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
       const headers = new Headers(usageHeaders);
       headers.set("x-request-id", context.requestId);

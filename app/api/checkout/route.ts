@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import {
   getLookupKeyForProCheckoutPlan,
+  includesProLookupKey,
   resolveProCheckoutPlan,
 } from "../../../src/config/proCheckout";
 import { createRequestContext, errorResponse, successJson } from "../../../src/lib/apiError";
@@ -29,6 +30,86 @@ function getStripeClient(): Stripe {
   return stripeClient;
 }
 
+function normalizeEmail(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function escapeStripeSearchValue(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+function getSubscriptionLookupKeys(subscription: Stripe.Subscription): string[] {
+  return subscription.items.data
+    .map((item) => {
+      const price = item.price;
+      if (!price || typeof price === "string") {
+        return null;
+      }
+
+      return typeof price.lookup_key === "string" ? price.lookup_key.trim() : null;
+    })
+    .filter((value): value is string => Boolean(value));
+}
+
+function isActiveProSubscription(subscription: Stripe.Subscription): boolean {
+  const isPro = includesProLookupKey(getSubscriptionLookupKeys(subscription));
+  if (!isPro) {
+    return false;
+  }
+
+  return subscription.status === "active" || subscription.status === "trialing";
+}
+
+async function findCustomerIdsByEmail(email: string): Promise<string[]> {
+  const stripe = getStripeClient();
+  try {
+    const searchResult = await stripe.customers.search({
+      query: `email:'${escapeStripeSearchValue(email)}'`,
+      limit: 10,
+    });
+
+    return searchResult.data
+      .map((customer) => customer.id.trim())
+      .filter((customerId) => customerId.length > 0);
+  } catch {
+    const listResult = await stripe.customers.list({
+      email,
+      limit: 10,
+    });
+
+    return listResult.data
+      .map((customer) => customer.id.trim())
+      .filter((customerId) => customerId.length > 0);
+  }
+}
+
+async function emailHasActiveProSubscription(email: string): Promise<boolean> {
+  const stripe = getStripeClient();
+  const customerIds = await findCustomerIdsByEmail(email);
+  if (customerIds.length === 0) {
+    return false;
+  }
+
+  for (const customerId of customerIds) {
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 20,
+      expand: ["data.items.data.price"],
+    });
+
+    if (subscriptions.data.some((subscription) => isActiveProSubscription(subscription))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function POST(request: Request) {
   const context = createRequestContext(request);
   const startedAt = Date.now();
@@ -55,14 +136,27 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as CheckoutRequestBody;
     const requestedPlan = resolveProCheckoutPlan({ plan: body.plan, priceId: body.priceId });
-    requestEmail = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    requestEmail = normalizeEmail(body.email);
 
     if (!requestedPlan) return respond(errorResponse(context, 400, "INVALID_PLAN", "Selected plan is invalid."), "error");
     if (!requestEmail) return respond(errorResponse(context, 400, "MISSING_EMAIL", "Email is required."), "error");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requestEmail)) return respond(errorResponse(context, 400, "INVALID_EMAIL", "Email address is invalid."), "error");
+    if (!isValidEmail(requestEmail)) return respond(errorResponse(context, 400, "INVALID_EMAIL", "Email address is invalid."), "error");
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
     if (!appUrl) return respond(errorResponse(context, 500, "APP_URL_MISSING", "Checkout is not configured."), "error");
+
+    const alreadyActivePro = await emailHasActiveProSubscription(requestEmail);
+    if (alreadyActivePro) {
+      return respond(
+        errorResponse(
+          context,
+          409,
+          "ALREADY_PRO_ACTIVE",
+          "This email already has an active Pro subscription. Please log in instead of purchasing again.",
+        ),
+        "error",
+      );
+    }
 
     const lookupKey = getLookupKeyForProCheckoutPlan(requestedPlan);
     const priceResult = await getStripeClient().prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
@@ -73,7 +167,7 @@ export async function POST(request: Request) {
       mode: "subscription",
       line_items: [{ price: stripePriceId, quantity: 1 }],
       customer_email: requestEmail,
-      success_url: `${appUrl}/billing/success`,
+      success_url: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/billing/cancel`,
       metadata: { pro_plan: requestedPlan },
     });

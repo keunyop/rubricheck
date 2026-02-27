@@ -49,6 +49,15 @@ function readExampleRevisions(score: EvaluationCriterionScore): string[] | undef
   return normalized.length > 0 ? normalized : undefined;
 }
 
+function buildFallbackExampleRevision(criterionName: string, feedback: string): string {
+  const cleanedFeedback = feedback.replace(/\s+/g, " ").trim();
+  if (!cleanedFeedback) {
+    return `Revise the ${criterionName} section to align more directly with rubric expectations.`;
+  }
+
+  return `Revise ${criterionName}: ${cleanedFeedback}`.slice(0, 300);
+}
+
 function normalizeCriterionName(name: string): string {
   return name
     .normalize("NFKC")
@@ -208,12 +217,14 @@ function buildStandardCriteria(
     }
 
     const detailedBreakdown = readDetailedBreakdown(matchedScore);
-    const exampleRevisions = readExampleRevisions(matchedScore);
+    const exampleRevisions =
+      readExampleRevisions(matchedScore) ??
+      [buildFallbackExampleRevision(rubricCriterion.name, matchedScore.feedback)];
 
     criteria.push({
       ...baseCriterion,
       ...(detailedBreakdown ? { detailed_breakdown: detailedBreakdown } : {}),
-      ...(exampleRevisions ? { example_revisions: exampleRevisions } : {}),
+      example_revisions: exampleRevisions,
     });
   }
 
@@ -270,12 +281,14 @@ function buildStrictCriteria(
     }
 
     const detailedBreakdown = readDetailedBreakdown(matchedScore);
-    const exampleRevisions = readExampleRevisions(matchedScore);
+    const exampleRevisions =
+      readExampleRevisions(matchedScore) ??
+      [buildFallbackExampleRevision(rubricCriterion.name, matchedScore.feedback)];
 
     criteria.push({
       ...baseCriterion,
       ...(detailedBreakdown ? { detailed_breakdown: detailedBreakdown } : {}),
-      ...(exampleRevisions ? { example_revisions: exampleRevisions } : {}),
+      example_revisions: exampleRevisions,
     });
   }
 

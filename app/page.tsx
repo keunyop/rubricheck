@@ -84,6 +84,8 @@ type CheckoutResponse = {
   url?: string;
   plan?: string;
   packId?: string;
+  code?: string;
+  message?: string;
   error?: string;
 };
 
@@ -289,7 +291,7 @@ function getEvaluationStatusChip(plan: "free" | "pro", remainingEvaluations: num
 } {
   if (plan === "pro") {
     return {
-      label: "Unlimited evaluations",
+      label: "Pro",
       toneClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
     };
   }
@@ -1087,13 +1089,18 @@ export default function Home() {
 
       const data: CheckoutResponse = await response.json().catch(() => ({}));
       if (!response.ok || !data.url) {
-        throw new Error(data.error ?? "CHECKOUT_SESSION_FAILED");
+        throw new Error(data.code ?? data.error ?? "CHECKOUT_SESSION_FAILED");
       }
 
       persistEvaluationDraftForCheckout();
       window.location.assign(data.url);
-    } catch {
-      setCheckoutError("Unable to start checkout right now. Please try again.");
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "CHECKOUT_SESSION_FAILED";
+      if (code === "ALREADY_PRO_ACTIVE") {
+        setCheckoutError("This email already has an active Pro subscription. Please log in instead of purchasing again.");
+      } else {
+        setCheckoutError("Unable to start checkout right now. Please try again.");
+      }
     } finally {
       setIsCreatingCheckout(false);
     }
@@ -1267,6 +1274,13 @@ export default function Home() {
           row.estimated_range.every((value) => typeof value === "number") &&
           typeof row.feedback === "string" &&
           (row.detailed_breakdown_locked === undefined || typeof row.detailed_breakdown_locked === "boolean") &&
+          (row.example_revisions === undefined ||
+            (Array.isArray(row.example_revisions) &&
+              row.example_revisions.length >= 1 &&
+              row.example_revisions.length <= 2 &&
+              row.example_revisions.every(
+                (revision) => typeof revision === "string" && revision.trim().length > 0,
+              ))) &&
           (row.evidence === undefined ||
             (Array.isArray(row.evidence) &&
               row.evidence.length >= 1 &&
@@ -1496,7 +1510,12 @@ export default function Home() {
     setRestoreCode("");
     setRestoreError("");
     setRestoreInfo("");
-    void refreshAccountSummary();
+    setGradeResult(null);
+    setResultMode(null);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+    }
   }
 
   async function handleStartRestorePro() {
@@ -1664,7 +1683,7 @@ export default function Home() {
                       aria-haspopup="menu"
                       aria-expanded={showAccountMenu}
                       onClick={() => setShowAccountMenu((previous) => !previous)}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 px-2.5 py-1.5 shadow-sm transition hover:border-slate-300"
+                      className="inline-flex items-center gap-2 px-0.5 py-0.5 transition hover:opacity-90"
                     >
                       <span
                         aria-hidden="true"
@@ -2128,37 +2147,29 @@ export default function Home() {
 
             </div>
 
-            {SHOW_PRO_FEATURES ? (
+            {SHOW_PRO_FEATURES && !hasProAccess ? (
               <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 md:p-5">
-                {hasProAccess ? (
-                  <p className="inline-flex items-center rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
-                    Pro Active on This Device
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    {!signedInEmail ? (
-                      <button
-                        type="button"
-                        onClick={openLoginModal}
-                        className="inline-flex w-full items-center justify-center rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
-                      >
-                        Log in
-                      </button>
-                    ) : null}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  {!signedInEmail ? (
                     <button
                       type="button"
-                      onClick={() => openRewritePaywall("upgrade")}
-                      className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
+                      onClick={openLoginModal}
+                      className="inline-flex w-full items-center justify-center rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
                     >
-                      Upgrade to Pro
+                      Log in
                     </button>
-                  </div>
-                )}
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => openRewritePaywall("upgrade")}
+                    className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
+                  >
+                    Upgrade to Pro
+                  </button>
+                </div>
                 <p className="mt-2 text-xs leading-5 text-indigo-900/80 md:text-sm">
-                  {hasProAccess
-                    ? "Pro entitlement is active. Rewrite/simulate gates now use your Pro session."
-                    : signedInEmail
-                      ? "You're logged in on this device. Upgrade to Pro to unlock rewrite/simulate."
+                  {signedInEmail
+                    ? "You're logged in on this device. Upgrade to Pro to unlock rewrite/simulate."
                     : entitlementStatus === "needs_restore"
                       ? "Already subscribed? Log in with email verification, or upgrade to Pro."
                       : "Pro unlocks rewrite suggestions focused on improving your score."}
@@ -2185,6 +2196,13 @@ export default function Home() {
                     const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
                     const rationaleText = item.rationale ?? item.feedback;
                     const evidenceList = item.evidence ?? [];
+                    const rewriteSuggestions =
+                      hasProAccess && Array.isArray(item.example_revisions)
+                        ? item.example_revisions
+                            .map((revision) => revision.trim())
+                            .filter((revision) => revision.length > 0)
+                            .slice(0, 2)
+                        : [];
                     const isDetailedBreakdownLocked = item.detailed_breakdown_locked === true;
                     const canShowDetailedBreakdown = SHOW_PRO_FEATURES && hasProAccess;
                     const detailedBreakdownBullets =
@@ -2248,9 +2266,17 @@ export default function Home() {
                                 {isRewriteOpen ? (
                                   <div className="border-t border-slate-200 px-3 py-3">
                                     {hasProAccess ? (
-                                      <p className="text-sm text-emerald-700">
-                                        Pro is active on this device.
-                                      </p>
+                                      rewriteSuggestions.length > 0 ? (
+                                        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                                          {rewriteSuggestions.map((suggestion, suggestionIndex) => (
+                                            <li key={`${criteriaKey}-rewrite-${suggestionIndex}`}>{suggestion}</li>
+                                          ))}
+                                        </ul>
+                                      ) : (
+                                        <p className="text-sm text-slate-600">
+                                          Rewrite suggestions are not available for this criterion yet. Run Evaluate again to refresh this section.
+                                        </p>
+                                      )
                                     ) : (
                                       <>
                                         <p className="text-sm text-slate-600">
@@ -2295,6 +2321,13 @@ export default function Home() {
                 const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
                 const rationaleText = item.rationale ?? item.feedback;
                 const evidenceList = item.evidence ?? [];
+                const rewriteSuggestions =
+                  hasProAccess && Array.isArray(item.example_revisions)
+                    ? item.example_revisions
+                        .map((revision) => revision.trim())
+                        .filter((revision) => revision.length > 0)
+                        .slice(0, 2)
+                    : [];
                 const isDetailedBreakdownLocked = item.detailed_breakdown_locked === true;
                 const canShowDetailedBreakdown = SHOW_PRO_FEATURES && hasProAccess;
                 const detailedBreakdownBullets =
@@ -2360,9 +2393,17 @@ export default function Home() {
                         {isRewriteOpen ? (
                           <div className="border-t border-slate-200 px-3 py-3">
                             {hasProAccess ? (
-                              <p className="text-sm text-emerald-700">
-                                Pro is active on this device.
-                              </p>
+                              rewriteSuggestions.length > 0 ? (
+                                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                                  {rewriteSuggestions.map((suggestion, suggestionIndex) => (
+                                    <li key={`${criteriaKey}-mobile-rewrite-${suggestionIndex}`}>{suggestion}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-sm text-slate-600">
+                                  Rewrite suggestions are not available for this criterion yet. Run Evaluate again to refresh this section.
+                                </p>
+                              )
                             ) : (
                               <>
                                 <p className="text-sm text-slate-600">
