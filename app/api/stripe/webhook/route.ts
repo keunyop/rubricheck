@@ -60,6 +60,20 @@ function getCustomerId(customer: string | Stripe.Customer | Stripe.DeletedCustom
   return typeof customer.id === "string" && customer.id.trim() ? customer.id : null;
 }
 
+function getPaymentIntentId(
+  paymentIntent: string | Stripe.PaymentIntent | null,
+): string | null {
+  if (!paymentIntent) {
+    return null;
+  }
+
+  if (typeof paymentIntent === "string") {
+    return paymentIntent.trim() || null;
+  }
+
+  return typeof paymentIntent.id === "string" && paymentIntent.id.trim() ? paymentIntent.id : null;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object") {
     return null;
@@ -211,6 +225,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
       amount: getCreditsForCreditPack(packId),
       customerId,
       email: sessionEmail,
+      paymentIntentId: getPaymentIntentId(session.payment_intent as string | Stripe.PaymentIntent | null),
+      creditPackId: packId,
+      amountTotal: typeof session.amount_total === "number" ? session.amount_total : null,
+      currency: typeof session.currency === "string" ? session.currency : null,
       markSessionProcessed: markCreditsSessionProcessed,
       grantCredits,
     });

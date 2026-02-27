@@ -36,7 +36,7 @@ const CREDIT_PACK_CONFIG: Record<CreditPackId, CreditPackConfig> = {
 
 const LOOKUP_KEY_TO_PACK_ID = Object.entries(CREDIT_PACK_CONFIG).reduce<Record<string, CreditPackId>>(
   (acc, [packId, config]) => {
-    acc[config.lookupKey] = packId as CreditPackId;
+    acc[config.lookupKey.toLowerCase()] = packId as CreditPackId;
     return acc;
   },
   {},

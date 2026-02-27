@@ -2,11 +2,13 @@ import { Redis } from "@upstash/redis";
 
 import { getCustomerIdByEmail, setCustomerIdByEmail } from "./entitlement";
 import { getCreditEmailFromCookie } from "./creditSession";
+import { callSupabaseRpc, hasSupabaseConfig } from "./supabaseRest";
 
 const CREDITS_BY_CUSTOMER_KEY_PREFIX = "rubricheck:credits:customer:";
 const CREDITS_BY_EMAIL_KEY_PREFIX = "rubricheck:credits:email:";
 const CREDIT_SESSION_PROCESSED_KEY_PREFIX = "rubricheck:credits:processedSession:";
 const CREDIT_SESSION_PROCESSED_TTL_SECONDS = 60 * 60 * 24 * 180;
+const BILLING_SCOPE_CHECKOUT_SESSION = "checkout_session";
 
 export type CreditStorageTarget =
   | {
@@ -20,6 +22,16 @@ export type CreditStorageTarget =
 
 export type CreditReservation = {
   target: CreditStorageTarget;
+  backend: "supabase" | "redis";
+  usageEventId?: string | null;
+  lotId?: number | null;
+};
+
+type SupabaseReserveResult = {
+  reserved?: unknown;
+  balance_after?: unknown;
+  usage_event_id?: unknown;
+  lot_id?: unknown;
 };
 
 let redisClient: Redis | null = null;
@@ -28,6 +40,10 @@ function hasRedisConfig(): boolean {
   const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
   const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
   return Boolean(url && token);
+}
+
+function hasCreditStorageConfig(): boolean {
+  return hasSupabaseConfig() || hasRedisConfig();
 }
 
 function getRedisClient(): Redis {
@@ -74,6 +90,44 @@ function parseCredits(value: unknown): number {
   return 0;
 }
 
+function parseBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "t" || normalized === "1";
+  }
+
+  if (typeof value === "number") {
+    return value === 1;
+  }
+
+  return false;
+}
+
+function parseNullableString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
+
+function isRedisConfigMissingError(error: unknown): boolean {
+  return error instanceof Error && error.message === "UPSTASH_REDIS_CONFIG_MISSING";
+}
+
+function shouldIgnoreRedisIdentityError(error: unknown): boolean {
+  if (hasSupabaseConfig()) {
+    return true;
+  }
+
+  return isRedisConfigMissingError(error);
+}
+
 async function readCreditsByKey(key: string): Promise<number> {
   const raw = await getRedisClient().get(key);
   return parseCredits(raw);
@@ -84,10 +138,120 @@ async function incrementCreditsByKey(key: string, amount: number): Promise<numbe
   return parseCredits(nextBalance);
 }
 
+function targetToOwner(target: CreditStorageTarget): { ownerType: "customer" | "email"; ownerId: string } {
+  if (target.type === "customer") {
+    return { ownerType: "customer", ownerId: target.customerId.trim() };
+  }
+
+  return { ownerType: "email", ownerId: normalizeEmail(target.email) };
+}
+
+async function readCreditsByTargetSupabase(target: CreditStorageTarget): Promise<number> {
+  const owner = targetToOwner(target);
+  const raw = await callSupabaseRpc<number>("rubricheck_credit_balance", {
+    p_owner_type: owner.ownerType,
+    p_owner_id: owner.ownerId,
+  });
+  return parseCredits(raw);
+}
+
+async function migrateEmailCreditsToCustomerSupabase(email: string, customerId: string): Promise<void> {
+  await callSupabaseRpc<number>("rubricheck_migrate_credit_owner", {
+    p_email: normalizeEmail(email),
+    p_customer_id: customerId.trim(),
+  });
+}
+
+async function markBillingEventProcessedSupabase(scope: string, externalId: string): Promise<boolean> {
+  const raw = await callSupabaseRpc<boolean>("rubricheck_mark_billing_event_processed", {
+    p_scope: scope.trim(),
+    p_external_id: externalId.trim(),
+  });
+  return parseBoolean(raw);
+}
+
+async function grantCreditsSupabase(params: {
+  amount: number;
+  target: CreditStorageTarget;
+  checkoutSessionId?: string | null;
+  paymentIntentId?: string | null;
+  customerId?: string | null;
+  email?: string | null;
+  creditPackId?: string | null;
+  amountTotal?: number | null;
+  currency?: string | null;
+}): Promise<number> {
+  const owner = targetToOwner(params.target);
+  const raw = await callSupabaseRpc<number>("rubricheck_grant_credit_purchase", {
+    p_owner_type: owner.ownerType,
+    p_owner_id: owner.ownerId,
+    p_credits: Math.floor(params.amount),
+    p_checkout_session_id: params.checkoutSessionId ?? null,
+    p_payment_intent_id: params.paymentIntentId ?? null,
+    p_customer_id: params.customerId ?? null,
+    p_email: params.email ?? null,
+    p_credit_pack_id: params.creditPackId ?? null,
+    p_amount_total: params.amountTotal ?? null,
+    p_currency: params.currency ?? null,
+  });
+  return parseCredits(raw);
+}
+
+async function reserveOneCreditSupabase(target: CreditStorageTarget): Promise<{
+  reserved: boolean;
+  balanceAfter: number;
+  reservation: CreditReservation | null;
+}> {
+  const owner = targetToOwner(target);
+  const raw = await callSupabaseRpc<SupabaseReserveResult>("rubricheck_reserve_one_credit", {
+    p_owner_type: owner.ownerType,
+    p_owner_id: owner.ownerId,
+  });
+
+  const reserved = parseBoolean(raw?.reserved);
+  const balanceAfter = parseCredits(raw?.balance_after);
+  const usageEventId = parseNullableString(raw?.usage_event_id);
+  const lotId = parseCredits(raw?.lot_id);
+
+  if (!reserved || !usageEventId) {
+    return {
+      reserved: false,
+      balanceAfter,
+      reservation: null,
+    };
+  }
+
+  return {
+    reserved: true,
+    balanceAfter,
+    reservation: {
+      target,
+      backend: "supabase",
+      usageEventId,
+      lotId: lotId > 0 ? lotId : null,
+    },
+  };
+}
+
+async function refundReservationSupabase(reservation: CreditReservation): Promise<number> {
+  const owner = targetToOwner(reservation.target);
+  const raw = await callSupabaseRpc<number>("rubricheck_refund_credit_reservation", {
+    p_usage_event_id: reservation.usageEventId ?? null,
+    p_owner_type: owner.ownerType,
+    p_owner_id: owner.ownerId,
+  });
+  return parseCredits(raw);
+}
+
 async function ensureEmailCreditsMigratedToCustomer(email: string, customerId: string): Promise<void> {
   const normalizedEmail = normalizeEmail(email);
   const normalizedCustomerId = customerId.trim();
   if (!normalizedEmail || !normalizedCustomerId) {
+    return;
+  }
+
+  if (hasSupabaseConfig()) {
+    await migrateEmailCreditsToCustomerSupabase(normalizedEmail, normalizedCustomerId);
     return;
   }
 
@@ -108,7 +272,13 @@ export async function resolveCreditStorageTarget(params: {
   const rawCustomerId = params.customerId?.trim() ?? "";
   if (rawCustomerId) {
     if (params.email?.trim()) {
-      await setCustomerIdByEmail(params.email, rawCustomerId);
+      try {
+        await setCustomerIdByEmail(params.email, rawCustomerId);
+      } catch (error) {
+        if (!shouldIgnoreRedisIdentityError(error)) {
+          throw error;
+        }
+      }
       await ensureEmailCreditsMigratedToCustomer(params.email, rawCustomerId);
     }
 
@@ -123,7 +293,15 @@ export async function resolveCreditStorageTarget(params: {
     return null;
   }
 
-  const mappedCustomerId = await getCustomerIdByEmail(normalizedEmail);
+  let mappedCustomerId: string | null = null;
+  try {
+    mappedCustomerId = await getCustomerIdByEmail(normalizedEmail);
+  } catch (error) {
+    if (!shouldIgnoreRedisIdentityError(error)) {
+      throw error;
+    }
+  }
+
   if (mappedCustomerId) {
     await ensureEmailCreditsMigratedToCustomer(normalizedEmail, mappedCustomerId);
     return {
@@ -147,6 +325,10 @@ function creditTargetToKey(target: CreditStorageTarget): string {
 }
 
 export async function getCreditBalanceForTarget(target: CreditStorageTarget): Promise<number> {
+  if (hasSupabaseConfig()) {
+    return readCreditsByTargetSupabase(target);
+  }
+
   if (!hasRedisConfig()) {
     return 0;
   }
@@ -155,7 +337,7 @@ export async function getCreditBalanceForTarget(target: CreditStorageTarget): Pr
 }
 
 export async function getCreditBalanceForRequest(request: Request): Promise<number | null> {
-  if (!hasRedisConfig()) {
+  if (!hasCreditStorageConfig()) {
     return null;
   }
 
@@ -175,10 +357,6 @@ export async function reserveOneCreditForRequest(request: Request): Promise<{
   balanceAfter: number;
   reservation: CreditReservation | null;
 }> {
-  if (!hasRedisConfig()) {
-    throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
-  }
-
   const email = getCreditEmailFromCookie(request);
   const target = await resolveCreditStorageTarget({ email });
   if (!target) {
@@ -187,6 +365,14 @@ export async function reserveOneCreditForRequest(request: Request): Promise<{
       balanceAfter: 0,
       reservation: null,
     };
+  }
+
+  if (hasSupabaseConfig()) {
+    return reserveOneCreditSupabase(target);
+  }
+
+  if (!hasRedisConfig()) {
+    throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
   }
 
   const key = creditTargetToKey(target);
@@ -204,11 +390,18 @@ export async function reserveOneCreditForRequest(request: Request): Promise<{
   return {
     reserved: true,
     balanceAfter: nextBalance,
-    reservation: { target },
+    reservation: {
+      target,
+      backend: "redis",
+    },
   };
 }
 
 export async function refundCreditReservation(reservation: CreditReservation): Promise<number> {
+  if (reservation.backend === "supabase" || hasSupabaseConfig()) {
+    return refundReservationSupabase(reservation);
+  }
+
   if (!hasRedisConfig()) {
     throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
   }
@@ -222,11 +415,12 @@ export async function grantCredits(params: {
   amount: number;
   email?: string | null;
   customerId?: string | null;
+  checkoutSessionId?: string | null;
+  paymentIntentId?: string | null;
+  creditPackId?: string | null;
+  amountTotal?: number | null;
+  currency?: string | null;
 }): Promise<number> {
-  if (!hasRedisConfig()) {
-    throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
-  }
-
   const amount = Math.floor(params.amount);
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("INVALID_CREDIT_AMOUNT");
@@ -240,17 +434,39 @@ export async function grantCredits(params: {
     throw new Error("CREDIT_IDENTITY_MISSING");
   }
 
-  return incrementCreditsByKey(creditTargetToKey(target), amount);
-}
+  if (hasSupabaseConfig()) {
+    return grantCreditsSupabase({
+      amount,
+      target,
+      checkoutSessionId: params.checkoutSessionId ?? null,
+      paymentIntentId: params.paymentIntentId ?? null,
+      customerId: params.customerId ?? null,
+      email: params.email ?? null,
+      creditPackId: params.creditPackId ?? null,
+      amountTotal: params.amountTotal ?? null,
+      currency: params.currency ?? null,
+    });
+  }
 
-export async function markCreditsSessionProcessed(sessionId: string): Promise<boolean> {
   if (!hasRedisConfig()) {
     throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
   }
 
+  return incrementCreditsByKey(creditTargetToKey(target), amount);
+}
+
+export async function markCreditsSessionProcessed(sessionId: string): Promise<boolean> {
   const normalizedSessionId = sessionId.trim();
   if (!normalizedSessionId) {
     throw new Error("STRIPE_SESSION_ID_MISSING");
+  }
+
+  if (hasSupabaseConfig()) {
+    return markBillingEventProcessedSupabase(BILLING_SCOPE_CHECKOUT_SESSION, normalizedSessionId);
+  }
+
+  if (!hasRedisConfig()) {
+    throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
   }
 
   const result = await getRedisClient().set(getCreditsProcessedSessionKey(normalizedSessionId), "1", {

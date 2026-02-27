@@ -35,6 +35,35 @@ function getStripeClient(): Stripe {
   return stripeClient;
 }
 
+type StripeLikeError = {
+  param?: unknown;
+  message?: unknown;
+  code?: unknown;
+  type?: unknown;
+};
+
+function asStripeLikeError(error: unknown): StripeLikeError | null {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  return error as StripeLikeError;
+}
+
+function shouldRetryWithoutCustomerCreation(error: unknown): boolean {
+  const stripeError = asStripeLikeError(error);
+  if (!stripeError) {
+    return false;
+  }
+
+  if (stripeError.param === "customer_creation") {
+    return true;
+  }
+
+  const message = typeof stripeError.message === "string" ? stripeError.message.toLowerCase() : "";
+  return message.includes("customer_creation");
+}
+
 function normalizeEmail(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
@@ -83,11 +112,11 @@ export async function POST(request: Request) {
     const stripePriceId = priceResult.data[0]?.id;
     if (!stripePriceId) return respond(errorResponse(context, 500, "STRIPE_PRICE_NOT_FOUND", "Checkout price is unavailable."), "error");
 
-    const session = await getStripeClient().checkout.sessions.create({
+    const stripe = getStripeClient();
+    const baseSessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "payment",
       line_items: [{ price: stripePriceId, quantity: 1 }],
       customer_email: requestEmail,
-      customer_creation: "always",
       success_url: `${appUrl}/billing/success`,
       cancel_url: `${appUrl}/billing/cancel`,
       metadata: {
@@ -95,7 +124,24 @@ export async function POST(request: Request) {
         credit_pack_id: packId,
         credit_pack_lookup_key: lookupKey,
       },
-    });
+    };
+
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        ...baseSessionParams,
+        customer_creation: "always",
+      });
+    } catch (sessionError) {
+      if (!shouldRetryWithoutCustomerCreation(sessionError)) {
+        throw sessionError;
+      }
+
+      console.warn("CREDIT_CHECKOUT_CUSTOMER_CREATION_UNSUPPORTED", {
+        requestId: context.requestId,
+      });
+      session = await stripe.checkout.sessions.create(baseSessionParams);
+    }
 
     if (!session.url) return respond(errorResponse(context, 500, "CHECKOUT_SESSION_URL_MISSING", "Checkout session is unavailable."), "error");
 
@@ -112,7 +158,21 @@ export async function POST(request: Request) {
     return respond(response, "success");
   } catch (error) {
     if (error instanceof SyntaxError) return respond(errorResponse(context, 400, "INVALID_JSON", "Request body must be valid JSON."), "error");
-    console.error("CREDIT_CHECKOUT_SESSION_FAILED", { requestId: context.requestId, error, emailHash: hashEmail(requestEmail) });
+    const stripeError = asStripeLikeError(error);
+    console.error("CREDIT_CHECKOUT_SESSION_FAILED", {
+      requestId: context.requestId,
+      error,
+      emailHash: hashEmail(requestEmail),
+      stripeError:
+        stripeError
+          ? {
+              type: typeof stripeError.type === "string" ? stripeError.type : null,
+              code: typeof stripeError.code === "string" ? stripeError.code : null,
+              param: typeof stripeError.param === "string" ? stripeError.param : null,
+              message: typeof stripeError.message === "string" ? stripeError.message : null,
+            }
+          : null,
+    });
     return respond(errorResponse(context, 500, "CREDIT_CHECKOUT_SESSION_FAILED", "Unable to start credit checkout right now."), "error");
   }
 }

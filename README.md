@@ -48,7 +48,7 @@ Evidence-based and conservative scoring; requires quotes per criterion.
 - Frontend: Next.js App Router, React, TypeScript, Tailwind CSS
 - Backend: Next.js Route Handlers
 - AI: OpenAI API (rubric structuring + evaluation prompts)
-- Storage/limits: Upstash Redis
+- Storage/limits: Upstash Redis (session/rate-limit), Supabase Postgres (credit ledger)
 - Billing (feature branch): Stripe Checkout
 
 ## System Flow
@@ -117,6 +117,8 @@ ENTITLEMENT_SESSION_SECRET=... # recommended (fallbacks to STRIPE_WEBHOOK_SECRET
 ENTITLEMENT_OTP_SECRET=... # recommended for OTP hashing (fallbacks to session secret)
 RESEND_API_KEY=... # optional in dev, required in prod for OTP email send
 OTP_FROM_EMAIL=... # e.g. no-reply@yourdomain.com
+SUPABASE_URL=... # e.g. https://xxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=... # server-only, never expose to client
 ```
 
 Stripe setup note:
@@ -127,7 +129,7 @@ Stripe setup note:
   - `lookup_key=credits_25_v1`
   - `lookup_key=credits_60_v1`
 
-## Redis Keys
+## Redis Keys (Non-Financial)
 
 - Usage limits
   - `rubricheck:usage:{ip}:{yyyy-mm-dd}:{feature}`
@@ -141,6 +143,28 @@ Stripe setup note:
   - `rubricheck:restore:otp:send:email:{email}` -> send rate limit counter (10m window)
   - `rubricheck:restore:otp:send:ip:{ip}` -> send rate limit counter (10m window)
   - `rubricheck:restore:otp:verify:{email}:{ip}` -> verify rate limit counter (10m window)
+
+Credits, payment lots, usage allocation, and webhook idempotency are stored in Supabase Postgres.
+
+## Supabase Setup (MVP Credit Ledger)
+
+1. Create a Supabase project and copy:
+   - `Project URL` -> `SUPABASE_URL`
+   - `service_role` key -> `SUPABASE_SERVICE_ROLE_KEY`
+2. In Supabase SQL Editor, run:
+   - `supabase/credits_mvp.sql`
+3. Verify tables were created:
+   - `credit_payments`
+   - `credit_lots`
+   - `credit_usage_events`
+   - `credit_usage_allocations`
+   - `credit_refunds`
+   - `billing_processed_events`
+   - `billing_webhook_failures`
+4. Ensure Stripe webhook is configured and active:
+   - Endpoint: `/api/stripe/webhook`
+   - Events: `checkout.session.completed`, `customer.subscription.created|updated|deleted`
+5. Keep Redis enabled for non-financial features (rate limits, entitlement cache, OTP).
 
 ## Restoring Pro After Session Expiry
 

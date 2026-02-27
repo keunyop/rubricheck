@@ -21,7 +21,18 @@ type OtpRecord = {
   failedAttempts: number;
 };
 
+type InMemoryRateLimitRecord = {
+  count: number;
+  expiresAt: number;
+};
+
 let redisClient: Redis | null = null;
+const inMemoryOtpStore = new Map<string, OtpRecord>();
+const inMemoryRateLimitStore = new Map<string, InMemoryRateLimitRecord>();
+
+function isProductionEnvironment(): boolean {
+  return process.env.NODE_ENV === "production";
+}
 
 function hasRedisConfig(): boolean {
   const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
@@ -73,6 +84,9 @@ function getRestoreSecret(): string {
     "";
 
   if (!secret) {
+    if (!isProductionEnvironment()) {
+      return "rubricheck-dev-otp-secret";
+    }
     throw new Error("ENTITLEMENT_OTP_SECRET_MISSING");
   }
 
@@ -150,6 +164,25 @@ async function incrementRateLimit(key: string, windowSeconds: number): Promise<n
   return nextCount;
 }
 
+function incrementRateLimitInMemory(key: string, windowSeconds: number): number {
+  const nowSeconds = getNowSeconds();
+  const existing = inMemoryRateLimitStore.get(key);
+  if (!existing || existing.expiresAt <= nowSeconds) {
+    inMemoryRateLimitStore.set(key, {
+      count: 1,
+      expiresAt: nowSeconds + windowSeconds,
+    });
+    return 1;
+  }
+
+  const nextCount = existing.count + 1;
+  inMemoryRateLimitStore.set(key, {
+    ...existing,
+    count: nextCount,
+  });
+  return nextCount;
+}
+
 function generateOtpCode(): string {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
@@ -161,30 +194,47 @@ function isValidOtpCode(code: string): boolean {
 async function sendOtpEmail(email: string, code: string): Promise<void> {
   const resendApiKey = process.env.RESEND_API_KEY?.trim();
   const otpFromEmail = process.env.OTP_FROM_EMAIL?.trim();
+  const isProduction = isProductionEnvironment();
 
   if (resendApiKey && otpFromEmail) {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: otpFromEmail,
-        to: [email],
-        subject: "Your RubriCheck restore code",
-        text: `Your RubriCheck code is ${code}. It expires in 10 minutes.`,
-      }),
-    });
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: otpFromEmail,
+          to: [email],
+          subject: "Your RubriCheck restore code",
+          text: `Your RubriCheck code is ${code}. It expires in 10 minutes.`,
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error("OTP_EMAIL_SEND_FAILED");
+      if (response.ok) {
+        return;
+      }
+
+      if (!isProduction) {
+        console.warn("RESTORE_OTP_DEV_EMAIL_FALLBACK", { email, status: response.status });
+        console.info("RESTORE_OTP_DEV_SEND", { email });
+        return;
+      }
+    } catch (error) {
+      if (!isProduction) {
+        console.warn("RESTORE_OTP_DEV_EMAIL_FALLBACK", { email, error });
+        console.info("RESTORE_OTP_DEV_SEND", { email });
+        return;
+      }
     }
 
-    return;
+    if (isProduction) {
+      throw new Error("OTP_EMAIL_SEND_FAILED");
+    }
   }
 
-  if (process.env.NODE_ENV !== "production") {
+  if (!isProduction) {
     console.info("RESTORE_OTP_DEV_SEND", { email });
     return;
   }
@@ -193,12 +243,38 @@ async function sendOtpEmail(email: string, code: string): Promise<void> {
 }
 
 export async function startRestoreOtp(request: Request, email: string): Promise<void> {
-  if (!hasRedisConfig()) {
-    throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
-  }
-
   const normalizedEmail = normalizeEmailInput(email);
   const ip = getRequestIp(request);
+
+  if (!hasRedisConfig()) {
+    if (isProductionEnvironment()) {
+      throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
+    }
+
+    const emailRateCount = incrementRateLimitInMemory(
+      getOtpSendEmailLimitKey(normalizedEmail),
+      RATE_LIMIT_WINDOW_SECONDS,
+    );
+    const ipRateCount = incrementRateLimitInMemory(
+      getOtpSendIpLimitKey(ip),
+      RATE_LIMIT_WINDOW_SECONDS,
+    );
+
+    if (emailRateCount > MAX_SEND_PER_WINDOW || ipRateCount > MAX_SEND_PER_WINDOW) {
+      throw new Error("RESTORE_OTP_RATE_LIMITED");
+    }
+
+    const code = generateOtpCode();
+    const nowSeconds = getNowSeconds();
+    const record: OtpRecord = {
+      codeHash: hashOtpCode(normalizedEmail, code),
+      expiresAt: nowSeconds + OTP_TTL_SECONDS,
+      failedAttempts: 0,
+    };
+    inMemoryOtpStore.set(getOtpCodeKey(normalizedEmail), record);
+    await sendOtpEmail(normalizedEmail, code);
+    return;
+  }
 
   const [emailRateCount, ipRateCount] = await Promise.all([
     incrementRateLimit(getOtpSendEmailLimitKey(normalizedEmail), RATE_LIMIT_WINDOW_SECONDS),
@@ -226,13 +302,61 @@ export async function startRestoreOtp(request: Request, email: string): Promise<
 }
 
 export async function verifyRestoreOtp(request: Request, email: string, code: string): Promise<boolean> {
-  if (!hasRedisConfig()) {
-    throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
-  }
-
   const normalizedEmail = normalizeEmailInput(email);
   const normalizedCode = typeof code === "string" ? code.trim() : "";
   const ip = getRequestIp(request);
+
+  if (!hasRedisConfig()) {
+    if (isProductionEnvironment()) {
+      throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
+    }
+
+    const verifyCount = incrementRateLimitInMemory(
+      getOtpVerifyLimitKey(normalizedEmail, ip),
+      RATE_LIMIT_WINDOW_SECONDS,
+    );
+    if (verifyCount > MAX_VERIFY_PER_WINDOW) {
+      throw new Error("RESTORE_OTP_RATE_LIMITED");
+    }
+
+    if (!isValidOtpCode(normalizedCode)) {
+      return false;
+    }
+
+    const otpKey = getOtpCodeKey(normalizedEmail);
+    const record = inMemoryOtpStore.get(otpKey);
+    if (!record) {
+      return false;
+    }
+
+    const nowSeconds = getNowSeconds();
+    if (record.expiresAt < nowSeconds) {
+      inMemoryOtpStore.delete(otpKey);
+      return false;
+    }
+
+    if (record.failedAttempts >= MAX_VERIFY_FAILS_PER_CODE) {
+      inMemoryOtpStore.delete(otpKey);
+      return false;
+    }
+
+    const expectedHash = hashOtpCode(normalizedEmail, normalizedCode);
+    const providedBuffer = Buffer.from(record.codeHash, "utf8");
+    const expectedBuffer = Buffer.from(expectedHash, "utf8");
+    const matches =
+      providedBuffer.length === expectedBuffer.length && timingSafeEqual(providedBuffer, expectedBuffer);
+
+    if (matches) {
+      inMemoryOtpStore.delete(otpKey);
+      return true;
+    }
+
+    inMemoryOtpStore.set(otpKey, {
+      ...record,
+      failedAttempts: record.failedAttempts + 1,
+    });
+    return false;
+  }
 
   const verifyCount = await incrementRateLimit(
     getOtpVerifyLimitKey(normalizedEmail, ip),
