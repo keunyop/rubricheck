@@ -23,7 +23,7 @@ test("credit decrement occurs only on successful evaluation", () => {
   );
 });
 
-test("simulate/rewrite style non-credit billing never trigger credit refund logic", () => {
+test("non-credit billing never triggers credit refund logic", () => {
   assert.equal(
     shouldRefundReservedEvaluateCredit({
       billingSource: "free",

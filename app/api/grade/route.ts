@@ -9,7 +9,6 @@ import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
 import { createRequestContext, errorResponse } from "../../../src/lib/apiError";
 import { getCreditEmailFromCookie } from "../../../src/lib/creditSession";
 import { resolveCreditStorageTarget } from "../../../src/lib/credits";
-import { getEntitlementEmailFromCookie } from "../../../src/lib/entitlementSession";
 import { shouldRefundReservedEvaluateCredit } from "../../../src/lib/evaluationCreditSettlement";
 import { buildFreeLimitReachedPayload } from "../../../src/lib/evaluateLimitPayload";
 import {
@@ -93,9 +92,8 @@ async function resolveRubricCacheIdentity(
     };
   }
 
-  const entitlementEmail = getEntitlementEmailFromCookie(request);
   const creditEmail = getCreditEmailFromCookie(request);
-  const email = entitlementEmail ?? creditEmail;
+  const email = creditEmail;
   if (!email) {
     return null;
   }
@@ -118,6 +116,11 @@ export async function POST(request: Request) {
   const context = createRequestContext(request);
 
   try {
+    const signedInEmail = getCreditEmailFromCookie(request);
+    if (!signedInEmail) {
+      return errorResponse(context, 401, "SIGN_IN_REQUIRED", "Log in to grade your assignment.");
+    }
+
     const contentType = request.headers.get("content-type") ?? "";
     let mode: GradingMode = "standard";
     let rubricFile: File | null = null;
@@ -206,7 +209,7 @@ export async function POST(request: Request) {
         return errorResponse(context, 503, "REDIS_UNAVAILABLE", usage.errorMessage ?? "Usage checks are temporarily unavailable. Please retry shortly.", undefined, usageHeaders);
       }
 
-      return errorResponse(context, 429, usage.errorCode ?? "RATE_LIMITED", usage.errorMessage ?? `Free daily limit reached (${usage.limit}). Upgrade to continue.`, undefined, usageHeaders);
+      return errorResponse(context, 429, usage.errorCode ?? "RATE_LIMITED", usage.errorMessage ?? `Free trial limit reached (${usage.limit}). Upgrade to continue.`, undefined, usageHeaders);
     }
 
     let structuredRubric;

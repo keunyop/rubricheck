@@ -1,6 +1,6 @@
 import { Redis } from "@upstash/redis";
 
-import { FREE_DAILY_LIMIT, PLUS_DAILY_LIMIT, type PlanName, getPlanFromUser } from "../config/plans.ts";
+import { FREE_TRIAL_LIMIT, PLUS_DAILY_LIMIT, type PlanName, getPlanFromUser } from "../config/plans.ts";
 import {
   FREE_LIMIT_REACHED_CODE,
   SHOW_INTERSTITIAL_ACTION,
@@ -19,9 +19,8 @@ import {
   hasAccountEntitlementStore,
   isActiveProAccountEntitlement,
 } from "./accountEntitlements";
-import { getEntitlementEmailFromCookie, getPlanFromEntitlementCookie } from "./entitlementSession.ts";
 
-export type UsageFeature = "evaluate" | "rewrite" | "simulate";
+export type UsageFeature = "evaluate" | "rewrite";
 export type UsageAction = typeof SHOW_INTERSTITIAL_ACTION;
 
 type UserPlanPayload = {
@@ -48,7 +47,6 @@ export type UsageCheckResult = {
 };
 
 const WINDOW_SECONDS = 86400;
-export const FREE_EVALUATE_DAILY_LIMIT = 3;
 const PRODUCTION_FREE_EVALUATE_BYPASS_LIMIT = 9_999_999;
 const ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV = "ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT";
 const UNLIMITED_PLAN_SENTINEL = -1;
@@ -75,24 +73,20 @@ export function checkRedisFallbackAllowance(request: Request, feature: UsageFeat
 
 const PLAN_FEATURE_LIMITS: Record<PlanName, FeatureLimitMap> = {
   free: {
-    evaluate: FREE_DAILY_LIMIT,
+    evaluate: FREE_TRIAL_LIMIT,
     rewrite: null,
-    simulate: null,
   },
   plus: {
     evaluate: PLUS_DAILY_LIMIT,
     rewrite: PLUS_DAILY_LIMIT,
-    simulate: PLUS_DAILY_LIMIT,
   },
   pro: {
     evaluate: "unlimited",
     rewrite: "unlimited",
-    simulate: "unlimited",
   },
   semester: {
     evaluate: PLUS_DAILY_LIMIT,
     rewrite: PLUS_DAILY_LIMIT,
-    simulate: PLUS_DAILY_LIMIT,
   },
 };
 
@@ -141,39 +135,20 @@ function getUtcDateKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getFreeUsageActor(request: Request): string {
-  const entitlementEmail = getEntitlementEmailFromCookie(request);
-  if (entitlementEmail) {
-    return `email:${entitlementEmail}`;
-  }
-
+function getFreeUsageActor(request: Request): string | null {
   const creditEmail = getCreditEmailFromCookie(request);
   if (creditEmail) {
     return `email:${creditEmail}`;
   }
-
-  return `ip:${getRequestIp(request)}`;
+  return null;
 }
 
 function getFreeEvaluateUsageKey(request: Request): string {
-  return `rubricheck:usage:${getFreeUsageActor(request)}:${getUtcDateKey()}:evaluate_free`;
-}
-
-function getFreeEvaluateDisabledKey(request: Request): string {
-  return `rubricheck:usage:${getFreeUsageActor(request)}:${getUtcDateKey()}:evaluate_free_disabled`;
-}
-
-async function markFreeEvaluateDisabledForDay(redis: Redis, request: Request): Promise<void> {
-  const key = getFreeEvaluateDisabledKey(request);
-  const result = await redis.set(key, "1", { nx: true, ex: WINDOW_SECONDS });
-  if (result !== "OK") {
-    await redis.expire(key, WINDOW_SECONDS);
+  const actor = getFreeUsageActor(request);
+  if (!actor) {
+    throw new Error("FREE_TRIAL_IDENTITY_MISSING");
   }
-}
-
-async function isFreeEvaluateDisabledForDay(redis: Redis, request: Request): Promise<boolean> {
-  const raw = await redis.get(getFreeEvaluateDisabledKey(request));
-  return raw !== null && raw !== undefined;
+  return `rubricheck:usage:${actor}:evaluate_free`;
 }
 
 function getLimitForFeature(plan: PlanName, feature: UsageFeature): PlanFeatureLimit {
@@ -186,7 +161,7 @@ function getFeatureBlockedMessage(feature: UsageFeature): string {
 }
 
 function getFreePlanLimitMessage(limit: number): string {
-  return `Free daily limit reached (${limit}). Upgrade to continue.`;
+  return `Free trial limit reached (${limit}). Upgrade to continue.`;
 }
 
 function isProductionFreeEvaluateLimitEnabled(): boolean {
@@ -208,23 +183,14 @@ async function resolveEffectivePlan(request: Request, user?: UserPlanPayload): P
     return requestedPlan;
   }
 
-  const signedInEmail = getEntitlementEmailFromCookie(request) ?? getCreditEmailFromCookie(request);
+  const signedInEmail = getCreditEmailFromCookie(request);
   if (signedInEmail && hasAccountEntitlementStore()) {
     try {
       const entitlement = await getAccountEntitlementByEmail(signedInEmail);
       return isActiveProAccountEntitlement(entitlement) ? "pro" : "free";
     } catch {
-      // Fallback to cookie-based plan if DB lookup is temporarily unavailable.
+      return "free";
     }
-  }
-
-  try {
-    const planFromCookie = getPlanFromEntitlementCookie(request);
-    if (planFromCookie === "pro") {
-      return "pro";
-    }
-  } catch {
-    // Ignore malformed/missing cookie and fall back to free.
   }
 
   return "free";
@@ -327,8 +293,8 @@ async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageChec
     if (process.env.NODE_ENV !== "production") {
       return {
         allowed: true,
-        limit: FREE_EVALUATE_DAILY_LIMIT,
-        remaining: FREE_EVALUATE_DAILY_LIMIT,
+        limit: FREE_TRIAL_LIMIT,
+        remaining: FREE_TRIAL_LIMIT,
         plan: "free",
         billingSource: "free",
         creditsBalance: null,
@@ -342,13 +308,34 @@ async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageChec
     const redis = getRedisClient();
     const currentCreditBalance = Math.max(0, (await getCreditBalanceForRequest(request)) ?? 0);
 
-    if (currentCreditBalance > 0) {
-      await markFreeEvaluateDisabledForDay(redis, request);
+    const freeKey = getFreeEvaluateUsageKey(request);
+    const rawFreeCount = await redis.get(freeKey);
+    const freeCountBefore = typeof rawFreeCount === "number" ? Math.max(0, Math.floor(rawFreeCount)) : Number.parseInt(String(rawFreeCount ?? "0"), 10) || 0;
+
+    const freeDecision = decideFreeEvaluateAccess({
+      freeCount: freeCountBefore + 1,
+      freeLimit: FREE_TRIAL_LIMIT,
+      creditsAvailable: currentCreditBalance,
+    });
+
+    if (freeDecision.allowed && freeDecision.source === "free") {
+      const freeCount = await redis.incr(freeKey);
+      return {
+        allowed: true,
+        limit: FREE_TRIAL_LIMIT,
+        remaining: Math.max(0, FREE_TRIAL_LIMIT - freeCount),
+        plan: "free",
+        billingSource: "free",
+        creditsBalance: currentCreditBalance,
+      };
+    }
+
+    if (freeDecision.allowed && freeDecision.source === "credit") {
       const creditReservation = await reserveOneCreditForRequest(request);
       if (creditReservation.reserved && creditReservation.reservation) {
         return {
           allowed: true,
-          limit: FREE_EVALUATE_DAILY_LIMIT,
+          limit: FREE_TRIAL_LIMIT,
           remaining: 0,
           plan: "free",
           billingSource: "credit",
@@ -359,66 +346,27 @@ async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageChec
 
       return {
         allowed: false,
-        limit: FREE_EVALUATE_DAILY_LIMIT,
+        limit: FREE_TRIAL_LIMIT,
         remaining: 0,
         plan: "free",
         billingSource: "free",
         errorCode: "FREE_LIMIT_REACHED",
         action: "SHOW_INTERSTITIAL",
-        errorMessage: getFreePlanLimitMessage(FREE_EVALUATE_DAILY_LIMIT),
+        errorMessage: getFreePlanLimitMessage(FREE_TRIAL_LIMIT),
         creditsBalance: creditReservation.balanceAfter,
-      };
-    }
-
-    const isFreeDisabledForToday = await isFreeEvaluateDisabledForDay(redis, request);
-    if (isFreeDisabledForToday) {
-      return {
-        allowed: false,
-        limit: FREE_EVALUATE_DAILY_LIMIT,
-        remaining: 0,
-        plan: "free",
-        billingSource: "free",
-        errorCode: "FREE_LIMIT_REACHED",
-        action: "SHOW_INTERSTITIAL",
-        errorMessage: getFreePlanLimitMessage(FREE_EVALUATE_DAILY_LIMIT),
-        creditsBalance: 0,
-      };
-    }
-
-    const freeKey = getFreeEvaluateUsageKey(request);
-    const freeCount = await redis.incr(freeKey);
-
-    if (freeCount === 1) {
-      await redis.expire(freeKey, WINDOW_SECONDS);
-    }
-
-    const freeDecision = decideFreeEvaluateAccess({
-      freeCount,
-      freeLimit: FREE_EVALUATE_DAILY_LIMIT,
-      creditsAvailable: 0,
-    });
-
-    if (freeDecision.allowed) {
-      return {
-        allowed: true,
-        limit: FREE_EVALUATE_DAILY_LIMIT,
-        remaining: Math.max(0, FREE_EVALUATE_DAILY_LIMIT - freeCount),
-        plan: "free",
-        billingSource: "free",
-        creditsBalance: 0,
       };
     }
 
     return {
       allowed: false,
-      limit: FREE_EVALUATE_DAILY_LIMIT,
+      limit: FREE_TRIAL_LIMIT,
       remaining: 0,
       plan: "free",
       billingSource: "free",
       errorCode: "FREE_LIMIT_REACHED",
       action: "SHOW_INTERSTITIAL",
-      errorMessage: getFreePlanLimitMessage(FREE_EVALUATE_DAILY_LIMIT),
-      creditsBalance: 0,
+      errorMessage: getFreePlanLimitMessage(FREE_TRIAL_LIMIT),
+      creditsBalance: currentCreditBalance,
     };
   } catch {
     const fallback = checkRedisFallbackAllowance(request, "evaluate");

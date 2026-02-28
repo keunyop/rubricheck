@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { AccountStatusPill } from "../components/AccountStatusPill";
 import { SubpageBackHomeLink } from "../components/SubpageBackHomeLink";
 
 import { CREDIT_PACK_IDS, getCreditPackLabel, getCreditPackMarketingLabel, getCreditPackPriceLabel } from "../../src/config/creditPacks";
@@ -73,37 +74,6 @@ function getEmailInitialAvatarClassName(email: string): string {
   return EMAIL_AVATAR_CLASS_NAME;
 }
 
-function getEvaluationStatusChip(plan: "free" | "pro", remainingEvaluations: number | null): {
-  label: string;
-  toneClassName: string;
-} {
-  if (plan === "pro") {
-    return {
-      label: "Pro",
-      toneClassName: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    };
-  }
-
-  if (typeof remainingEvaluations === "number") {
-    if (remainingEvaluations <= 0) {
-      return {
-        label: "No evaluations left today",
-        toneClassName: "border-amber-200 bg-amber-50 text-amber-700",
-      };
-    }
-
-    return {
-      label: `${remainingEvaluations} evaluations left`,
-      toneClassName: "border-sky-200 bg-sky-50 text-sky-700",
-    };
-  }
-
-  return {
-    label: "Remaining evaluations -",
-    toneClassName: "border-slate-200 bg-slate-50 text-slate-600",
-  };
-}
-
 export function PricingClient() {
   const [signedInEmail, setSignedInEmail] = useState("");
   const [accountPlan, setAccountPlan] = useState<"free" | "pro">("free");
@@ -113,11 +83,9 @@ export function PricingClient() {
   const [activePricingTab, setActivePricingTab] = useState<PricingTab>("pro");
 
   const [checkoutPlan, setCheckoutPlan] = useState<ProCheckoutPlan>("monthly");
-  const [checkoutEmail, setCheckoutEmail] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
 
-  const [creditCheckoutEmail, setCreditCheckoutEmail] = useState("");
   const [creditCheckoutError, setCreditCheckoutError] = useState("");
   const [isCreatingCreditCheckout, setIsCreatingCreditCheckout] = useState(false);
 
@@ -131,7 +99,6 @@ export function PricingClient() {
   const [isVerifyingRestore, setIsVerifyingRestore] = useState(false);
 
   const selectedCheckoutPlanDisplay = PRO_CHECKOUT_DISPLAY[checkoutPlan];
-  const evaluationStatusChip = getEvaluationStatusChip(accountPlan, remainingEvaluations);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
 
   const refreshAccountSummary = useCallback(async () => {
@@ -155,8 +122,6 @@ export function PricingClient() {
         setSignedInEmail(email);
         setAccountPlan(data.plan === "pro" ? "pro" : "free");
         setRemainingEvaluations(remaining);
-        setCheckoutEmail((previous) => (previous.trim() ? previous : email));
-        setCreditCheckoutEmail((previous) => (previous.trim() ? previous : email));
       } else {
         setSignedInEmail("");
         setAccountPlan("free");
@@ -172,12 +137,12 @@ export function PricingClient() {
     }
   }, []);
 
-  function openLoginModal() {
+  function openLoginModal(infoMessage?: string) {
     setShowAccountMenu(false);
     setRestoreStep("email");
     setRestoreCode("");
     setRestoreError("");
-    setRestoreInfo("");
+    setRestoreInfo(infoMessage ?? "");
     setShowLoginModal(true);
   }
 
@@ -234,19 +199,13 @@ export function PricingClient() {
 
   async function handleUpgradeToPro() {
     setCheckoutError("");
+    if (!signedInEmail) {
+      openLoginModal("Log in before starting Pro checkout.");
+      return;
+    }
+
     if (accountPlan === "pro") {
       setCheckoutError("This account is already on Pro. No additional checkout is needed.");
-      return;
-    }
-
-    const normalizedEmail = checkoutEmail.trim().toLowerCase();
-    if (!normalizedEmail) {
-      setCheckoutError("Please enter your email before continuing.");
-      return;
-    }
-
-    if (!isValidEmail(normalizedEmail)) {
-      setCheckoutError("Please enter a valid email address.");
       return;
     }
 
@@ -257,7 +216,7 @@ export function PricingClient() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ plan: checkoutPlan, email: normalizedEmail }),
+        body: JSON.stringify({ plan: checkoutPlan }),
       });
 
       const data: CheckoutResponse = await response.json().catch(() => ({}));
@@ -268,8 +227,12 @@ export function PricingClient() {
       window.location.assign(data.url);
     } catch (error) {
       const code = error instanceof Error ? error.message : "CHECKOUT_SESSION_FAILED";
+      if (code === "AUTH_REQUIRED") {
+        openLoginModal("Log in before starting Pro checkout.");
+        return;
+      }
       if (code === "ALREADY_PRO_ACTIVE") {
-        setCheckoutError("This email already has an active Pro subscription. Please log in instead of purchasing again.");
+        setCheckoutError("This account already has an active Pro subscription.");
       } else {
         setCheckoutError("Unable to start checkout right now. Please try again.");
       }
@@ -280,19 +243,13 @@ export function PricingClient() {
 
   async function handleBuyCredits(packId: (typeof CREDIT_PACK_IDS)[number]) {
     setCreditCheckoutError("");
+    if (!signedInEmail) {
+      openLoginModal("Log in before purchasing top-ups.");
+      return;
+    }
+
     if (accountPlan === "pro") {
       setCreditCheckoutError("Top-up purchases are disabled while this account is on Pro.");
-      return;
-    }
-
-    const normalizedEmail = creditCheckoutEmail.trim().toLowerCase();
-    if (!normalizedEmail) {
-      setCreditCheckoutError("Please enter your email before continuing.");
-      return;
-    }
-
-    if (!isValidEmail(normalizedEmail)) {
-      setCreditCheckoutError("Please enter a valid email address.");
       return;
     }
 
@@ -304,16 +261,21 @@ export function PricingClient() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ packId, email: normalizedEmail }),
+        body: JSON.stringify({ packId }),
       });
 
       const data: CheckoutResponse = await response.json().catch(() => ({}));
       if (!response.ok || !data.url) {
-        throw new Error(data.error ?? "CREDIT_CHECKOUT_SESSION_FAILED");
+        throw new Error(data.code ?? data.error ?? "CREDIT_CHECKOUT_SESSION_FAILED");
       }
 
       window.location.assign(data.url);
-    } catch {
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "CREDIT_CHECKOUT_SESSION_FAILED";
+      if (code === "AUTH_REQUIRED") {
+        openLoginModal("Log in before purchasing top-ups.");
+        return;
+      }
       setCreditCheckoutError("Unable to start credit checkout right now. Please try again.");
     } finally {
       setIsCreatingCreditCheckout(false);
@@ -473,11 +435,7 @@ export function PricingClient() {
                       >
                         {getEmailInitial(signedInEmail)}
                       </span>
-                      <p
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${evaluationStatusChip.toneClassName}`}
-                      >
-                        {evaluationStatusChip.label}
-                      </p>
+                      <AccountStatusPill plan={accountPlan} remainingEvaluations={remainingEvaluations} />
                       <span className="sr-only">{signedInEmail}</span>
                     </button>
                     {showAccountMenu ? (
@@ -500,7 +458,7 @@ export function PricingClient() {
                 ) : (
                   <button
                     type="button"
-                    onClick={openLoginModal}
+                    onClick={() => openLoginModal()}
                     className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                   >
                     Log in
@@ -585,36 +543,38 @@ export function PricingClient() {
                   <p className="mt-1 text-sm text-indigo-700">{selectedCheckoutPlanDisplay.saveNote}</p>
                 ) : null}
               </div>
-              <label htmlFor="pricing-upgrade-email" className="mt-3 block">
-                <span className="text-xs font-semibold text-slate-700">Email</span>
-                <input
-                  id="pricing-upgrade-email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  value={checkoutEmail}
-                  onChange={(event) => {
-                    setCheckoutEmail(event.target.value);
-                    setCheckoutError("");
-                  }}
-                  disabled={isCreatingCheckout || accountPlan === "pro"}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                />
-              </label>
+              {signedInEmail ? (
+                <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                  Checkout account: <span className="font-semibold text-slate-900">{signedInEmail}</span>
+                </div>
+              ) : (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                  Log in first to start a Pro checkout.
+                </div>
+              )}
               {checkoutError ? (
                 <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {checkoutError}
                 </p>
               ) : null}
-              <button
-                type="button"
-                onClick={handleUpgradeToPro}
-                disabled={isCreatingCheckout || accountPlan === "pro"}
-                className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {accountPlan === "pro" ? "Already on Pro" : isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
-              </button>
+              {signedInEmail ? (
+                <button
+                  type="button"
+                  onClick={handleUpgradeToPro}
+                  disabled={isCreatingCheckout || accountPlan === "pro"}
+                  className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {accountPlan === "pro" ? "Already on Pro" : isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openLoginModal("Log in before starting Pro checkout.")}
+                  className="mt-3 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Log in to Upgrade
+                </button>
+              )}
             </section>
           ) : (
             <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
@@ -628,23 +588,15 @@ export function PricingClient() {
               {typeof creditBalance === "number" ? (
                 <p className="mt-1 text-base text-slate-600">Current credits: {creditBalance}</p>
               ) : null}
-              <label htmlFor="pricing-credit-email" className="mt-3 block">
-                <span className="text-xs font-semibold text-slate-700">Email</span>
-                <input
-                  id="pricing-credit-email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  value={creditCheckoutEmail}
-                  onChange={(event) => {
-                    setCreditCheckoutEmail(event.target.value);
-                    setCreditCheckoutError("");
-                  }}
-                  disabled={isCreatingCreditCheckout || accountPlan === "pro"}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                />
-              </label>
+              {signedInEmail ? (
+                <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                  Purchase account: <span className="font-semibold text-slate-900">{signedInEmail}</span>
+                </div>
+              ) : (
+                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                  Log in first to purchase evaluation top-ups.
+                </div>
+              )}
               {creditCheckoutError ? (
                 <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {creditCheckoutError}
@@ -665,10 +617,10 @@ export function PricingClient() {
                     <button
                       type="button"
                       onClick={() => void handleBuyCredits(packId)}
-                      disabled={isCreatingCreditCheckout || accountPlan === "pro"}
+                      disabled={isCreatingCreditCheckout || accountPlan === "pro" || !signedInEmail}
                       className="mt-4 w-full rounded-lg bg-slate-800 px-3 py-2 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isCreatingCreditCheckout ? "Redirecting..." : "Top up"}
+                      {!signedInEmail ? "Log in to Top Up" : isCreatingCreditCheckout ? "Redirecting..." : "Top up"}
                     </button>
                   </article>
                 ))}

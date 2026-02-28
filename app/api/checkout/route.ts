@@ -11,6 +11,7 @@ import {
   recordAbuseTelemetry,
   shouldEnforceForSuspicious,
 } from "../../../src/lib/abuseTelemetry";
+import { getCreditEmailFromCookie } from "../../../src/lib/creditSession";
 
 export const runtime = "nodejs";
 
@@ -136,11 +137,24 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as CheckoutRequestBody;
     const requestedPlan = resolveProCheckoutPlan({ plan: body.plan, priceId: body.priceId });
-    requestEmail = normalizeEmail(body.email);
+    const bodyEmail = normalizeEmail(body.email);
+    const signedInEmail = getCreditEmailFromCookie(request);
+    requestEmail = signedInEmail ?? bodyEmail;
 
     if (!requestedPlan) return respond(errorResponse(context, 400, "INVALID_PLAN", "Selected plan is invalid."), "error");
-    if (!requestEmail) return respond(errorResponse(context, 400, "MISSING_EMAIL", "Email is required."), "error");
-    if (!isValidEmail(requestEmail)) return respond(errorResponse(context, 400, "INVALID_EMAIL", "Email address is invalid."), "error");
+    if (!signedInEmail) {
+      return respond(errorResponse(context, 401, "AUTH_REQUIRED", "Log in before starting checkout."), "error");
+    }
+    if (bodyEmail && bodyEmail !== signedInEmail) {
+      return respond(
+        errorResponse(context, 409, "CHECKOUT_EMAIL_MISMATCH", "Checkout email must match the signed-in account."),
+        "error",
+      );
+    }
+    if (!isValidEmail(signedInEmail)) {
+      return respond(errorResponse(context, 409, "SESSION_EMAIL_INVALID", "Signed-in email is invalid."), "error");
+    }
+    requestEmail = signedInEmail;
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
     if (!appUrl) return respond(errorResponse(context, 500, "APP_URL_MISSING", "Checkout is not configured."), "error");
@@ -167,7 +181,7 @@ export async function POST(request: Request) {
       mode: "subscription",
       line_items: [{ price: stripePriceId, quantity: 1 }],
       customer_email: requestEmail,
-      success_url: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${appUrl}/?checkout_session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/billing/cancel`,
       metadata: { pro_plan: requestedPlan },
     });

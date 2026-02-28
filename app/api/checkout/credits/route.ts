@@ -17,6 +17,9 @@ import {
   recordAbuseTelemetry,
   shouldEnforceForSuspicious,
 } from "../../../../src/lib/abuseTelemetry";
+import { buildCreditCheckoutSessionParams } from "../../../../src/lib/creditCheckoutSession";
+import { getCreditEmailFromCookie } from "../../../../src/lib/creditSession";
+import { getCustomerIdByEmail } from "../../../../src/lib/entitlement";
 
 export const runtime = "nodejs";
 
@@ -68,6 +71,57 @@ function normalizeEmail(value: unknown): string {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
+function escapeStripeSearchValue(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+async function findExistingStripeCustomerId(email: string): Promise<string | null> {
+  const mappedCustomerId = await getCustomerIdByEmail(email);
+  if (mappedCustomerId) {
+    return mappedCustomerId;
+  }
+
+  const stripe = getStripeClient();
+  try {
+    const searchResult = await stripe.customers.search({
+      query: `email:'${escapeStripeSearchValue(email)}'`,
+      limit: 10,
+    });
+
+    const customerId = searchResult.data
+      .map((customer) => customer.id.trim())
+      .find((value) => value.length > 0);
+
+    return customerId ?? null;
+  } catch {
+    const listResult = await stripe.customers.list({
+      email,
+      limit: 10,
+    });
+
+    const customerId = listResult.data
+      .map((customer) => customer.id.trim())
+      .find((value) => value.length > 0);
+
+    return customerId ?? null;
+  }
+}
+
+function shouldRetryWithoutPinnedCustomer(error: unknown): boolean {
+  const stripeError = asStripeLikeError(error);
+  if (!stripeError) {
+    return false;
+  }
+
+  if (stripeError.param === "customer") {
+    return true;
+  }
+
+  const code = typeof stripeError.code === "string" ? stripeError.code.toLowerCase() : "";
+  const message = typeof stripeError.message === "string" ? stripeError.message.toLowerCase() : "";
+  return code.includes("customer") || message.includes("no such customer") || message.includes("customer");
+}
+
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -98,11 +152,24 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as CreditCheckoutRequestBody;
     const packId = normalizeCreditPackId(body.packId);
-    requestEmail = normalizeEmail(body.email);
+    const bodyEmail = normalizeEmail(body.email);
+    const signedInEmail = getCreditEmailFromCookie(request);
+    requestEmail = signedInEmail ?? bodyEmail;
 
     if (!packId) return respond(errorResponse(context, 400, "INVALID_PACK_ID", "Selected credit pack is invalid."), "error");
-    if (!requestEmail) return respond(errorResponse(context, 400, "MISSING_EMAIL", "Email is required."), "error");
-    if (!isValidEmail(requestEmail)) return respond(errorResponse(context, 400, "INVALID_EMAIL", "Email address is invalid."), "error");
+    if (!signedInEmail) {
+      return respond(errorResponse(context, 401, "AUTH_REQUIRED", "Log in before starting checkout."), "error");
+    }
+    if (bodyEmail && bodyEmail !== signedInEmail) {
+      return respond(
+        errorResponse(context, 409, "CHECKOUT_EMAIL_MISMATCH", "Checkout email must match the signed-in account."),
+        "error",
+      );
+    }
+    if (!isValidEmail(signedInEmail)) {
+      return respond(errorResponse(context, 409, "SESSION_EMAIL_INVALID", "Signed-in email is invalid."), "error");
+    }
+    requestEmail = signedInEmail;
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
     if (!appUrl) return respond(errorResponse(context, 500, "APP_URL_MISSING", "Checkout is not configured."), "error");
@@ -113,34 +180,53 @@ export async function POST(request: Request) {
     if (!stripePriceId) return respond(errorResponse(context, 500, "STRIPE_PRICE_NOT_FOUND", "Checkout price is unavailable."), "error");
 
     const stripe = getStripeClient();
-    const baseSessionParams: Stripe.Checkout.SessionCreateParams = {
-      mode: "payment",
-      line_items: [{ price: stripePriceId, quantity: 1 }],
-      customer_email: requestEmail,
-      success_url: `${appUrl}/billing/success`,
-      cancel_url: `${appUrl}/billing/cancel`,
-      metadata: {
-        purchase_type: "credits",
-        credit_pack_id: packId,
-        credit_pack_lookup_key: lookupKey,
-      },
-    };
+    const existingCustomerId = await findExistingStripeCustomerId(requestEmail);
+    const sessionParams = buildCreditCheckoutSessionParams({
+      priceId: stripePriceId,
+      appUrl,
+      email: requestEmail,
+      packId,
+      lookupKey,
+      customerId: existingCustomerId,
+    });
 
     let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.create({
-        ...baseSessionParams,
-        customer_creation: "always",
-      });
+      session = await stripe.checkout.sessions.create(sessionParams);
     } catch (sessionError) {
-      if (!shouldRetryWithoutCustomerCreation(sessionError)) {
+      if (sessionParams.customer && shouldRetryWithoutPinnedCustomer(sessionError)) {
+        console.warn("CREDIT_CHECKOUT_CUSTOMER_REUSE_FAILED", {
+          requestId: context.requestId,
+          customerId: sessionParams.customer,
+        });
+        session = await stripe.checkout.sessions.create(
+          buildCreditCheckoutSessionParams({
+            priceId: stripePriceId,
+            appUrl,
+            email: requestEmail,
+            packId,
+            lookupKey,
+            customerId: null,
+          }),
+        );
+      } else if (!shouldRetryWithoutCustomerCreation(sessionError)) {
         throw sessionError;
+      } else {
+        console.warn("CREDIT_CHECKOUT_CUSTOMER_CREATION_UNSUPPORTED", {
+          requestId: context.requestId,
+        });
+        session = await stripe.checkout.sessions.create({
+          ...buildCreditCheckoutSessionParams({
+            priceId: stripePriceId,
+            appUrl,
+            email: requestEmail,
+            packId,
+            lookupKey,
+            customerId: null,
+          }),
+          customer_creation: undefined,
+        });
       }
-
-      console.warn("CREDIT_CHECKOUT_CUSTOMER_CREATION_UNSUPPORTED", {
-        requestId: context.requestId,
-      });
-      session = await stripe.checkout.sessions.create(baseSessionParams);
     }
 
     if (!session.url) return respond(errorResponse(context, 500, "CHECKOUT_SESSION_URL_MISSING", "Checkout session is unavailable."), "error");

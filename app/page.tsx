@@ -12,8 +12,10 @@ import {
   useRef,
   useState,
 } from "react";
+import html2canvas from "html2canvas";
 import Image from "next/image";
 import Link from "next/link";
+import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ACTIVE_LANDING_COPY } from "../src/config/copy";
 import { PRO_CHECKOUT_DISPLAY, type ProCheckoutPlan } from "../src/config/proCheckout";
 import { getEvaluateInterstitialDecision } from "../src/lib/evaluateInterstitial";
@@ -103,6 +105,17 @@ type EntitlementStatusResponse = {
   status?: string;
 };
 
+type CheckoutConfirmResponse = {
+  ok?: boolean;
+  status?: string;
+  mode?: string;
+  plan?: string;
+  packId?: string;
+  creditsAdded?: number;
+  code?: string;
+  error?: string;
+};
+
 type RestoreStartResponse = {
   ok?: boolean;
   message?: string;
@@ -122,13 +135,13 @@ type RestoreVerifyResponse = {
 
 type PaywallMode = "restore" | "upgrade";
 type RestoreStep = "email" | "code";
+type ShareFeedbackState = "idle" | "copied" | "downloaded";
 
 const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
 const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ?? "";
 const NODE_ENV = process.env.NODE_ENV?.trim().toLowerCase() ?? "";
 const IS_PRODUCTION_APP_ENV = NEXT_PUBLIC_APP_ENV === "production";
 const SHOW_PRO_FEATURES = !IS_PRODUCTION_APP_ENV;
-const SHOW_PRICING_BUTTON = NODE_ENV !== "production";
 const SHOW_BETA_BADGE = IS_PRODUCTION_APP_ENV;
 
 const FOOTER_LEGAL_LINKS = [
@@ -155,7 +168,7 @@ const rubricFileInputId = "rubric-file-input";
 const assignmentFileInputId = "assignment-file-input";
 const GRADING_MODE_STORAGE_KEY = "rubricheck_grading_mode";
 const LOCKED_DETAILED_FEEDBACK_NOTICE = "Detailed criterion breakdown is available with Pro.";
-const FREE_EVALUATIONS_PER_DAY = 3;
+const FREE_TRIAL_EVALUATIONS = 3;
 const EVALUATION_DRAFT_STORAGE_KEY = "rubricheck_evaluation_draft_v1";
 const EVALUATION_DRAFT_TTL_MS = 1000 * 60 * 60 * 24;
 const EVALUATION_RESULT_STORAGE_KEY = "rubricheck_evaluation_result_v1";
@@ -246,34 +259,6 @@ function getEmailInitialAvatarClassName(email: string): string {
   return EMAIL_AVATAR_CLASS_NAME;
 }
 
-function getEvaluationStatusChip(plan: "free" | "pro", remainingEvaluations: number | null): {
-  label: string;
-  toneClassName: string;
-} | null {
-  if (plan === "pro") {
-    return null;
-  }
-
-  if (typeof remainingEvaluations === "number") {
-    if (remainingEvaluations <= 0) {
-      return {
-        label: "No evaluations left today",
-        toneClassName: "border-amber-200 bg-amber-50 text-amber-700",
-      };
-    }
-
-    return {
-      label: `${remainingEvaluations} evaluations left`,
-      toneClassName: "border-sky-200 bg-sky-50 text-sky-700",
-    };
-  }
-
-  return {
-    label: "Remaining evaluations -",
-    toneClassName: "border-slate-200 bg-slate-50 text-slate-600",
-  };
-}
-
 function restoreBrowserFocus() {
   if (typeof window === "undefined") {
     return;
@@ -295,6 +280,21 @@ function shouldShowEnvDebugFooter(): boolean {
 
   const searchParams = new URLSearchParams(window.location.search);
   return searchParams.get("debug") === "1";
+}
+
+function removeCheckoutSessionIdFromUrl() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("checkout_session_id")) {
+    return;
+  }
+
+  url.searchParams.delete("checkout_session_id");
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState({}, "", nextUrl);
 }
 
 function TabButton({
@@ -371,14 +371,36 @@ function drawRoundedRect(
   ctx.closePath();
 }
 
+function getWrappedTextHeight(lines: string[], lineHeight: number): number {
+  return lines.length > 0 ? lines.length * lineHeight : 0;
+}
+
+function drawWrappedText(
+  ctx: CanvasRenderingContext2D,
+  lines: string[],
+  x: number,
+  y: number,
+  lineHeight: number,
+): number {
+  let cursorY = y;
+  for (const line of lines) {
+    ctx.fillText(line, x, cursorY);
+    cursorY += lineHeight;
+  }
+
+  return cursorY;
+}
+
 function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
   const width = 1200;
-  const outerPadding = 44;
-  const cardPadding = 42;
-  const contentWidth = width - outerPadding * 2 - cardPadding * 2;
-  const bodyLineHeight = 34;
-  const smallGap = 16;
-  const mediumGap = 26;
+  const outerPadding = 40;
+  const gutter = 24;
+  const leftColumnWidth = 370;
+  const rightColumnWidth = width - outerPadding * 2 - leftColumnWidth - gutter;
+  const scoreLineHeight = 92;
+  const bodyLineHeight = 30;
+  const detailLineHeight = 26;
+  const sectionGap = 22;
 
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -386,148 +408,253 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
     throw new Error("CANVAS_CONTEXT_MISSING");
   }
 
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+
   const scoreText = `${formatOverallScoreDisplay(result.overall_range)} / 100`;
+  const criteriaItems = result.criteria.slice(0, 4);
+  const summaryWidth = leftColumnWidth - 64;
+  const criteriaWidth = rightColumnWidth - 44;
 
-  ctx.font = "400 30px system-ui, -apple-system, Segoe UI, sans-serif";
-  const summaryLines = wrapCanvasText(ctx, result.summary, contentWidth);
+  ctx.font = "500 26px system-ui, -apple-system, Segoe UI, sans-serif";
+  const summaryLines = wrapCanvasText(ctx, result.summary, summaryWidth);
 
-  ctx.font = "400 30px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.font = "500 24px system-ui, -apple-system, Segoe UI, sans-serif";
   const improvementLines = result.top_improvements
     .slice(0, 3)
-    .map((item) => wrapCanvasText(ctx, item, contentWidth - 26));
+    .map((item) => wrapCanvasText(ctx, item, summaryWidth - 28));
 
-  const criteriaLines = result.criteria.map((item) => {
-    ctx.font = "700 30px system-ui, -apple-system, Segoe UI, sans-serif";
+  const criteriaCards = criteriaItems.map((item) => {
+    ctx.font = "700 24px system-ui, -apple-system, Segoe UI, sans-serif";
     const estimatedRangeText = formatEstimatedRangeDisplay(item.estimated_range, "~");
     const titleText = `${item.name} (${estimatedRangeText} / ${item.max_score})`;
-    const titleLines = wrapCanvasText(ctx, titleText, contentWidth - 40);
+    const titleLines = wrapCanvasText(ctx, titleText, criteriaWidth);
 
-    ctx.font = "400 28px system-ui, -apple-system, Segoe UI, sans-serif";
-    const feedbackLines = wrapCanvasText(ctx, item.feedback, contentWidth - 40);
-    return { titleLines, feedbackLines };
+    ctx.font = "400 21px system-ui, -apple-system, Segoe UI, sans-serif";
+    const feedbackLines = wrapCanvasText(ctx, item.feedback, criteriaWidth);
+    const height = 34 + getWrappedTextHeight(titleLines, bodyLineHeight) + 10 + getWrappedTextHeight(feedbackLines, detailLineHeight) + 24;
+    return { titleLines, feedbackLines, estimatedRangeText, height };
   });
 
-  const summaryHeight = Math.max(bodyLineHeight, summaryLines.length * bodyLineHeight);
-  const improvementsHeight =
-    improvementLines.reduce((total, lines) => total + Math.max(bodyLineHeight, lines.length * bodyLineHeight), 0) +
-    mediumGap;
-  const criteriaHeight =
-    criteriaLines.reduce((total, item) => {
-      const titleHeight = Math.max(bodyLineHeight, item.titleLines.length * bodyLineHeight);
-      const feedbackHeight = Math.max(bodyLineHeight, item.feedbackLines.length * bodyLineHeight);
-      return total + titleHeight + feedbackHeight + 26;
-    }, 0) + mediumGap;
-
-  const height = 540 + summaryHeight + improvementsHeight + criteriaHeight;
+  const summaryHeight = getWrappedTextHeight(summaryLines, bodyLineHeight);
+  const improvementsHeight = improvementLines.reduce(
+    (total, lines) => total + Math.max(bodyLineHeight, getWrappedTextHeight(lines, detailLineHeight)) + 16,
+    0,
+  );
+  const leftColumnHeight = 292 + summaryHeight + improvementsHeight + sectionGap * 2;
+  const rightColumnHeight =
+    124 + criteriaCards.reduce((total, card) => total + card.height, 0) + Math.max(0, criteriaCards.length - 1) * 16;
+  const height = Math.max(760, outerPadding * 2 + Math.max(leftColumnHeight, rightColumnHeight));
   canvas.width = width;
   canvas.height = height;
 
-  const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-  bgGradient.addColorStop(0, "#e7eefc");
-  bgGradient.addColorStop(1, "#f8fafc");
+  const bgGradient = ctx.createLinearGradient(0, 0, width, height);
+  bgGradient.addColorStop(0, "#e0f2fe");
+  bgGradient.addColorStop(0.48, "#f8fafc");
+  bgGradient.addColorStop(1, "#fef3c7");
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, width, height);
 
-  drawRoundedRect(ctx, outerPadding, outerPadding, width - outerPadding * 2, height - outerPadding * 2, 28);
-  ctx.fillStyle = "rgba(255,255,255,0.94)";
+  ctx.fillStyle = "rgba(14,165,233,0.10)";
+  ctx.beginPath();
+  ctx.arc(width - 120, 96, 132, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "rgba(148,163,184,0.28)";
-  ctx.lineWidth = 2;
+  ctx.fillStyle = "rgba(250,204,21,0.14)";
+  ctx.beginPath();
+  ctx.arc(132, height - 118, 148, 0, Math.PI * 2);
+  ctx.fill();
+
+  drawRoundedRect(ctx, outerPadding, outerPadding, width - outerPadding * 2, height - outerPadding * 2, 34);
+  ctx.fillStyle = "rgba(255,255,255,0.90)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(148,163,184,0.18)";
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  let cursorY = outerPadding + cardPadding;
-  const textX = outerPadding + cardPadding;
+  const leftX = outerPadding + 28;
+  const rightX = leftX + leftColumnWidth + gutter;
+  const panelTop = outerPadding + 28;
 
-  ctx.fillStyle = "#0f172a";
-  ctx.font = "700 54px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("RubriCheck Snapshot", textX, cursorY);
+  drawRoundedRect(ctx, leftX, panelTop, leftColumnWidth, height - outerPadding * 2 - 56, 28);
+  ctx.fillStyle = "rgba(8,47,73,0.96)";
+  ctx.fill();
 
-  cursorY += 68;
-  ctx.fillStyle = "#4f46e5";
-  ctx.font = "700 80px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText(scoreText, textX, cursorY);
+  drawRoundedRect(ctx, rightX, panelTop, rightColumnWidth, height - outerPadding * 2 - 56, 28);
+  ctx.fillStyle = "rgba(255,255,255,0.76)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(148,163,184,0.22)";
+  ctx.stroke();
 
-  cursorY += 46;
-  ctx.fillStyle = "#64748b";
-  ctx.font = "500 24px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("AI-estimated score range", textX, cursorY);
+  let leftCursorY = panelTop + 28;
+  const leftTextX = leftX + 30;
 
-  cursorY += 52;
-  ctx.fillStyle = "#0f172a";
-  ctx.font = "700 34px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("Summary", textX, cursorY);
+  ctx.fillStyle = "rgba(224,242,254,0.86)";
+  ctx.font = "700 22px Georgia, Times New Roman, serif";
+  ctx.fillText("RubriCheck Snapshot", leftTextX, leftCursorY);
 
-  cursorY += 40;
-  ctx.fillStyle = "#334155";
-  ctx.font = "400 30px system-ui, -apple-system, Segoe UI, sans-serif";
-  for (const line of summaryLines) {
-    ctx.fillText(line, textX, cursorY);
-    cursorY += bodyLineHeight;
-  }
+  leftCursorY += 42;
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "700 78px system-ui, -apple-system, Segoe UI, sans-serif";
+  drawWrappedText(ctx, [scoreText], leftTextX, leftCursorY, scoreLineHeight);
 
-  cursorY += mediumGap;
-  ctx.fillStyle = "#0f172a";
-  ctx.font = "700 34px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("Top Improvements", textX, cursorY);
+  leftCursorY += 96;
+  ctx.fillStyle = "rgba(224,242,254,0.78)";
+  ctx.font = "600 18px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText("AI-estimated score range", leftTextX, leftCursorY);
 
-  cursorY += 40;
-  ctx.fillStyle = "#334155";
-  ctx.font = "400 30px system-ui, -apple-system, Segoe UI, sans-serif";
+  leftCursorY += 46;
+  ctx.fillStyle = "rgba(255,255,255,0.72)";
+  ctx.font = "700 16px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText("Summary", leftTextX, leftCursorY);
+
+  leftCursorY += 28;
+  ctx.fillStyle = "#e2e8f0";
+  ctx.font = "500 26px system-ui, -apple-system, Segoe UI, sans-serif";
+  leftCursorY = drawWrappedText(ctx, summaryLines, leftTextX, leftCursorY, bodyLineHeight);
+
+  leftCursorY += sectionGap;
+  ctx.fillStyle = "rgba(255,255,255,0.72)";
+  ctx.font = "700 16px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText("Top improvements", leftTextX, leftCursorY);
+
+  leftCursorY += 28;
+  ctx.fillStyle = "#e2e8f0";
+  ctx.font = "500 22px system-ui, -apple-system, Segoe UI, sans-serif";
   for (const lines of improvementLines) {
     if (lines.length === 0) {
       continue;
     }
 
-    ctx.fillText("-", textX, cursorY);
-    ctx.fillText(lines[0], textX + 26, cursorY);
-    cursorY += bodyLineHeight;
-
-    for (const line of lines.slice(1)) {
-      ctx.fillText(line, textX + 26, cursorY);
-      cursorY += bodyLineHeight;
-    }
+    ctx.fillStyle = "#67e8f9";
+    ctx.fillText("•", leftTextX, leftCursorY);
+    ctx.fillStyle = "#e2e8f0";
+    leftCursorY = drawWrappedText(ctx, lines, leftTextX + 20, leftCursorY, detailLineHeight) + 10;
   }
 
-  cursorY += mediumGap;
+  let rightCursorY = panelTop + 28;
+  const rightTextX = rightX + 22;
+
   ctx.fillStyle = "#0f172a";
-  ctx.font = "700 34px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("Criteria Snapshot", textX, cursorY);
+  ctx.font = "700 28px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText("Criteria snapshot", rightTextX, rightCursorY);
 
-  cursorY += 34;
-  for (const item of criteriaLines) {
-    const cardX = textX;
-    const cardY = cursorY;
-    const titleHeight = Math.max(bodyLineHeight, item.titleLines.length * bodyLineHeight);
-    const feedbackHeight = Math.max(bodyLineHeight, item.feedbackLines.length * bodyLineHeight);
-    const itemHeight = 24 + titleHeight + smallGap + feedbackHeight + 18;
+  rightCursorY += 16;
+  ctx.fillStyle = "#475569";
+  ctx.font = "500 17px system-ui, -apple-system, Segoe UI, sans-serif";
+  rightCursorY = drawWrappedText(
+    ctx,
+    wrapCanvasText(ctx, "A compact summary designed for sharing before you revise and resubmit.", rightColumnWidth - 44),
+    rightTextX,
+    rightCursorY + 22,
+    22,
+  );
 
-    drawRoundedRect(ctx, cardX, cardY, contentWidth, itemHeight, 16);
-    ctx.fillStyle = "#f8fafc";
+  rightCursorY += 18;
+  for (const card of criteriaCards) {
+    drawRoundedRect(ctx, rightTextX - 2, rightCursorY, rightColumnWidth - 44, card.height, 20);
+    ctx.fillStyle = "#ffffff";
     ctx.fill();
-    ctx.strokeStyle = "rgba(148,163,184,0.35)";
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(14,165,233,0.18)";
+    ctx.lineWidth = 1.25;
     ctx.stroke();
 
-    let itemY = cardY + 36;
-    ctx.fillStyle = "#1e293b";
-    ctx.font = "700 30px system-ui, -apple-system, Segoe UI, sans-serif";
-    for (const line of item.titleLines) {
-      ctx.fillText(line, cardX + 20, itemY);
-      itemY += bodyLineHeight;
-    }
+    let cardCursorY = rightCursorY + 18;
+    ctx.fillStyle = "#0369a1";
+    ctx.font = "700 14px system-ui, -apple-system, Segoe UI, sans-serif";
+    ctx.fillText(card.estimatedRangeText, rightTextX + 16, cardCursorY);
 
-    itemY += 6;
-    ctx.fillStyle = "#334155";
-    ctx.font = "400 28px system-ui, -apple-system, Segoe UI, sans-serif";
-    for (const line of item.feedbackLines) {
-      ctx.fillText(line, cardX + 20, itemY);
-      itemY += bodyLineHeight;
-    }
+    cardCursorY += 26;
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "700 24px system-ui, -apple-system, Segoe UI, sans-serif";
+    cardCursorY = drawWrappedText(ctx, card.titleLines, rightTextX + 16, cardCursorY, bodyLineHeight);
 
-    cursorY += itemHeight + 14;
+    cardCursorY += 8;
+    ctx.fillStyle = "#475569";
+    ctx.font = "400 21px system-ui, -apple-system, Segoe UI, sans-serif";
+    drawWrappedText(ctx, card.feedbackLines, rightTextX + 16, cardCursorY, detailLineHeight);
+
+    rightCursorY += card.height + 16;
   }
 
   return canvas;
+}
+
+async function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((result) => resolve(result), "image/png");
+  });
+
+  if (blob) {
+    return blob;
+  }
+
+  const dataUrl = canvas.toDataURL("image/png");
+  const dataResponse = await fetch(dataUrl);
+  return dataResponse.blob();
+}
+
+function downloadShareImage(blob: Blob): void {
+  const pngUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = pngUrl;
+  anchor.download = `rubricheck-summary-${new Date().toISOString().slice(0, 10)}.png`;
+
+  if ("download" in HTMLAnchorElement.prototype) {
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+  } else {
+    window.open(pngUrl, "_blank", "noopener,noreferrer");
+  }
+
+  setTimeout(() => {
+    URL.revokeObjectURL(pngUrl);
+  }, 30_000);
+}
+
+async function captureGradeSectionCanvas(element: HTMLElement): Promise<HTMLCanvasElement> {
+  const captureWidth = Math.max(1120, Math.ceil(element.getBoundingClientRect().width));
+  const host = document.createElement("div");
+  host.setAttribute("aria-hidden", "true");
+  host.style.position = "fixed";
+  host.style.left = "-20000px";
+  host.style.top = "0";
+  host.style.width = `${captureWidth + 48}px`;
+  host.style.padding = "24px";
+  host.style.background = "#f8fafc";
+  host.style.pointerEvents = "none";
+  host.style.opacity = "1";
+  host.style.zIndex = "-1";
+
+  const clone = element.cloneNode(true) as HTMLElement;
+  clone.style.width = `${captureWidth}px`;
+  clone.style.maxWidth = `${captureWidth}px`;
+  clone.style.margin = "0";
+  clone.style.transform = "none";
+  clone.querySelectorAll("[data-html2canvas-ignore='true']").forEach((node) => {
+    node.remove();
+  });
+
+  host.append(clone);
+  document.body.append(host);
+
+  try {
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+
+    return await html2canvas(clone, {
+      backgroundColor: "#f8fafc",
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      windowWidth: captureWidth + 48,
+      scrollX: 0,
+      scrollY: 0,
+    });
+  } finally {
+    host.remove();
+  }
 }
 
 export default function Home() {
@@ -566,10 +693,9 @@ export default function Home() {
     {},
   );
   const [isSharingImage, setIsSharingImage] = useState(false);
-  const [didCopyImage, setDidCopyImage] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState<ShareFeedbackState>("idle");
   const [isCreatingCheckout, setIsCreatingCheckout] = useState(false);
   const [checkoutPlan, setCheckoutPlan] = useState<ProCheckoutPlan>("monthly");
-  const [checkoutEmail, setCheckoutEmail] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
   const [hasProAccess, setHasProAccess] = useState(false);
   const [entitlementStatus, setEntitlementStatus] = useState<"active" | "needs_restore">("needs_restore");
@@ -586,10 +712,11 @@ export default function Home() {
   const [showEnvDebugFooter, setShowEnvDebugFooter] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [shouldFocusEvaluationHeading, setShouldFocusEvaluationHeading] = useState(false);
-  const evaluationStatusChip = getEvaluationStatusChip(accountPlan, remainingEvaluations);
   const [draftRestoreNotice, setDraftRestoreNotice] = useState("");
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const checkoutReturnSessionRef = useRef<string | null>(null);
+  const resultShareCardRef = useRef<HTMLDivElement | null>(null);
 
   const isLoading = loadingStep !== "idle";
   const selectedCheckoutPlanDisplay = PRO_CHECKOUT_DISPLAY[checkoutPlan];
@@ -634,13 +761,54 @@ export default function Home() {
     }
   }, []);
 
-  function openLoginModal() {
+  const refreshEntitlementStatus = useCallback(async () => {
+    if (!SHOW_PRO_FEATURES) {
+      setHasProAccess(false);
+      setEntitlementStatus("needs_restore");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/entitlement", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const data: EntitlementStatusResponse = await response.json().catch(() => ({}));
+      const isActive = response.ok && data.plan === "pro" && data.status === "active";
+      setHasProAccess(isActive);
+      setEntitlementStatus(isActive ? "active" : "needs_restore");
+    } catch {
+      setHasProAccess(false);
+      setEntitlementStatus("needs_restore");
+    }
+  }, []);
+
+  function openLoginModal(infoMessage?: string) {
     setShowAccountMenu(false);
     setRestoreStep("email");
     setRestoreCode("");
     setRestoreError("");
-    setRestoreInfo("");
+    setRestoreInfo(infoMessage ?? "");
     setShowLoginModal(true);
+  }
+
+  function requireSignedInForEvaluation(selectedMode: GradingMode): boolean {
+    if (signedInEmail) {
+      return true;
+    }
+
+    setGradingMode(selectedMode);
+    setError("");
+    setErrorCode("");
+    setLastRequestId("");
+    setShowDailyLimitAlert(false);
+    setShowRewritePaywall(false);
+    openLoginModal(
+      selectedMode === "strict"
+        ? "Log in to use Strict Mode and run grading."
+        : "Log in to grade your assignment.",
+    );
+    return false;
   }
 
   function persistEvaluationDraftForCheckout() {
@@ -818,6 +986,94 @@ export default function Home() {
   }, [refreshAccountSummary]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const sessionId = searchParams.get("checkout_session_id")?.trim() ?? "";
+    if (!sessionId || checkoutReturnSessionRef.current === sessionId) {
+      return;
+    }
+
+    checkoutReturnSessionRef.current = sessionId;
+    let cancelled = false;
+
+    async function finalizeCheckoutReturn() {
+      setDraftRestoreNotice("Finalizing your purchase...");
+
+      try {
+        let lastData: CheckoutConfirmResponse = {};
+
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+          const response = await fetch("/api/checkout/confirm", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ sessionId }),
+          });
+
+          const data: CheckoutConfirmResponse = await response.json().catch(() => ({}));
+          lastData = data;
+
+          if (response.ok && data.ok === true) {
+            await refreshAccountSummary();
+            await refreshEntitlementStatus();
+            if (cancelled) {
+              return;
+            }
+
+            setDraftRestoreNotice(
+              data.mode === "credits"
+                ? data.creditsAdded && data.creditsAdded > 0
+                  ? `Top-up applied. ${data.creditsAdded} evaluation credits were added to your account.`
+                  : "Top-up is now available on this account."
+                : "Pro is now active on this device.",
+            );
+            removeCheckoutSessionIdFromUrl();
+            return;
+          }
+
+          if (!(response.ok && data.ok === false && data.status === "pending")) {
+            throw new Error(data.code ?? data.error ?? "CHECKOUT_CONFIRM_FAILED");
+          }
+
+          if (attempt < 3) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+          }
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setDraftRestoreNotice(
+          lastData.mode === "pro"
+            ? "Payment received. Pro activation is still processing. Refresh in a moment if it does not update."
+            : "Payment received. Your top-up is still processing. Refresh in a moment if it does not update.",
+        );
+      } catch {
+        if (cancelled) {
+          return;
+        }
+
+        setDraftRestoreNotice("Payment was successful, but final confirmation is still pending. Refresh in a moment.");
+      } finally {
+        if (!cancelled) {
+          removeCheckoutSessionIdFromUrl();
+        }
+      }
+    }
+
+    void finalizeCheckoutReturn();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshAccountSummary, refreshEntitlementStatus]);
+
+  useEffect(() => {
     if (loadingStep !== "evaluatingAssignment") {
       setEvaluationMessageIndex(0);
       return;
@@ -883,40 +1139,8 @@ export default function Home() {
   }, [showAccountMenu]);
 
   useEffect(() => {
-    if (!SHOW_PRO_FEATURES) {
-      setHasProAccess(false);
-      setEntitlementStatus("needs_restore");
-      return;
-    }
-
-    let canceled = false;
-
-    async function syncEntitlementStatus() {
-      try {
-        const response = await fetch("/api/entitlement", {
-          method: "GET",
-          cache: "no-store",
-        });
-        const data: EntitlementStatusResponse = await response.json().catch(() => ({}));
-        if (!canceled) {
-          const isActive = response.ok && data.plan === "pro" && data.status === "active";
-          setHasProAccess(isActive);
-          setEntitlementStatus(isActive ? "active" : "needs_restore");
-        }
-      } catch {
-        if (!canceled) {
-          setHasProAccess(false);
-          setEntitlementStatus("needs_restore");
-        }
-      }
-    }
-
-    void syncEntitlementStatus();
-
-    return () => {
-      canceled = true;
-    };
-  }, []);
+    void refreshEntitlementStatus();
+  }, [refreshEntitlementStatus]);
 
   function openRewritePaywall(mode: PaywallMode = "restore") {
     if (!SHOW_PRO_FEATURES) {
@@ -965,21 +1189,15 @@ export default function Home() {
     }
 
     setIsSharingImage(true);
-    setDidCopyImage(false);
+    setShareFeedback("idle");
 
     try {
-      const canvas = buildShareFallbackCanvas(gradeResult);
-
-      let imageBlob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((result) => resolve(result), "image/png");
-      });
-
-      if (!imageBlob) {
-        const dataUrl = canvas.toDataURL("image/png");
-        const dataResponse = await fetch(dataUrl);
-        imageBlob = await dataResponse.blob();
+      if (!resultShareCardRef.current) {
+        throw new Error("RESULT_SHARE_CARD_MISSING");
       }
 
+      const canvas = await captureGradeSectionCanvas(resultShareCardRef.current);
+      const imageBlob = await canvasToBlob(canvas);
       if (!imageBlob || imageBlob.size === 0) {
         throw new Error("IMAGE_BLOB_EMPTY");
       }
@@ -992,12 +1210,12 @@ export default function Home() {
       if (clipboardApi?.write && clipboardItemCtor) {
         try {
           await clipboardApi.write([new clipboardItemCtor({ "image/png": imageBlob })]);
-          setDidCopyImage(true);
+          setShareFeedback("copied");
           if (copyResetTimerRef.current) {
             clearTimeout(copyResetTimerRef.current);
           }
           copyResetTimerRef.current = setTimeout(() => {
-            setDidCopyImage(false);
+            setShareFeedback("idle");
           }, 1800);
           return;
         } catch {
@@ -1005,23 +1223,16 @@ export default function Home() {
         }
       }
 
-      const pngUrl = URL.createObjectURL(imageBlob);
-      const anchor = document.createElement("a");
-      anchor.href = pngUrl;
-      anchor.download = `rubricheck-summary-${new Date().toISOString().slice(0, 10)}.png`;
-      if ("download" in HTMLAnchorElement.prototype) {
-        document.body.append(anchor);
-        anchor.click();
-        anchor.remove();
-      } else {
-        window.open(pngUrl, "_blank", "noopener,noreferrer");
+      downloadShareImage(imageBlob);
+      setShareFeedback("downloaded");
+      if (copyResetTimerRef.current) {
+        clearTimeout(copyResetTimerRef.current);
       }
-
-      setTimeout(() => {
-        URL.revokeObjectURL(pngUrl);
-      }, 30_000);
+      copyResetTimerRef.current = setTimeout(() => {
+        setShareFeedback("idle");
+      }, 1800);
     } catch {
-      setDidCopyImage(false);
+      setShareFeedback("idle");
     } finally {
       setIsSharingImage(false);
     }
@@ -1029,9 +1240,9 @@ export default function Home() {
 
   async function handleUpgradeToPro() {
     setCheckoutError("");
-    const normalizedEmail = checkoutEmail.trim().toLowerCase();
-    if (!isValidEmail(normalizedEmail)) {
-      setCheckoutError("Please enter a valid email for Stripe checkout.");
+    if (!signedInEmail) {
+      setShowRewritePaywall(false);
+      openLoginModal("Log in before starting Pro checkout.");
       return;
     }
 
@@ -1043,7 +1254,7 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ plan: checkoutPlan, email: normalizedEmail }),
+        body: JSON.stringify({ plan: checkoutPlan }),
       });
 
       const data: CheckoutResponse = await response.json().catch(() => ({}));
@@ -1055,8 +1266,13 @@ export default function Home() {
       window.location.assign(data.url);
     } catch (error) {
       const code = error instanceof Error ? error.message : "CHECKOUT_SESSION_FAILED";
+      if (code === "AUTH_REQUIRED") {
+        setShowRewritePaywall(false);
+        openLoginModal("Log in before starting Pro checkout.");
+        return;
+      }
       if (code === "ALREADY_PRO_ACTIVE") {
-        setCheckoutError("This email already has an active Pro subscription. Please log in instead of purchasing again.");
+        setCheckoutError("This account already has an active Pro subscription.");
       } else {
         setCheckoutError("Unable to start checkout right now. Please try again.");
       }
@@ -1192,7 +1408,7 @@ export default function Home() {
     }
 
     if (message === "FREE_LIMIT_REACHED") {
-      return "You've used today's free evaluations. Upgrade to Pro or buy credits to continue.";
+      return "You've used the 3 free trial evaluations for this account. Upgrade to Pro or buy credits to continue.";
     }
 
     return "Something went wrong. Please try again.";
@@ -1267,6 +1483,10 @@ export default function Home() {
       return;
     }
 
+    if (!requireSignedInForEvaluation(selectedMode)) {
+      return;
+    }
+
     setGradingMode(selectedMode);
     setError("");
     setErrorCode("");
@@ -1282,7 +1502,7 @@ export default function Home() {
     setShowRewritePaywall(false);
     setExpandedRewriteSections({});
     setIsSharingImage(false);
-    setDidCopyImage(false);
+    setShareFeedback("idle");
 
     const stepTimers: Array<ReturnType<typeof setTimeout>> = [];
 
@@ -1385,9 +1605,15 @@ export default function Home() {
         data && typeof data === "object" && "message" in data
           ? String((data as { message?: unknown }).message ?? "")
           : "";
+      if ((apiCode || apiError) === "SIGN_IN_REQUIRED") {
+        openLoginModal("Log in to grade your assignment.");
+        setError("");
+        setErrorCode("");
+        return;
+      }
       const limitHeaderRaw = response.headers.get("x-ratelimit-limit");
       const limitFromHeader = limitHeaderRaw ? Number.parseInt(limitHeaderRaw, 10) : Number.NaN;
-      const limitFromErrorMatch = (apiMessage || apiError).match(/(?:Free )?daily limit reached \((\d+)\)/i);
+      const limitFromErrorMatch = (apiMessage || apiError).match(/Free(?: trial)? limit reached \((\d+)\)/i);
       const limitFromError = limitFromErrorMatch?.[1]
         ? Number.parseInt(limitFromErrorMatch[1], 10)
         : Number.NaN;
@@ -1400,11 +1626,11 @@ export default function Home() {
       const interstitialDecision = getEvaluateInterstitialDecision({
         status: response.status,
         payload: apiErrorResponse,
-        fallbackLimit: detectedDailyLimit ?? FREE_EVALUATIONS_PER_DAY,
+        fallbackLimit: detectedDailyLimit ?? FREE_TRIAL_EVALUATIONS,
       });
 
       if (interstitialDecision.show) {
-        setDailyLimitValue(interstitialDecision.freeLimit ?? FREE_EVALUATIONS_PER_DAY);
+        setDailyLimitValue(interstitialDecision.freeLimit ?? FREE_TRIAL_EVALUATIONS);
         setShowDailyLimitAlert(true);
         setError("");
         return;
@@ -1445,6 +1671,9 @@ export default function Home() {
   }
 
   function handleStrictSubmit() {
+    if (!requireSignedInForEvaluation("strict")) {
+      return;
+    }
     void submitGrade("strict");
   }
 
@@ -1503,7 +1732,6 @@ export default function Home() {
       }
 
       setRestoreEmail(normalizedEmail);
-      setCheckoutEmail((previous) => previous || normalizedEmail);
       setRestoreStep("code");
       if (typeof data.devCode === "string" && /^\d{6}$/.test(data.devCode)) {
         setRestoreCode(data.devCode);
@@ -1622,18 +1850,12 @@ export default function Home() {
                 ) : null}
               </div>
               <div className="inline-flex items-center gap-2">
-                {SHOW_PRICING_BUTTON ? (
-                  <Link
-                    href="/pricing"
-                    className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                      accountPlan === "pro"
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:text-emerald-800"
-                        : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:text-slate-900"
-                    }`}
-                  >
-                    {accountPlan === "pro" ? "Pro" : "Pricing"}
-                  </Link>
-                ) : null}
+                <Link
+                  href="/pricing"
+                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                >
+                  Pricing
+                </Link>
                 {signedInEmail ? (
                   <div ref={accountMenuRef} className="relative">
                     <button
@@ -1650,13 +1872,7 @@ export default function Home() {
                       >
                         {getEmailInitial(signedInEmail)}
                       </span>
-                      {evaluationStatusChip ? (
-                        <p
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${evaluationStatusChip.toneClassName}`}
-                        >
-                          {evaluationStatusChip.label}
-                        </p>
-                      ) : null}
+                      <AccountStatusPill plan={accountPlan} remainingEvaluations={remainingEvaluations} />
                       <span className="sr-only">{signedInEmail}</span>
                     </button>
                     {showAccountMenu ? (
@@ -1679,7 +1895,7 @@ export default function Home() {
                 ) : (
                   <button
                     type="button"
-                    onClick={openLoginModal}
+                    onClick={() => openLoginModal()}
                     className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                   >
                     Log in
@@ -2009,10 +2225,10 @@ export default function Home() {
                 Warning
               </div>
               <h2 id="daily-limit-title" className="mt-3 text-lg font-semibold text-slate-900">
-                Daily free limit reached
+                Free trial limit reached
               </h2>
               <p className="mt-2 text-sm text-slate-600">
-                You used {dailyLimitValue ?? FREE_EVALUATIONS_PER_DAY} free evaluations today.
+                You used {dailyLimitValue ?? FREE_TRIAL_EVALUATIONS} free evaluations for this account.
               </p>
               <p className="mt-1 text-sm text-slate-600">
                 Check pricing options for Pro and one-time top-ups.
@@ -2025,21 +2241,22 @@ export default function Home() {
                 >
                   Close
                 </button>
-                {SHOW_PRICING_BUTTON ? (
-                  <Link
-                    href="/pricing"
-                    className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
-                  >
-                    Go to Pricing
-                  </Link>
-                ) : null}
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                >
+                  Go to Pricing
+                </Link>
               </div>
             </section>
           </div>
         ) : null}
 
         {gradeResult ? (
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <section
+            ref={resultShareCardRef}
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
+          >
             <div className="border-b border-slate-100 pb-4">
               <div className="flex flex-wrap items-center gap-2">
                 <h2
@@ -2076,7 +2293,13 @@ export default function Home() {
                     disabled={isSharingImage}
                     className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
                   >
-                    {isSharingImage ? "Preparing image..." : didCopyImage ? "Copied" : "Share"}
+                    {isSharingImage
+                      ? "Preparing image..."
+                      : shareFeedback === "copied"
+                        ? "Copied"
+                        : shareFeedback === "downloaded"
+                          ? "Downloaded"
+                          : "Share"}
                   </button>
                 </div>
                 <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
@@ -2104,7 +2327,7 @@ export default function Home() {
                   {!signedInEmail ? (
                     <button
                       type="button"
-                      onClick={openLoginModal}
+                      onClick={() => openLoginModal()}
                       className="inline-flex w-full items-center justify-center rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
                     >
                       Log in
@@ -2120,7 +2343,7 @@ export default function Home() {
                 </div>
                 <p className="mt-2 text-xs leading-5 text-indigo-900/80 md:text-sm">
                   {signedInEmail
-                    ? "You're logged in on this device. Upgrade to Pro to unlock rewrite/simulate."
+                    ? "You're logged in on this device. Upgrade to Pro to unlock rewrite suggestions."
                     : entitlementStatus === "needs_restore"
                       ? "Already subscribed? Log in with email verification, or upgrade to Pro."
                       : "Pro unlocks rewrite suggestions focused on improving your score."}
@@ -2237,7 +2460,7 @@ export default function Home() {
                                           {!signedInEmail ? (
                                             <button
                                               type="button"
-                                              onClick={openLoginModal}
+                                              onClick={() => openLoginModal()}
                                               className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
                                             >
                                               Log in
@@ -2364,7 +2587,7 @@ export default function Home() {
                                   {!signedInEmail ? (
                                     <button
                                       type="button"
-                                      onClick={openLoginModal}
+                                      onClick={() => openLoginModal()}
                                       className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
                                     >
                                       Log in
@@ -2674,39 +2897,44 @@ export default function Home() {
                       <p className="mt-1 text-xs text-indigo-700">{selectedCheckoutPlanDisplay.saveNote}</p>
                     ) : null}
                   </div>
-                  <label htmlFor="upgrade-email" className="block">
-                    <span className="text-xs font-semibold text-slate-700">Email</span>
-                    <input
-                      id="upgrade-email"
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                      placeholder="you@example.com"
-                      value={checkoutEmail}
-                      onChange={(event) => {
-                        setCheckoutEmail(event.target.value);
-                        setCheckoutError("");
-                      }}
-                      disabled={isCreatingCheckout}
-                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                    />
-                  </label>
+                  {signedInEmail ? (
+                    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                      Checkout account: <span className="font-semibold text-slate-900">{signedInEmail}</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                      Log in first to start a Pro checkout.
+                    </div>
+                  )}
                   {checkoutError ? (
                     <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                       {checkoutError}
                     </p>
                   ) : null}
                   <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={handleUpgradeToPro}
-                      disabled={isCreatingCheckout || !checkoutEmail.trim()}
-                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isCreatingCheckout
-                        ? "Redirecting..."
-                        : `Upgrade to Pro (${checkoutPlan === "annual" ? "Annual" : "Monthly"})`}
-                    </button>
+                    {signedInEmail ? (
+                      <button
+                        type="button"
+                        onClick={handleUpgradeToPro}
+                        disabled={isCreatingCheckout}
+                        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isCreatingCheckout
+                          ? "Redirecting..."
+                          : `Upgrade to Pro (${checkoutPlan === "annual" ? "Annual" : "Monthly"})`}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowRewritePaywall(false);
+                          openLoginModal("Log in before starting Pro checkout.");
+                        }}
+                        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                      >
+                        Log in to Upgrade
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

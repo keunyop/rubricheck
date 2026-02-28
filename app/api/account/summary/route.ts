@@ -1,6 +1,6 @@
 import { Redis } from "@upstash/redis";
 
-import { FREE_DAILY_LIMIT } from "../../../../src/config/plans";
+import { FREE_TRIAL_LIMIT } from "../../../../src/config/plans";
 import { createRequestContext, errorResponse, successJson } from "../../../../src/lib/apiError";
 import { getCreditEmailFromCookie } from "../../../../src/lib/creditSession";
 import { getCreditBalanceForRequest } from "../../../../src/lib/credits";
@@ -10,7 +10,6 @@ import {
   isAccountEntitlementStoreUnavailableError,
   isActiveProAccountEntitlement,
 } from "../../../../src/lib/accountEntitlements";
-import { getEntitlementEmailFromCookie, getPlanFromEntitlementCookie } from "../../../../src/lib/entitlementSession";
 
 export const runtime = "nodejs";
 
@@ -37,44 +36,12 @@ function getRedisClient(): Redis {
   return redisClient;
 }
 
-function getRequestIp(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const firstIp = forwardedFor.split(",")[0]?.trim();
-    if (firstIp) {
-      return firstIp;
-    }
-  }
-
-  const realIp = request.headers.get("x-real-ip")?.trim();
-  if (realIp) {
-    return realIp;
-  }
-
-  return "unknown";
-}
-
-function getUtcDateKey(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function getFreeUsageActor(request: Request): string {
-  const entitlementEmail = getEntitlementEmailFromCookie(request);
-  if (entitlementEmail) {
-    return `email:${entitlementEmail}`;
-  }
-
+function getFreeUsageActor(request: Request): string | null {
   const creditEmail = getCreditEmailFromCookie(request);
   if (creditEmail) {
     return `email:${creditEmail}`;
   }
-
-  return `ip:${getRequestIp(request)}`;
-}
-
-function getFreeEvaluateDisabledKey(request: Request): string {
-  const actor = getFreeUsageActor(request);
-  return `rubricheck:usage:${actor}:${getUtcDateKey()}:evaluate_free_disabled`;
+  return null;
 }
 
 function parseCount(value: unknown): number {
@@ -98,24 +65,16 @@ async function readEvaluateUsageCount(request: Request, plan: "free" | "pro"): P
   }
 
   try {
-    const actor = plan === "free" ? getFreeUsageActor(request) : `ip:${getRequestIp(request)}`;
-    const featureKey = plan === "pro" ? "evaluate" : "evaluate_free";
-    const key = `rubricheck:usage:${actor}:${getUtcDateKey()}:${featureKey}`;
+    if (plan !== "free") {
+      return null;
+    }
+    const actor = getFreeUsageActor(request);
+    if (!actor) {
+      return null;
+    }
+    const key = `rubricheck:usage:${actor}:evaluate_free`;
     const rawCount = await getRedisClient().get(key);
     return parseCount(rawCount);
-  } catch {
-    return null;
-  }
-}
-
-async function readFreeEvaluateDisabledForToday(request: Request): Promise<boolean | null> {
-  if (!hasRedisConfig()) {
-    return null;
-  }
-
-  try {
-    const raw = await getRedisClient().get(getFreeEvaluateDisabledKey(request));
-    return raw !== null && raw !== undefined;
   } catch {
     return null;
   }
@@ -125,12 +84,11 @@ export async function GET(request: Request) {
   const context = createRequestContext(request);
 
   try {
-    const entitlementEmail = getEntitlementEmailFromCookie(request);
     const creditEmail = getCreditEmailFromCookie(request);
     const creditsBalance = await getCreditBalanceForRequest(request);
     const normalizedCreditsBalance =
       typeof creditsBalance === "number" && Number.isFinite(creditsBalance) ? Math.max(0, creditsBalance) : null;
-    const email = entitlementEmail ?? creditEmail ?? null;
+    const email = creditEmail ?? null;
     const signedIn = Boolean(email);
 
     if (!signedIn) {
@@ -143,7 +101,7 @@ export async function GET(request: Request) {
       });
     }
 
-    let plan: "free" | "pro" = getPlanFromEntitlementCookie(request) === "pro" ? "pro" : "free";
+    let plan: "free" | "pro" = "free";
     if (email && hasAccountEntitlementStore()) {
       try {
         const entitlement = await getAccountEntitlementByEmail(email);
@@ -159,16 +117,13 @@ export async function GET(request: Request) {
     }
 
     const usageCount = plan === "free" ? await readEvaluateUsageCount(request, plan) : null;
-    const isFreeDisabledForToday = plan === "free" ? await readFreeEvaluateDisabledForToday(request) : null;
-    const remainingByPlan = usageCount === null ? null : Math.max(0, FREE_DAILY_LIMIT - usageCount);
+    const remainingByPlan = usageCount === null ? null : Math.max(0, FREE_TRIAL_LIMIT - usageCount);
 
     const remainingEvaluations =
       plan === "free"
-        ? (normalizedCreditsBalance ?? 0) > 0
+        ? remainingByPlan === null
           ? normalizedCreditsBalance
-          : isFreeDisabledForToday
-            ? 0
-            : remainingByPlan
+          : remainingByPlan + Math.max(0, normalizedCreditsBalance ?? 0)
         : remainingByPlan;
 
     return successJson(context, {

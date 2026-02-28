@@ -5,15 +5,13 @@ import {
   isAccountEntitlementStoreUnavailableError,
   isActiveProAccountEntitlement,
 } from "../../../src/lib/accountEntitlements";
-import { getEntitlementEmailFromCookie, getPlanFromEntitlementCookie } from "../../../src/lib/entitlementSession";
 import { createRequestContext, errorResponse, successJson } from "../../../src/lib/apiError";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const context = createRequestContext(request);
-  const signedInEmail = getEntitlementEmailFromCookie(request) ?? getCreditEmailFromCookie(request);
-  const cookiePlan = getPlanFromEntitlementCookie(request);
+  const signedInEmail = getCreditEmailFromCookie(request);
 
   if (signedInEmail && hasAccountEntitlementStore()) {
     try {
@@ -26,19 +24,10 @@ export async function GET(request: Request) {
     } catch (error) {
       if (!isAccountEntitlementStoreUnavailableError(error)) {
         console.error("ENTITLEMENT_DB_LOOKUP_FAILED", { requestId: context.requestId, error });
+        return errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Entitlement lookup is temporarily unavailable.");
       }
-      if (cookiePlan === "pro") {
-        return successJson(context, { plan: "pro", status: "active" });
-      }
-      if (isAccountEntitlementStoreUnavailableError(error)) {
-        return successJson(context, { plan: "free", status: "needs_restore" });
-      }
-      return errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Entitlement lookup is temporarily unavailable.");
+      return successJson(context, { plan: "free", status: "needs_restore" });
     }
-  }
-
-  if (cookiePlan === "pro") {
-    return successJson(context, { plan: "pro", status: "active" });
   }
 
   return successJson(context, { plan: "free", status: "needs_restore" });
