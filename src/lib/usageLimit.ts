@@ -14,11 +14,12 @@ import {
 } from "./credits.ts";
 import { getCreditEmailFromCookie } from "./creditSession.ts";
 import { decideFreeEvaluateAccess } from "./evaluationCreditsPolicy.ts";
+import { getFreeUsageActor, getRequestIp } from "./freeUsageActor.ts";
 import {
   getAccountEntitlementByEmail,
   hasAccountEntitlementStore,
   isActiveProAccountEntitlement,
-} from "./accountEntitlements";
+} from "./accountEntitlements.ts";
 
 export type UsageFeature = "evaluate" | "rewrite";
 export type UsageAction = typeof SHOW_INTERSTITIAL_ACTION;
@@ -114,40 +115,12 @@ function getRedisClient(): Redis {
   return redisClient;
 }
 
-function getRequestIp(request: Request): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const firstIp = forwardedFor.split(",")[0]?.trim();
-    if (firstIp) {
-      return firstIp;
-    }
-  }
-
-  const realIp = request.headers.get("x-real-ip")?.trim();
-  if (realIp) {
-    return realIp;
-  }
-
-  return "unknown";
-}
-
 function getUtcDateKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getFreeUsageActor(request: Request): string | null {
-  const creditEmail = getCreditEmailFromCookie(request);
-  if (creditEmail) {
-    return `email:${creditEmail}`;
-  }
-  return null;
-}
-
 function getFreeEvaluateUsageKey(request: Request): string {
   const actor = getFreeUsageActor(request);
-  if (!actor) {
-    throw new Error("FREE_TRIAL_IDENTITY_MISSING");
-  }
   return `rubricheck:usage:${actor}:evaluate_free`;
 }
 

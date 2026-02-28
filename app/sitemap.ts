@@ -1,22 +1,16 @@
 import type { MetadataRoute } from "next";
 
 const BASE_URL = "https://rubricheck.com";
+const IS_PRODUCTION_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() === "production";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
-
-  return [
+  const routes: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/`,
       lastModified,
       changeFrequency: "daily",
       priority: 1,
-    },
-    {
-      url: `${BASE_URL}/pricing`,
-      lastModified,
-      changeFrequency: "weekly",
-      priority: 0.8,
     },
     {
       url: `${BASE_URL}/legal/privacy`,
@@ -43,4 +37,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
     },
   ];
+
+  if (!IS_PRODUCTION_APP_ENV) {
+    routes.splice(1, 0, {
+      url: `${BASE_URL}/pricing`,
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    });
+  }
+
+  return routes;
 }

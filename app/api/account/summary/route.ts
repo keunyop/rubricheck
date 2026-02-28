@@ -4,6 +4,7 @@ import { FREE_TRIAL_LIMIT } from "../../../../src/config/plans";
 import { createRequestContext, errorResponse, successJson } from "../../../../src/lib/apiError";
 import { getCreditEmailFromCookie } from "../../../../src/lib/creditSession";
 import { getCreditBalanceForRequest } from "../../../../src/lib/credits";
+import { getFreeUsageActor } from "../../../../src/lib/freeUsageActor";
 import {
   getAccountEntitlementByEmail,
   hasAccountEntitlementStore,
@@ -36,14 +37,6 @@ function getRedisClient(): Redis {
   return redisClient;
 }
 
-function getFreeUsageActor(request: Request): string | null {
-  const creditEmail = getCreditEmailFromCookie(request);
-  if (creditEmail) {
-    return `email:${creditEmail}`;
-  }
-  return null;
-}
-
 function parseCount(value: unknown): number {
   if (typeof value === "number" && Number.isFinite(value)) {
     return Math.max(0, Math.floor(value));
@@ -69,9 +62,6 @@ async function readEvaluateUsageCount(request: Request, plan: "free" | "pro"): P
       return null;
     }
     const actor = getFreeUsageActor(request);
-    if (!actor) {
-      return null;
-    }
     const key = `rubricheck:usage:${actor}:evaluate_free`;
     const rawCount = await getRedisClient().get(key);
     return parseCount(rawCount);
@@ -90,13 +80,16 @@ export async function GET(request: Request) {
       typeof creditsBalance === "number" && Number.isFinite(creditsBalance) ? Math.max(0, creditsBalance) : null;
     const email = creditEmail ?? null;
     const signedIn = Boolean(email);
+    const anonymousUsageCount = !signedIn ? await readEvaluateUsageCount(request, "free") : null;
+    const anonymousRemainingEvaluations =
+      anonymousUsageCount === null ? null : Math.max(0, FREE_TRIAL_LIMIT - anonymousUsageCount);
 
     if (!signedIn) {
       return successJson(context, {
         signedIn: false,
         email: null,
         plan: "free",
-        remainingEvaluations: null,
+        remainingEvaluations: anonymousRemainingEvaluations,
         creditsBalance: normalizedCreditsBalance,
       });
     }

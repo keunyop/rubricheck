@@ -142,6 +142,7 @@ const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowe
 const NODE_ENV = process.env.NODE_ENV?.trim().toLowerCase() ?? "";
 const IS_PRODUCTION_APP_ENV = NEXT_PUBLIC_APP_ENV === "production";
 const SHOW_PRO_FEATURES = !IS_PRODUCTION_APP_ENV;
+const SHOW_ACCOUNT_AND_PRICING = !IS_PRODUCTION_APP_ENV;
 const SHOW_BETA_BADGE = IS_PRODUCTION_APP_ENV;
 
 const FOOTER_LEGAL_LINKS = [
@@ -792,23 +793,36 @@ export default function Home() {
     setShowLoginModal(true);
   }
 
-  function requireSignedInForEvaluation(selectedMode: GradingMode): boolean {
-    if (signedInEmail) {
-      return true;
+  function requireSignedInForEvaluation(_selectedMode: GradingMode): boolean {
+    return true;
+  }
+
+  function openOperationsLimitMessage(): string {
+    if (SHOW_ACCOUNT_AND_PRICING) {
+      return "Check pricing options for Pro and one-time top-ups.";
     }
 
-    setGradingMode(selectedMode);
-    setError("");
-    setErrorCode("");
-    setLastRequestId("");
-    setShowDailyLimitAlert(false);
-    setShowRewritePaywall(false);
-    openLoginModal(
-      selectedMode === "strict"
-        ? "Log in to use Strict Mode and run grading."
-        : "Log in to grade your assignment.",
-    );
-    return false;
+    return "Free trial limit reached for this device.";
+  }
+
+  function shouldShowPricingCta(): boolean {
+    return SHOW_ACCOUNT_AND_PRICING;
+  }
+
+  function shouldShowLoginModal(): boolean {
+    return SHOW_ACCOUNT_AND_PRICING;
+  }
+
+  function canShowAccountActions(): boolean {
+    return SHOW_ACCOUNT_AND_PRICING;
+  }
+
+  function maybeOpenLoginModal(infoMessage?: string) {
+    if (!shouldShowLoginModal()) {
+      return;
+    }
+
+    openLoginModal(infoMessage);
   }
 
   function persistEvaluationDraftForCheckout() {
@@ -1850,57 +1864,61 @@ export default function Home() {
                 ) : null}
               </div>
               <div className="inline-flex items-center gap-2">
-                <Link
-                  href="/pricing"
-                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                >
-                  Pricing
-                </Link>
-                {signedInEmail ? (
-                  <div ref={accountMenuRef} className="relative">
-                    <button
-                      type="button"
-                      title={signedInEmail}
-                      aria-haspopup="menu"
-                      aria-expanded={showAccountMenu}
-                      onClick={() => setShowAccountMenu((previous) => !previous)}
-                      className="inline-flex items-center gap-2 px-0.5 py-0.5 transition hover:opacity-90"
+                {canShowAccountActions() ? (
+                  <>
+                    <Link
+                      href="/pricing"
+                      className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                     >
-                      <span
-                        aria-hidden="true"
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
-                      >
-                        {getEmailInitial(signedInEmail)}
-                      </span>
-                      <AccountStatusPill plan={accountPlan} remainingEvaluations={remainingEvaluations} />
-                      <span className="sr-only">{signedInEmail}</span>
-                    </button>
-                    {showAccountMenu ? (
-                      <div
-                        role="menu"
-                        className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
-                      >
-                        <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
+                      Pricing
+                    </Link>
+                    {signedInEmail ? (
+                      <div ref={accountMenuRef} className="relative">
                         <button
                           type="button"
-                          role="menuitem"
-                          onClick={() => void handleLogout()}
-                          className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                          title={signedInEmail}
+                          aria-haspopup="menu"
+                          aria-expanded={showAccountMenu}
+                          onClick={() => setShowAccountMenu((previous) => !previous)}
+                          className="inline-flex items-center gap-2 px-0.5 py-0.5 transition hover:opacity-90"
                         >
-                          Log out
+                          <span
+                            aria-hidden="true"
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
+                          >
+                            {getEmailInitial(signedInEmail)}
+                          </span>
+                          <AccountStatusPill plan={accountPlan} remainingEvaluations={remainingEvaluations} />
+                          <span className="sr-only">{signedInEmail}</span>
                         </button>
+                        {showAccountMenu ? (
+                          <div
+                            role="menu"
+                            className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+                          >
+                            <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => void handleLogout()}
+                              className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                            >
+                              Log out
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => openLoginModal()}
-                    className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                  >
-                    Log in
-                  </button>
-                )}
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => maybeOpenLoginModal()}
+                        className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                      >
+                        Log in
+                      </button>
+                    )}
+                  </>
+                ) : null}
               </div>
             </div>
             <p className="mt-2 text-sm text-slate-600 md:text-[15px]">
@@ -2228,10 +2246,12 @@ export default function Home() {
                 Free trial limit reached
               </h2>
               <p className="mt-2 text-sm text-slate-600">
-                You used {dailyLimitValue ?? FREE_TRIAL_EVALUATIONS} free evaluations for this account.
+                {SHOW_ACCOUNT_AND_PRICING
+                  ? `You used ${dailyLimitValue ?? FREE_TRIAL_EVALUATIONS} free evaluations for this account.`
+                  : `You used ${dailyLimitValue ?? FREE_TRIAL_EVALUATIONS} free evaluations for this device.`}
               </p>
               <p className="mt-1 text-sm text-slate-600">
-                Check pricing options for Pro and one-time top-ups.
+                {openOperationsLimitMessage()}
               </p>
               <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
@@ -2241,12 +2261,14 @@ export default function Home() {
                 >
                   Close
                 </button>
-                <Link
-                  href="/pricing"
-                  className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
-                >
-                  Go to Pricing
-                </Link>
+                {shouldShowPricingCta() ? (
+                  <Link
+                    href="/pricing"
+                    className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                  >
+                    Go to Pricing
+                  </Link>
+                ) : null}
               </div>
             </section>
           </div>
@@ -2614,7 +2636,7 @@ export default function Home() {
           </section>
         ) : null}
 
-        {showLoginModal ? (
+        {SHOW_ACCOUNT_AND_PRICING && showLoginModal ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <button
               type="button"

@@ -1,8 +1,8 @@
 import { Redis } from "@upstash/redis";
 
-import { getCustomerIdByEmail, setCustomerIdByEmail } from "./entitlement";
-import { getCreditEmailFromCookie } from "./creditSession";
-import { callSupabaseRpc, hasSupabaseConfig } from "./supabaseRest";
+import { getCustomerIdByEmail, setCustomerIdByEmail } from "./entitlement.ts";
+import { getCreditEmailFromCookie } from "./creditSession.ts";
+import { callSupabaseRpc, hasSupabaseConfig } from "./supabaseRest.ts";
 
 const CREDITS_BY_CUSTOMER_KEY_PREFIX = "rubricheck:credits:customer:";
 const CREDITS_BY_EMAIL_KEY_PREFIX = "rubricheck:credits:email:";
