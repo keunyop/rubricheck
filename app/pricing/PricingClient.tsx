@@ -297,6 +297,14 @@ export function PricingClient() {
         setRestoreError("Too many attempts. Please wait and try again.");
         return;
       }
+      if (code === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED") {
+        setRestoreError("Restore email delivery is not configured right now.");
+        return;
+      }
+      if (code === "OTP_EMAIL_SEND_FAILED") {
+        setRestoreError("Unable to send the verification email right now. Please try again shortly.");
+        return;
+      }
       if (code === "SERVICE_UNAVAILABLE") {
         setRestoreError("Restore is temporarily unavailable. Please try again shortly.");
         return;
@@ -360,6 +368,14 @@ export function PricingClient() {
       }
       if (code === "RATE_LIMITED") {
         setRestoreError("Too many attempts. Please wait and try again.");
+        return;
+      }
+      if (code === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED") {
+        setRestoreError("Restore email delivery is not configured right now.");
+        return;
+      }
+      if (code === "OTP_EMAIL_SEND_FAILED") {
+        setRestoreError("Unable to send the verification email right now. Please try again shortly.");
         return;
       }
       if (code === "SERVICE_UNAVAILABLE") {

@@ -164,13 +164,12 @@ export async function POST(request: Request) {
 
     if (
       error instanceof Error &&
-      (error.message === "UPSTASH_REDIS_CONFIG_MISSING" ||
-        error.message === "ENTITLEMENT_OTP_SECRET_MISSING" ||
+      (error.message === "ENTITLEMENT_OTP_SECRET_MISSING" ||
         error.message === "ENTITLEMENT_SESSION_SECRET_MISSING" ||
         error.message === "CREDIT_SESSION_SECRET_MISSING" ||
         error.message === "STRIPE_SECRET_KEY_MISSING")
     ) {
-      return respond(errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Restore is temporarily unavailable. Please try again shortly."), "error");
+      return respond(errorResponse(context, 503, error.message, "Restore is temporarily unavailable. Please try again shortly."), "error");
     }
 
     console.error("ENTITLEMENT_RESTORE_VERIFY_FAILED", { requestId: context.requestId, error, emailHash: hashEmail(email) });

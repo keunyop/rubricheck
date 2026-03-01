@@ -72,12 +72,17 @@ export async function POST(request: Request) {
 
     if (
       error instanceof Error &&
-      (error.message === "UPSTASH_REDIS_CONFIG_MISSING" ||
-        error.message === "ENTITLEMENT_OTP_SECRET_MISSING" ||
+      (error.message === "ENTITLEMENT_OTP_SECRET_MISSING" ||
         error.message === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED" ||
         error.message === "OTP_EMAIL_SEND_FAILED")
     ) {
-      return respond(errorResponse(context, 503, "SERVICE_UNAVAILABLE", "Restore is temporarily unavailable. Please try again shortly."), "error");
+      const message =
+        error.message === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED"
+          ? "Restore email delivery is not configured right now."
+          : error.message === "OTP_EMAIL_SEND_FAILED"
+            ? "Unable to send the verification email right now. Please try again shortly."
+            : "Restore is temporarily unavailable. Please try again shortly.";
+      return respond(errorResponse(context, 503, error.message, message), "error");
     }
 
     console.error("ENTITLEMENT_RESTORE_START_FAILED", { requestId: context.requestId, error, emailHash: hashEmail(email) });

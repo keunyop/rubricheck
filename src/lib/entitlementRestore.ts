@@ -192,6 +192,23 @@ async function cacheStripeLookupResult(
   }
 }
 
+async function persistRedisEntitlementHints(params: {
+  email: string;
+  customerId: string;
+  entitlement: EntitlementRecord;
+}): Promise<void> {
+  const operations = [
+    setCustomerIdByEmail(params.email, params.customerId),
+    setEntitlementForCustomer(params.customerId, params.entitlement),
+    cacheStripeLookupResult(params.email, {
+      customerId: params.customerId,
+      entitlement: params.entitlement,
+    }),
+  ];
+
+  await Promise.allSettled(operations);
+}
+
 export async function resolveActiveEntitlementByVerifiedEmail(
   email: string,
 ): Promise<ResolveActiveEntitlementResult | null> {
@@ -230,14 +247,11 @@ export async function resolveActiveEntitlementByVerifiedEmail(
 
     const stripeEntitlement = await getActiveEntitlementByCustomerId(customerIdFromRedis);
     if (stripeEntitlement) {
-      await Promise.all([
-        setCustomerIdByEmail(normalizedEmail, customerIdFromRedis),
-        setEntitlementForCustomer(customerIdFromRedis, stripeEntitlement),
-        cacheStripeLookupResult(normalizedEmail, {
-          customerId: customerIdFromRedis,
-          entitlement: stripeEntitlement,
-        }),
-      ]);
+      await persistRedisEntitlementHints({
+        email: normalizedEmail,
+        customerId: customerIdFromRedis,
+        entitlement: stripeEntitlement,
+      });
       return {
         customerId: customerIdFromRedis,
         entitlement: stripeEntitlement,
@@ -254,14 +268,11 @@ export async function resolveActiveEntitlementByVerifiedEmail(
     return null;
   }
 
-  await Promise.all([
-    setCustomerIdByEmail(normalizedEmail, bestCandidate.customerId),
-    setEntitlementForCustomer(bestCandidate.customerId, bestCandidate.entitlement),
-    cacheStripeLookupResult(normalizedEmail, {
-      customerId: bestCandidate.customerId,
-      entitlement: bestCandidate.entitlement,
-    }),
-  ]);
+  await persistRedisEntitlementHints({
+    email: normalizedEmail,
+    customerId: bestCandidate.customerId,
+    entitlement: bestCandidate.entitlement,
+  });
 
   return bestCandidate;
 }

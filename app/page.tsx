@@ -649,6 +649,7 @@ export default function Home() {
     signedInEmail,
     accountPlan,
     remainingEvaluations,
+    hasLoadedAccountSummary,
     refreshAccountSummary,
     clearAccountSummary,
   } = useAccountSummary();
@@ -756,6 +757,19 @@ export default function Home() {
 
   function requireSignedInForEvaluation(selectedMode: GradingMode): boolean {
     void selectedMode;
+    if (!hasLoadedAccountSummary) {
+      setError("Checking login status. Please try again.");
+      setErrorCode("");
+      return false;
+    }
+
+    if (!signedInEmail) {
+      setError("Log in before requesting an evaluation.");
+      setErrorCode("AUTH_REQUIRED");
+      maybeOpenLoginModal("Log in before requesting an evaluation.");
+      return false;
+    }
+
     return true;
   }
 
@@ -1574,7 +1588,7 @@ export default function Home() {
         data && typeof data === "object" && "message" in data
           ? String((data as { message?: unknown }).message ?? "")
           : "";
-      if ((apiCode || apiError) === "SIGN_IN_REQUIRED") {
+      if ((apiCode || apiError) === "SIGN_IN_REQUIRED" || (apiCode || apiError) === "AUTH_REQUIRED") {
         openLoginModal("Log in to grade your assignment.");
         setError("");
         setErrorCode("");
@@ -1713,6 +1727,14 @@ export default function Home() {
         setRestoreError("Too many requests. Please wait and try again.");
         return;
       }
+      if (code === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED") {
+        setRestoreError("Restore email delivery is not configured right now.");
+        return;
+      }
+      if (code === "OTP_EMAIL_SEND_FAILED") {
+        setRestoreError("Unable to send the verification email right now. Please try again shortly.");
+        return;
+      }
 
       if (code === "SERVICE_UNAVAILABLE") {
         setRestoreError("Restore is temporarily unavailable. Please try again shortly.");
@@ -1786,6 +1808,14 @@ export default function Home() {
       }
       if (code === "RATE_LIMITED") {
         setRestoreError("Too many attempts. Please wait and try again.");
+        return;
+      }
+      if (code === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED") {
+        setRestoreError("Restore email delivery is not configured right now.");
+        return;
+      }
+      if (code === "OTP_EMAIL_SEND_FAILED") {
+        setRestoreError("Unable to send the verification email right now. Please try again shortly.");
         return;
       }
       if (code === "SERVICE_UNAVAILABLE") {

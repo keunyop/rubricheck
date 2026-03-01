@@ -33,6 +33,7 @@ type InMemoryRateLimitRecord = {
 let redisClient: Redis | null = null;
 const inMemoryOtpStore = new Map<string, OtpRecord>();
 const inMemoryRateLimitStore = new Map<string, InMemoryRateLimitRecord>();
+let hasWarnedAboutProductionInMemoryOtpFallback = false;
 
 function isProductionEnvironment(): boolean {
   return process.env.NODE_ENV === "production";
@@ -78,6 +79,15 @@ function getRequestIp(request: Request): string {
   }
 
   return "unknown";
+}
+
+function warnAboutProductionInMemoryOtpFallback(): void {
+  if (!isProductionEnvironment() || hasWarnedAboutProductionInMemoryOtpFallback) {
+    return;
+  }
+
+  hasWarnedAboutProductionInMemoryOtpFallback = true;
+  console.warn("RESTORE_OTP_PRODUCTION_IN_MEMORY_FALLBACK");
 }
 
 function getRestoreSecret(): string {
@@ -251,9 +261,7 @@ export async function startRestoreOtp(request: Request, email: string): Promise<
   const ip = getRequestIp(request);
 
   if (!hasRedisConfig()) {
-    if (isProductionEnvironment()) {
-      throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
-    }
+    warnAboutProductionInMemoryOtpFallback();
 
     const emailRateCount = incrementRateLimitInMemory(
       getOtpSendEmailLimitKey(normalizedEmail),
@@ -312,9 +320,7 @@ export async function verifyRestoreOtp(request: Request, email: string, code: st
   const ip = getRequestIp(request);
 
   if (!hasRedisConfig()) {
-    if (isProductionEnvironment()) {
-      throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
-    }
+    warnAboutProductionInMemoryOtpFallback();
 
     const verifyCount = incrementRateLimitInMemory(
       getOtpVerifyLimitKey(normalizedEmail, ip),

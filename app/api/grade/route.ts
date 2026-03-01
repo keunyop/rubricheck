@@ -116,6 +116,11 @@ export async function POST(request: Request) {
   const context = createRequestContext(request);
 
   try {
+    const signedInEmail = getCreditEmailFromCookie(request);
+    if (!signedInEmail) {
+      return errorResponse(context, 401, "AUTH_REQUIRED", "Log in before requesting an evaluation.");
+    }
+
     const contentType = request.headers.get("content-type") ?? "";
     let mode: GradingMode = "standard";
     let rubricFile: File | null = null;
