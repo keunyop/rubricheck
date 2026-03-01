@@ -126,6 +126,7 @@ type RestoreVerifyResponse = {
 type PaywallMode = "restore" | "upgrade";
 type RestoreStep = "email" | "code";
 type ShareFeedbackState = "idle" | "copied" | "downloaded" | "failed";
+type AuthVerificationPurpose = "login" | "restore";
 
 const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
 const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ?? "";
@@ -697,6 +698,7 @@ export default function Home() {
   const [restoreInfo, setRestoreInfo] = useState("");
   const [isStartingRestore, setIsStartingRestore] = useState(false);
   const [isVerifyingRestore, setIsVerifyingRestore] = useState(false);
+  const [loginModalPurpose, setLoginModalPurpose] = useState<AuthVerificationPurpose>("login");
   const [proRestoreNotice, setProRestoreNotice] = useState("");
   const [showEnvDebugFooter, setShowEnvDebugFooter] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
@@ -748,6 +750,7 @@ export default function Home() {
   function openLoginModal(infoMessage?: string) {
     setShowAccountMenu(false);
     setShowBillingMenu(false);
+    setLoginModalPurpose("login");
     setRestoreStep("email");
     setRestoreCode("");
     setRestoreError("");
@@ -1152,9 +1155,11 @@ export default function Home() {
     setRestoreInfo("");
     setPaywallMode(mode);
     if (mode === "restore") {
+      setLoginModalPurpose("restore");
       setRestoreStep("email");
       setRestoreCode("");
     } else {
+      setLoginModalPurpose("login");
       setCheckoutPlan("monthly");
     }
     setShowRewritePaywall(true);
@@ -1772,7 +1777,11 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: normalizedEmail, code: normalizedCode }),
+        body: JSON.stringify({
+          email: normalizedEmail,
+          code: normalizedCode,
+          purpose: loginModalPurpose,
+        }),
       });
 
       const data: RestoreVerifyResponse = await response.json().catch(() => ({}));
@@ -2667,12 +2676,14 @@ export default function Home() {
               aria-labelledby="main-login-title"
               className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
             >
-              <h3 id="main-login-title" className="text-lg font-semibold text-slate-900">
-                Log in
-              </h3>
-              <p className="mt-2 text-sm text-slate-600">
-                We will send a one-time code to verify ownership before logging you in.
-              </p>
+            <h3 id="main-login-title" className="text-lg font-semibold text-slate-900">
+              {loginModalPurpose === "restore" ? "Restore Pro" : "Log in"}
+            </h3>
+            <p className="mt-2 text-sm text-slate-600">
+              {loginModalPurpose === "restore"
+                ? "We will send a one-time code to verify ownership, then check this email for an active Pro subscription."
+                : "We will send a one-time code to verify ownership before logging you in."}
+            </p>
               <label htmlFor="main-restore-email" className="mt-4 block">
                 <span className="text-xs font-semibold text-slate-700">Email</span>
                 <input
@@ -2746,14 +2757,24 @@ export default function Home() {
                     </button>
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => void handleStartRestorePro()}
-                    disabled={isStartingRestore || isVerifyingRestore || !restoreEmail.trim()}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isStartingRestore ? "Sending..." : "Send code"}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setLoginModalPurpose((previous) => (previous === "login" ? "restore" : "login"))}
+                      disabled={isStartingRestore || isVerifyingRestore}
+                      className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {loginModalPurpose === "restore" ? "Log in only" : "Restore Pro instead"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleStartRestorePro()}
+                      disabled={isStartingRestore || isVerifyingRestore || !restoreEmail.trim()}
+                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isStartingRestore ? "Sending..." : "Send code"}
+                    </button>
+                  </>
                 )}
               </div>
             </section>
@@ -2783,7 +2804,10 @@ export default function Home() {
               <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
                 <button
                   type="button"
-                  onClick={() => setPaywallMode("restore")}
+                  onClick={() => {
+                    setPaywallMode("restore");
+                    setLoginModalPurpose("restore");
+                  }}
                   className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
                     paywallMode === "restore"
                       ? "bg-white text-slate-900 shadow-sm"
@@ -2794,7 +2818,10 @@ export default function Home() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPaywallMode("upgrade")}
+                  onClick={() => {
+                    setPaywallMode("upgrade");
+                    setLoginModalPurpose("login");
+                  }}
                   className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
                     paywallMode === "upgrade"
                       ? "bg-white text-slate-900 shadow-sm"

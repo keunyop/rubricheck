@@ -30,10 +30,15 @@ export const runtime = "nodejs";
 type RestoreVerifyRequestBody = {
   email?: unknown;
   code?: unknown;
+  purpose?: unknown;
 };
 
 function normalizeOtpCode(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeVerifyPurpose(value: unknown): "login" | "restore" {
+  return value === "restore" ? "restore" : "login";
 }
 
 export async function POST(request: Request) {
@@ -69,6 +74,7 @@ export async function POST(request: Request) {
 
   email = normalizeEmailInput(payload.email);
   const code = normalizeOtpCode(payload.code);
+  const purpose = normalizeVerifyPurpose(payload.purpose);
 
   if (!isValidEmail(email)) {
     return respond(errorResponse(context, 400, "INVALID_EMAIL", "Please enter a valid email."), "error");
@@ -84,10 +90,42 @@ export async function POST(request: Request) {
       return respond(errorResponse(context, 400, "INVALID_CODE", "Invalid or expired code."), "error");
     }
 
-    const resolved = await resolveActiveEntitlementByVerifiedEmail(email);
     const creditToken = createCreditSessionToken({ email });
     const isSecureCookie = process.env.NODE_ENV === "production";
 
+    if (purpose === "login") {
+      const response = NextResponse.json(
+        {
+          ok: true,
+          status: "signed_in",
+          plan: "free",
+        },
+        { headers: { "x-request-id": context.requestId } },
+      );
+
+      response.cookies.set({
+        name: ENTITLEMENT_SESSION_COOKIE_NAME,
+        value: "",
+        httpOnly: true,
+        secure: isSecureCookie,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 0,
+      });
+      response.cookies.set({
+        name: CREDIT_SESSION_COOKIE_NAME,
+        value: creditToken,
+        httpOnly: true,
+        secure: isSecureCookie,
+        sameSite: "lax",
+        path: "/",
+        maxAge: CREDIT_SESSION_TTL_SECONDS,
+      });
+
+      return respond(response, "success");
+    }
+
+    const resolved = await resolveActiveEntitlementByVerifiedEmail(email);
     if (!resolved) {
       const response = NextResponse.json(
         {
