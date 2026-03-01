@@ -13,8 +13,8 @@ import {
   type CreditReservation,
 } from "./credits.ts";
 import { getCreditEmailFromCookie } from "./creditSession.ts";
-import { decideFreeEvaluateAccess } from "./evaluationCreditsPolicy.ts";
-import { getFreeUsageActor, getRequestIp } from "./freeUsageActor.ts";
+import { getRequestIp } from "./freeUsageActor.ts";
+import { consumeFreeEvaluateUsage } from "./freeUsage.ts";
 import {
   getAccountEntitlementByEmail,
   hasAccountEntitlementStore,
@@ -31,7 +31,10 @@ type UserPlanPayload = {
 type PlanFeatureLimit = number | "unlimited" | null;
 type FeatureLimitMap = Record<UsageFeature, PlanFeatureLimit>;
 
-export type UsageErrorCode = typeof FREE_LIMIT_REACHED_CODE | "REDIS_UNAVAILABLE";
+export type UsageErrorCode =
+  | typeof FREE_LIMIT_REACHED_CODE
+  | "REDIS_UNAVAILABLE"
+  | "FREE_USAGE_STORE_UNAVAILABLE";
 
 export type UsageCheckResult = {
   allowed: boolean;
@@ -44,7 +47,7 @@ export type UsageCheckResult = {
   plan?: PlanName;
   billingSource?: "free" | "pro" | "credit";
   creditReservation?: CreditReservation;
-  degradedCode?: "REDIS_UNAVAILABLE";
+  degradedCode?: "REDIS_UNAVAILABLE" | "FREE_USAGE_STORE_UNAVAILABLE";
 };
 
 const WINDOW_SECONDS = 86400;
@@ -115,11 +118,6 @@ function getRedisClient(): Redis {
 
 function getUtcDateKey(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-function getFreeEvaluateUsageKey(request: Request): string {
-  const actor = getFreeUsageActor(request);
-  return `rubricheck:usage:${actor}:evaluate_free`;
 }
 
 function getLimitForFeature(plan: PlanName, feature: UsageFeature): PlanFeatureLimit {
@@ -236,48 +234,34 @@ async function checkPlanLimitedFeature(
 }
 
 async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageCheckResult> {
-  if (!hasRedisConfig()) {
-    if (process.env.NODE_ENV !== "production") {
-      return {
-        allowed: true,
-        limit: FREE_TRIAL_LIMIT,
-        remaining: FREE_TRIAL_LIMIT,
-        plan: "free",
-        billingSource: "free",
-        creditsBalance: null,
-      };
-    }
-
-    throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
+  const signedInEmail = getCreditEmailFromCookie(request);
+  if (!signedInEmail) {
+    return {
+      allowed: false,
+      limit: FREE_TRIAL_LIMIT,
+      remaining: 0,
+      plan: "free",
+      billingSource: "free",
+      errorMessage: "Log in before requesting an evaluation.",
+    };
   }
 
   try {
-    const redis = getRedisClient();
     const currentCreditBalance = Math.max(0, (await getCreditBalanceForRequest(request)) ?? 0);
+    const freeUsage = await consumeFreeEvaluateUsage(signedInEmail, FREE_TRIAL_LIMIT);
 
-    const freeKey = getFreeEvaluateUsageKey(request);
-    const rawFreeCount = await redis.get(freeKey);
-    const freeCountBefore = typeof rawFreeCount === "number" ? Math.max(0, Math.floor(rawFreeCount)) : Number.parseInt(String(rawFreeCount ?? "0"), 10) || 0;
-
-    const freeDecision = decideFreeEvaluateAccess({
-      freeCount: freeCountBefore + 1,
-      freeLimit: FREE_TRIAL_LIMIT,
-      creditsAvailable: currentCreditBalance,
-    });
-
-    if (freeDecision.allowed && freeDecision.source === "free") {
-      const freeCount = await redis.incr(freeKey);
+    if (freeUsage.allowed) {
       return {
         allowed: true,
         limit: FREE_TRIAL_LIMIT,
-        remaining: Math.max(0, FREE_TRIAL_LIMIT - freeCount),
+        remaining: freeUsage.remaining,
         plan: "free",
         billingSource: "free",
         creditsBalance: currentCreditBalance,
       };
     }
 
-    if (freeDecision.allowed && freeDecision.source === "credit") {
+    if (currentCreditBalance > 0) {
       const creditReservation = await reserveOneCreditForRequest(request);
       if (creditReservation.reserved && creditReservation.reservation) {
         return {
@@ -315,20 +299,20 @@ async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageChec
       errorMessage: getFreePlanLimitMessage(FREE_TRIAL_LIMIT),
       creditsBalance: currentCreditBalance,
     };
-  } catch {
-    const fallback = checkRedisFallbackAllowance(request, "evaluate");
+  } catch (error) {
     return {
-      allowed: fallback.allowed,
-      limit: fallback.limit,
-      remaining: fallback.remaining,
+      allowed: false,
+      limit: FREE_TRIAL_LIMIT,
+      remaining: 0,
       plan: "free",
       billingSource: "free",
       creditsBalance: null,
-      degradedCode: "REDIS_UNAVAILABLE",
-      errorCode: fallback.allowed ? undefined : "REDIS_UNAVAILABLE",
-      errorMessage: fallback.allowed
-        ? "Usage checks are running in limited mode while we reconnect."
-        : "Service is busy verifying usage right now. Please retry shortly.",
+      degradedCode: "FREE_USAGE_STORE_UNAVAILABLE",
+      errorCode: "FREE_USAGE_STORE_UNAVAILABLE",
+      errorMessage:
+        error instanceof Error && error.message === "FREE_USAGE_STORE_UNAVAILABLE"
+          ? "Free evaluation tracking is temporarily unavailable. Please retry shortly."
+          : "Account usage verification is temporarily unavailable. Please retry shortly.",
     };
   }
 }

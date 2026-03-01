@@ -87,6 +87,13 @@ create table if not exists public.account_entitlements (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.free_usage_counters (
+  email text primary key,
+  evaluate_count integer not null default 0 check (evaluate_count >= 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists credit_lots_owner_created_idx
   on public.credit_lots (owner_type, owner_id, created_at, id);
 
@@ -98,6 +105,9 @@ create index if not exists billing_webhook_failures_event_id_idx
 
 create index if not exists account_entitlements_email_idx
   on public.account_entitlements (email, updated_at desc);
+
+create index if not exists free_usage_counters_updated_at_idx
+  on public.free_usage_counters (updated_at desc);
 
 create or replace function public.rubricheck_mark_billing_event_processed(
   p_scope text,
@@ -439,6 +449,89 @@ begin
 end;
 $$;
 
+create or replace function public.rubricheck_get_free_evaluate_usage_count(
+  p_email text
+)
+returns integer
+language sql
+security definer
+set search_path = public
+as $$
+  with normalized as (
+    select nullif(lower(trim(coalesce(p_email, ''))), '') as email
+  )
+  select coalesce((
+    select c.evaluate_count
+    from public.free_usage_counters c
+    join normalized n on c.email = n.email
+    where n.email is not null
+    limit 1
+  ), 0)::integer;
+$$;
+
+create or replace function public.rubricheck_consume_free_evaluate(
+  p_email text,
+  p_limit integer default 3
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_email text := nullif(lower(trim(coalesce(p_email, ''))), '');
+  v_limit integer := greatest(coalesce(p_limit, 0), 0);
+  v_count integer := 0;
+begin
+  if v_email is null then
+    raise exception 'INVALID_EMAIL';
+  end if;
+
+  insert into public.free_usage_counters (email, evaluate_count, created_at, updated_at)
+  values (v_email, 0, now(), now())
+  on conflict (email) do nothing;
+
+  if v_limit <= 0 then
+    select evaluate_count
+    into v_count
+    from public.free_usage_counters
+    where email = v_email;
+
+    return jsonb_build_object(
+      'allowed', false,
+      'count', coalesce(v_count, 0),
+      'remaining', 0
+    );
+  end if;
+
+  update public.free_usage_counters
+  set evaluate_count = evaluate_count + 1,
+      updated_at = now()
+  where email = v_email
+    and evaluate_count < v_limit
+  returning evaluate_count into v_count;
+
+  if v_count is not null then
+    return jsonb_build_object(
+      'allowed', true,
+      'count', v_count,
+      'remaining', greatest(v_limit - v_count, 0)
+    );
+  end if;
+
+  select evaluate_count
+  into v_count
+  from public.free_usage_counters
+  where email = v_email;
+
+  return jsonb_build_object(
+    'allowed', false,
+    'count', coalesce(v_count, 0),
+    'remaining', greatest(v_limit - coalesce(v_count, 0), 0)
+  );
+end;
+$$;
+
 create or replace function public.rubricheck_list_refundable_credit_payments(
   p_owner_type text,
   p_owner_id text
@@ -709,6 +802,8 @@ revoke all on function public.rubricheck_migrate_credit_owner(text, text) from p
 revoke all on function public.rubricheck_grant_credit_purchase(text, text, integer, text, text, text, text, text, integer, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_reserve_one_credit(text, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_refund_credit_reservation(uuid, text, text) from public, anon, authenticated;
+revoke all on function public.rubricheck_get_free_evaluate_usage_count(text) from public, anon, authenticated;
+revoke all on function public.rubricheck_consume_free_evaluate(text, integer) from public, anon, authenticated;
 revoke all on function public.rubricheck_list_refundable_credit_payments(text, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_mark_credit_payment_refunded(bigint, text, text, text, integer, integer, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_log_webhook_failure(text, text, text, text, text, text, text) from public, anon, authenticated;
@@ -721,6 +816,8 @@ grant execute on function public.rubricheck_migrate_credit_owner(text, text) to 
 grant execute on function public.rubricheck_grant_credit_purchase(text, text, integer, text, text, text, text, text, integer, text) to service_role;
 grant execute on function public.rubricheck_reserve_one_credit(text, text) to service_role;
 grant execute on function public.rubricheck_refund_credit_reservation(uuid, text, text) to service_role;
+grant execute on function public.rubricheck_get_free_evaluate_usage_count(text) to service_role;
+grant execute on function public.rubricheck_consume_free_evaluate(text, integer) to service_role;
 grant execute on function public.rubricheck_list_refundable_credit_payments(text, text) to service_role;
 grant execute on function public.rubricheck_mark_credit_payment_refunded(bigint, text, text, text, integer, integer, text) to service_role;
 grant execute on function public.rubricheck_log_webhook_failure(text, text, text, text, text, text, text) to service_role;

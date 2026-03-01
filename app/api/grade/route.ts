@@ -209,6 +209,17 @@ export async function POST(request: Request) {
         return errorResponse(context, 503, "REDIS_UNAVAILABLE", usage.errorMessage ?? "Usage checks are temporarily unavailable. Please retry shortly.", undefined, usageHeaders);
       }
 
+      if (usage.errorCode === "FREE_USAGE_STORE_UNAVAILABLE") {
+        return errorResponse(
+          context,
+          503,
+          "SERVICE_UNAVAILABLE",
+          usage.errorMessage ?? "Free evaluation tracking is temporarily unavailable. Please retry shortly.",
+          undefined,
+          usageHeaders,
+        );
+      }
+
       return errorResponse(context, 429, usage.errorCode ?? "RATE_LIMITED", usage.errorMessage ?? `Free trial limit reached (${usage.limit}). Upgrade to continue.`, undefined, usageHeaders);
     }
 
