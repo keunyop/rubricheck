@@ -48,8 +48,6 @@ export type UsageCheckResult = {
 };
 
 const WINDOW_SECONDS = 86400;
-const PRODUCTION_FREE_EVALUATE_BYPASS_LIMIT = 9_999_999;
-const ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV = "ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT";
 const UNLIMITED_PLAN_SENTINEL = -1;
 
 const REDIS_FALLBACK_LIMIT = 2;
@@ -135,19 +133,6 @@ function getFeatureBlockedMessage(feature: UsageFeature): string {
 
 function getFreePlanLimitMessage(limit: number): string {
   return `Free trial limit reached (${limit}). Upgrade to continue.`;
-}
-
-function isProductionFreeEvaluateLimitEnabled(): boolean {
-  const normalizeEnabledFlag = (value: string | undefined): boolean => {
-    const raw = value?.trim().toLowerCase();
-    return raw === "1" || raw === "true" || raw === "on";
-  };
-
-  if (process.env.NODE_ENV !== "production") {
-    return true;
-  }
-
-  return normalizeEnabledFlag(process.env[ENABLE_PRODUCTION_FREE_EVALUATE_LIMIT_ENV]);
 }
 
 async function resolveEffectivePlan(request: Request, user?: UserPlanPayload): Promise<PlanName> {
@@ -251,17 +236,6 @@ async function checkPlanLimitedFeature(
 }
 
 async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageCheckResult> {
-  if (!isProductionFreeEvaluateLimitEnabled()) {
-    return {
-      allowed: true,
-      limit: PRODUCTION_FREE_EVALUATE_BYPASS_LIMIT,
-      remaining: PRODUCTION_FREE_EVALUATE_BYPASS_LIMIT,
-      plan: "free",
-      billingSource: "free",
-      creditsBalance: await getCreditBalanceForRequest(request),
-    };
-  }
-
   if (!hasRedisConfig()) {
     if (process.env.NODE_ENV !== "production") {
       return {
