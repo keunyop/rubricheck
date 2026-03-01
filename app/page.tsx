@@ -1576,7 +1576,7 @@ export default function Home() {
       const data: unknown = contentType.includes("application/json")
         ? await response.json()
         : { error: "INTERNAL_SERVER_ERROR" };
-      void refreshAccountSummary();
+      await refreshAccountSummary();
 
       const apiErrorResponse = (data ?? {}) as GradeErrorResponse;
       setLastRequestId(response.headers.get("x-request-id") ?? apiErrorResponse.requestId ?? "");
@@ -2677,12 +2677,10 @@ export default function Home() {
               className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
             >
             <h3 id="main-login-title" className="text-lg font-semibold text-slate-900">
-              {loginModalPurpose === "restore" ? "Restore Pro" : "Log in"}
+              Log in
             </h3>
             <p className="mt-2 text-sm text-slate-600">
-              {loginModalPurpose === "restore"
-                ? "We will send a one-time code to verify ownership, then check this email for an active Pro subscription."
-                : "We will send a one-time code to verify ownership before logging you in."}
+              We will send a one-time code to verify ownership before logging you in.
             </p>
               <label htmlFor="main-restore-email" className="mt-4 block">
                 <span className="text-xs font-semibold text-slate-700">Email</span>
@@ -2757,24 +2755,14 @@ export default function Home() {
                     </button>
                   </>
                 ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setLoginModalPurpose((previous) => (previous === "login" ? "restore" : "login"))}
-                      disabled={isStartingRestore || isVerifyingRestore}
-                      className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {loginModalPurpose === "restore" ? "Log in only" : "Restore Pro instead"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleStartRestorePro()}
-                      disabled={isStartingRestore || isVerifyingRestore || !restoreEmail.trim()}
-                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isStartingRestore ? "Sending..." : "Send code"}
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => void handleStartRestorePro()}
+                    disabled={isStartingRestore || isVerifyingRestore || !restoreEmail.trim()}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isStartingRestore ? "Sending..." : "Send code"}
+                  </button>
                 )}
               </div>
             </section>
