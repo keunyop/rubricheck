@@ -439,6 +439,151 @@ begin
 end;
 $$;
 
+create or replace function public.rubricheck_list_refundable_credit_payments(
+  p_owner_type text,
+  p_owner_id text
+)
+returns table (
+  payment_id bigint,
+  stripe_payment_intent_id text,
+  credit_pack_id text,
+  total_credits integer,
+  remaining_credits integer,
+  amount_total integer,
+  refundable_amount integer,
+  currency text,
+  created_at timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    p.id as payment_id,
+    p.stripe_payment_intent_id,
+    p.credit_pack_id,
+    p.total_credits,
+    sum(l.remaining_credits)::integer as remaining_credits,
+    p.amount_total,
+    greatest(
+      0,
+      least(
+        p.amount_total,
+        round((p.amount_total::numeric * sum(l.remaining_credits)::numeric) / nullif(p.total_credits, 0))::integer
+      )
+    ) as refundable_amount,
+    p.currency,
+    p.created_at
+  from public.credit_payments p
+  join public.credit_lots l on l.payment_id = p.id
+  where p.owner_type = trim(coalesce(p_owner_type, ''))
+    and p.owner_id = trim(coalesce(p_owner_id, ''))
+    and p.amount_total is not null
+    and p.amount_total > 0
+    and nullif(trim(coalesce(p.stripe_payment_intent_id, '')), '') is not null
+    and nullif(trim(coalesce(p.currency, '')), '') is not null
+  group by p.id, p.stripe_payment_intent_id, p.credit_pack_id, p.total_credits, p.amount_total, p.currency, p.created_at
+  having sum(l.remaining_credits) > 0
+  order by p.created_at desc, p.id desc;
+$$;
+
+create or replace function public.rubricheck_mark_credit_payment_refunded(
+  p_payment_id bigint,
+  p_owner_type text,
+  p_owner_id text,
+  p_stripe_refund_id text,
+  p_refunded_credits integer,
+  p_refunded_amount integer,
+  p_reason text default null
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_owner_type text := trim(coalesce(p_owner_type, ''));
+  v_owner_id text := trim(coalesce(p_owner_id, ''));
+  v_refund_id text := trim(coalesce(p_stripe_refund_id, ''));
+  v_refunded_credits integer := greatest(coalesce(p_refunded_credits, 0), 0);
+  v_refunded_amount integer := greatest(coalesce(p_refunded_amount, 0), 0);
+  v_available_credits integer := 0;
+  v_balance integer := 0;
+begin
+  if p_payment_id is null or p_payment_id <= 0 then
+    raise exception 'INVALID_PAYMENT_ID';
+  end if;
+
+  if v_owner_type not in ('customer', 'email') then
+    raise exception 'INVALID_OWNER_TYPE';
+  end if;
+
+  if v_owner_id = '' then
+    raise exception 'INVALID_OWNER_ID';
+  end if;
+
+  if v_refund_id = '' then
+    raise exception 'INVALID_STRIPE_REFUND_ID';
+  end if;
+
+  if v_refunded_credits <= 0 or v_refunded_amount <= 0 then
+    raise exception 'INVALID_REFUND_AMOUNT';
+  end if;
+
+  perform 1
+  from public.credit_lots l
+  join public.credit_payments p on p.id = l.payment_id
+  where p.id = p_payment_id
+    and p.owner_type = v_owner_type
+    and p.owner_id = v_owner_id
+  for update of l;
+
+  select coalesce(sum(l.remaining_credits), 0)::integer
+  into v_available_credits
+  from public.credit_lots l
+  join public.credit_payments p on p.id = l.payment_id
+  where p.id = p_payment_id
+    and p.owner_type = v_owner_type
+    and p.owner_id = v_owner_id;
+
+  if v_available_credits < v_refunded_credits then
+    raise exception 'REFUND_CREDITS_EXCEED_AVAILABLE';
+  end if;
+
+  update public.credit_lots
+  set remaining_credits = 0,
+      updated_at = now()
+  where payment_id = p_payment_id
+    and owner_type = v_owner_type
+    and owner_id = v_owner_id
+    and remaining_credits > 0;
+
+  insert into public.credit_refunds (
+    payment_id,
+    stripe_refund_id,
+    refunded_credits,
+    refunded_amount,
+    reason
+  )
+  values (
+    p_payment_id,
+    v_refund_id,
+    v_refunded_credits,
+    v_refunded_amount,
+    nullif(trim(coalesce(p_reason, '')), '')
+  )
+  on conflict (stripe_refund_id) do nothing;
+
+  select coalesce(sum(remaining_credits), 0)::integer
+  into v_balance
+  from public.credit_lots
+  where owner_type = v_owner_type
+    and owner_id = v_owner_id;
+
+  return v_balance;
+end;
+$$;
+
 create or replace function public.rubricheck_log_webhook_failure(
   p_event_id text,
   p_event_type text,
@@ -564,6 +709,8 @@ revoke all on function public.rubricheck_migrate_credit_owner(text, text) from p
 revoke all on function public.rubricheck_grant_credit_purchase(text, text, integer, text, text, text, text, text, integer, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_reserve_one_credit(text, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_refund_credit_reservation(uuid, text, text) from public, anon, authenticated;
+revoke all on function public.rubricheck_list_refundable_credit_payments(text, text) from public, anon, authenticated;
+revoke all on function public.rubricheck_mark_credit_payment_refunded(bigint, text, text, text, integer, integer, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_log_webhook_failure(text, text, text, text, text, text, text) from public, anon, authenticated;
 revoke all on function public.rubricheck_upsert_account_entitlement(text, text, text, bigint) from public, anon, authenticated;
 revoke all on function public.rubricheck_get_account_entitlement_by_email(text) from public, anon, authenticated;
@@ -574,6 +721,8 @@ grant execute on function public.rubricheck_migrate_credit_owner(text, text) to 
 grant execute on function public.rubricheck_grant_credit_purchase(text, text, integer, text, text, text, text, text, integer, text) to service_role;
 grant execute on function public.rubricheck_reserve_one_credit(text, text) to service_role;
 grant execute on function public.rubricheck_refund_credit_reservation(uuid, text, text) to service_role;
+grant execute on function public.rubricheck_list_refundable_credit_payments(text, text) to service_role;
+grant execute on function public.rubricheck_mark_credit_payment_refunded(bigint, text, text, text, integer, integer, text) to service_role;
 grant execute on function public.rubricheck_log_webhook_failure(text, text, text, text, text, text, text) to service_role;
 grant execute on function public.rubricheck_upsert_account_entitlement(text, text, text, bigint) to service_role;
 grant execute on function public.rubricheck_get_account_entitlement_by_email(text) to service_role;

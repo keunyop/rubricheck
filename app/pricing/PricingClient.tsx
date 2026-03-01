@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { useAccountSummary } from "../components/AccountSummaryProvider";
 import { AccountStatusPill } from "../components/AccountStatusPill";
 import { SubpageBackHomeLink } from "../components/SubpageBackHomeLink";
 
@@ -12,15 +14,6 @@ type CheckoutResponse = {
   url?: string;
   code?: string;
   message?: string;
-  error?: string;
-};
-
-type AccountSummaryResponse = {
-  signedIn?: boolean;
-  email?: string | null;
-  plan?: "free" | "pro";
-  remainingEvaluations?: number | null;
-  creditsBalance?: number | null;
   error?: string;
 };
 
@@ -47,6 +40,14 @@ type PricingTab = "pro" | "topups";
 const EMAIL_AVATAR_CLASS_NAME = "border-indigo-200 bg-indigo-100 text-indigo-700";
 const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
 const SHOW_BETA_BADGE = NEXT_PUBLIC_APP_ENV === "production";
+const FOOTER_LEGAL_LINKS = [
+  { label: "Privacy", href: "/legal/privacy" },
+  { label: "Terms", href: "/legal/terms" },
+  { label: "Refund Policy", href: "/legal/refund-policy" },
+  { label: "AI Disclaimer", href: "/legal/ai-disclaimer" },
+  { label: "Data Retention", href: "/legal/data-retention" },
+] as const;
+const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
 
 function isValidEmail(email: string): boolean {
   if (!email || email.length > 320) {
@@ -75,11 +76,16 @@ function getEmailInitialAvatarClassName(email: string): string {
 }
 
 export function PricingClient() {
-  const [signedInEmail, setSignedInEmail] = useState("");
-  const [accountPlan, setAccountPlan] = useState<"free" | "pro">("free");
-  const [remainingEvaluations, setRemainingEvaluations] = useState<number | null>(null);
-  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const {
+    signedInEmail,
+    accountPlan,
+    remainingEvaluations,
+    creditBalance,
+    refreshAccountSummary,
+    clearAccountSummary,
+  } = useAccountSummary();
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [showBillingMenu, setShowBillingMenu] = useState(false);
   const [activePricingTab, setActivePricingTab] = useState<PricingTab>("pro");
 
   const [checkoutPlan, setCheckoutPlan] = useState<ProCheckoutPlan>("monthly");
@@ -100,45 +106,11 @@ export function PricingClient() {
 
   const selectedCheckoutPlanDisplay = PRO_CHECKOUT_DISPLAY[checkoutPlan];
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
-
-  const refreshAccountSummary = useCallback(async () => {
-    try {
-      const response = await fetch("/api/account/summary", {
-        method: "GET",
-        cache: "no-store",
-      });
-      const data: AccountSummaryResponse = await response.json().catch(() => ({}));
-      const email = typeof data.email === "string" ? data.email.trim() : "";
-      const remaining =
-        typeof data.remainingEvaluations === "number" && Number.isFinite(data.remainingEvaluations)
-          ? Math.max(0, Math.floor(data.remainingEvaluations))
-          : null;
-      const balance =
-        typeof data.creditsBalance === "number" && Number.isFinite(data.creditsBalance)
-          ? Math.max(0, Math.floor(data.creditsBalance))
-          : null;
-
-      if (response.ok && data.signedIn && email) {
-        setSignedInEmail(email);
-        setAccountPlan(data.plan === "pro" ? "pro" : "free");
-        setRemainingEvaluations(remaining);
-      } else {
-        setSignedInEmail("");
-        setAccountPlan("free");
-        setRemainingEvaluations(null);
-      }
-
-      setCreditBalance(balance);
-    } catch {
-      setSignedInEmail("");
-      setAccountPlan("free");
-      setRemainingEvaluations(null);
-      setCreditBalance(null);
-    }
-  }, []);
+  const billingMenuRef = useRef<HTMLDivElement | null>(null);
 
   function openLoginModal(infoMessage?: string) {
     setShowAccountMenu(false);
+    setShowBillingMenu(false);
     setRestoreStep("email");
     setRestoreCode("");
     setRestoreError("");
@@ -147,24 +119,25 @@ export function PricingClient() {
   }
 
   useEffect(() => {
-    void refreshAccountSummary();
-  }, [refreshAccountSummary]);
-
-  useEffect(() => {
-    if (!showAccountMenu) {
+    if (!showAccountMenu && !showBillingMenu) {
       return;
     }
 
     const handleDocumentPointerDown = (event: MouseEvent) => {
       const targetNode = event.target as Node | null;
-      if (!targetNode || !accountMenuRef.current?.contains(targetNode)) {
+      if (
+        !targetNode ||
+        (!accountMenuRef.current?.contains(targetNode) && !billingMenuRef.current?.contains(targetNode))
+      ) {
         setShowAccountMenu(false);
+        setShowBillingMenu(false);
       }
     };
 
     const handleDocumentKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setShowAccountMenu(false);
+        setShowBillingMenu(false);
       }
     };
 
@@ -175,10 +148,11 @@ export function PricingClient() {
       document.removeEventListener("mousedown", handleDocumentPointerDown);
       document.removeEventListener("keydown", handleDocumentKeyDown);
     };
-  }, [showAccountMenu]);
+  }, [showAccountMenu, showBillingMenu]);
 
   async function handleLogout() {
     setShowAccountMenu(false);
+    setShowBillingMenu(false);
 
     try {
       await fetch("/api/account/logout", { method: "POST" });
@@ -186,10 +160,7 @@ export function PricingClient() {
       // Ignore network/logout failures and reset local session state.
     }
 
-    setSignedInEmail("");
-    setAccountPlan("free");
-    setRemainingEvaluations(null);
-    setCreditBalance(null);
+    clearAccountSummary();
     setShowLoginModal(false);
     setRestoreStep("email");
     setRestoreCode("");
@@ -420,41 +391,72 @@ export function PricingClient() {
               </div>
               <div className="inline-flex items-center gap-2">
                 {signedInEmail ? (
-                  <div ref={accountMenuRef} className="relative">
-                    <button
-                      type="button"
-                      title={signedInEmail}
-                      aria-haspopup="menu"
-                      aria-expanded={showAccountMenu}
-                      onClick={() => setShowAccountMenu((previous) => !previous)}
-                      className="inline-flex items-center gap-2 px-0.5 py-0.5 transition hover:opacity-90"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
+                  <>
+                    <div ref={accountMenuRef} className="relative">
+                      <button
+                        type="button"
+                        title={signedInEmail}
+                        aria-haspopup="menu"
+                        aria-expanded={showAccountMenu}
+                        onClick={() => setShowAccountMenu((previous) => !previous)}
+                        className="inline-flex items-center px-0.5 py-0.5 transition hover:opacity-90"
                       >
-                        {getEmailInitial(signedInEmail)}
-                      </span>
-                      <AccountStatusPill plan={accountPlan} remainingEvaluations={remainingEvaluations} />
-                      <span className="sr-only">{signedInEmail}</span>
-                    </button>
-                    {showAccountMenu ? (
-                      <div
-                        role="menu"
-                        className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
-                      >
-                        <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => void handleLogout()}
-                          className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
                         >
-                          Log out
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
+                          {getEmailInitial(signedInEmail)}
+                        </span>
+                        <span className="sr-only">{signedInEmail}</span>
+                      </button>
+                      {showAccountMenu ? (
+                        <div
+                          role="menu"
+                          className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+                        >
+                          <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => void handleLogout()}
+                            className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                          >
+                            Log out
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                    <div ref={billingMenuRef} className="relative">
+                      <button
+                        type="button"
+                        aria-haspopup="menu"
+                        aria-expanded={showBillingMenu}
+                        onClick={() => {
+                          setShowAccountMenu(false);
+                          setShowBillingMenu((previous) => !previous);
+                        }}
+                        className="inline-flex items-center transition hover:opacity-90"
+                        title="Open billing options"
+                      >
+                        <AccountStatusPill plan={accountPlan} remainingEvaluations={remainingEvaluations} />
+                      </button>
+                      {showBillingMenu ? (
+                        <div
+                          role="menu"
+                          className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+                        >
+                          <Link
+                            href="/billing/manage"
+                            role="menuitem"
+                            onClick={() => setShowBillingMenu(false)}
+                            className="block w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                          >
+                            Billing and refunds
+                          </Link>
+                        </div>
+                      ) : null}
+                    </div>
+                  </>
                 ) : (
                   <button
                     type="button"
@@ -558,14 +560,20 @@ export function PricingClient() {
                 </p>
               ) : null}
               {signedInEmail ? (
-                <button
-                  type="button"
-                  onClick={handleUpgradeToPro}
-                  disabled={isCreatingCheckout || accountPlan === "pro"}
-                  className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {accountPlan === "pro" ? "Already on Pro" : isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
-                </button>
+                accountPlan === "pro" ? (
+                  <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+                    Manage subscription changes from the billing and refunds page.
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleUpgradeToPro}
+                    disabled={isCreatingCheckout}
+                    className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
+                  </button>
+                )
               ) : (
                 <button
                   type="button"
@@ -601,6 +609,11 @@ export function PricingClient() {
                 <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {creditCheckoutError}
                 </p>
+              ) : null}
+              {signedInEmail ? (
+                <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
+                  Need cancellations or refunds? Use the billing and refunds page from your account controls.
+                </div>
               ) : null}
               <div className="mt-4 grid gap-4 sm:grid-cols-3">
                 {CREDIT_PACK_IDS.map((packId) => (
@@ -736,6 +749,33 @@ export function PricingClient() {
           </section>
         </div>
       ) : null}
+
+      <footer className="mt-10 px-1 py-2">
+        <div className="flex flex-col gap-3 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
+          <p>AI-generated estimate only. Not an official grade. RubriCheck.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            {FOOTER_LEGAL_LINKS.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="font-medium text-slate-600 transition hover:text-slate-900"
+              >
+                {link.label}
+              </a>
+            ))}
+            {feedbackUrl ? (
+              <a
+                href={feedbackUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="font-medium text-slate-600 transition hover:text-slate-900"
+              >
+                Feedback
+              </a>
+            ) : null}
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

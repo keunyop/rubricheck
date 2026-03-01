@@ -3,7 +3,6 @@
 import {
   ChangeEvent,
   DragEvent,
-  Fragment,
   FormEvent,
   RefObject,
   useCallback,
@@ -12,9 +11,9 @@ import {
   useRef,
   useState,
 } from "react";
-import html2canvas from "html2canvas";
 import Image from "next/image";
 import Link from "next/link";
+import { useAccountSummary } from "./components/AccountSummaryProvider";
 import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ACTIVE_LANDING_COPY } from "../src/config/copy";
 import { PRO_CHECKOUT_DISPLAY, type ProCheckoutPlan } from "../src/config/proCheckout";
@@ -91,15 +90,6 @@ type CheckoutResponse = {
   error?: string;
 };
 
-type AccountSummaryResponse = {
-  signedIn?: boolean;
-  email?: string | null;
-  plan?: "free" | "pro";
-  remainingEvaluations?: number | null;
-  creditsBalance?: number | null;
-  error?: string;
-};
-
 type EntitlementStatusResponse = {
   plan?: string;
   status?: string;
@@ -135,7 +125,7 @@ type RestoreVerifyResponse = {
 
 type PaywallMode = "restore" | "upgrade";
 type RestoreStep = "email" | "code";
-type ShareFeedbackState = "idle" | "copied" | "downloaded";
+type ShareFeedbackState = "idle" | "copied" | "downloaded" | "failed";
 
 const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
 const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ?? "";
@@ -148,6 +138,7 @@ const SHOW_BETA_BADGE = IS_PRODUCTION_APP_ENV;
 const FOOTER_LEGAL_LINKS = [
   { label: "Privacy", href: "/legal/privacy" },
   { label: "Terms", href: "/legal/terms" },
+  { label: "Refund Policy", href: "/legal/refund-policy" },
   { label: "AI Disclaimer", href: "/legal/ai-disclaimer" },
   { label: "Data Retention", href: "/legal/data-retention" },
 ] as const;
@@ -392,16 +383,35 @@ function drawWrappedText(
   return cursorY;
 }
 
+function drawShareLogoMark(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+  const bars = [
+    { yOffset: 0, width: 44, height: 8, radius: 4, color: "#f8fafc" },
+    { yOffset: 14, width: 50, height: 7, radius: 3.5, color: "#cbd5e1" },
+    { yOffset: 27, width: 36, height: 6, radius: 3, color: "#818cf8" },
+  ];
+
+  for (const bar of bars) {
+    drawRoundedRect(ctx, x, y + bar.yOffset, bar.width, bar.height, bar.radius);
+    ctx.fillStyle = bar.color;
+    ctx.fill();
+  }
+}
+
 function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
-  const width = 1200;
+  const width = 1320;
   const outerPadding = 40;
+  const panelInset = 28;
   const gutter = 24;
-  const leftColumnWidth = 370;
-  const rightColumnWidth = width - outerPadding * 2 - leftColumnWidth - gutter;
+  const leftColumnWidth = 350;
+  const innerPanelWidth = width - (outerPadding + panelInset) * 2;
+  const rightPanelWidth = innerPanelWidth - leftColumnWidth - gutter;
+  const criteriaCardWidth = rightPanelWidth - 68;
+  const criteriaTextWidth = criteriaCardWidth - 32;
   const scoreLineHeight = 92;
   const bodyLineHeight = 30;
   const detailLineHeight = 26;
   const sectionGap = 22;
+  const leftBottomPadding = 40;
 
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -415,7 +425,6 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
   const scoreText = `${formatOverallScoreDisplay(result.overall_range)} / 100`;
   const criteriaItems = result.criteria.slice(0, 4);
   const summaryWidth = leftColumnWidth - 64;
-  const criteriaWidth = rightColumnWidth - 44;
 
   ctx.font = "500 26px system-ui, -apple-system, Segoe UI, sans-serif";
   const summaryLines = wrapCanvasText(ctx, result.summary, summaryWidth);
@@ -429,12 +438,12 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
     ctx.font = "700 24px system-ui, -apple-system, Segoe UI, sans-serif";
     const estimatedRangeText = formatEstimatedRangeDisplay(item.estimated_range, "~");
     const titleText = `${item.name} (${estimatedRangeText} / ${item.max_score})`;
-    const titleLines = wrapCanvasText(ctx, titleText, criteriaWidth);
+    const titleLines = wrapCanvasText(ctx, titleText, criteriaTextWidth);
 
     ctx.font = "400 21px system-ui, -apple-system, Segoe UI, sans-serif";
-    const feedbackLines = wrapCanvasText(ctx, item.feedback, criteriaWidth);
-    const height = 34 + getWrappedTextHeight(titleLines, bodyLineHeight) + 10 + getWrappedTextHeight(feedbackLines, detailLineHeight) + 24;
-    return { titleLines, feedbackLines, estimatedRangeText, height };
+    const feedbackLines = wrapCanvasText(ctx, item.feedback, criteriaTextWidth);
+    const height = 26 + getWrappedTextHeight(titleLines, bodyLineHeight) + 12 + getWrappedTextHeight(feedbackLines, detailLineHeight) + 24;
+    return { titleLines, feedbackLines, height };
   });
 
   const summaryHeight = getWrappedTextHeight(summaryLines, bodyLineHeight);
@@ -442,7 +451,7 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
     (total, lines) => total + Math.max(bodyLineHeight, getWrappedTextHeight(lines, detailLineHeight)) + 16,
     0,
   );
-  const leftColumnHeight = 292 + summaryHeight + improvementsHeight + sectionGap * 2;
+  const leftColumnHeight = 316 + summaryHeight + improvementsHeight + sectionGap * 2 + leftBottomPadding;
   const rightColumnHeight =
     124 + criteriaCards.reduce((total, card) => total + card.height, 0) + Math.max(0, criteriaCards.length - 1) * 16;
   const height = Math.max(760, outerPadding * 2 + Math.max(leftColumnHeight, rightColumnHeight));
@@ -472,15 +481,15 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  const leftX = outerPadding + 28;
+  const leftX = outerPadding + panelInset;
   const rightX = leftX + leftColumnWidth + gutter;
-  const panelTop = outerPadding + 28;
+  const panelTop = outerPadding + panelInset;
 
   drawRoundedRect(ctx, leftX, panelTop, leftColumnWidth, height - outerPadding * 2 - 56, 28);
   ctx.fillStyle = "rgba(8,47,73,0.96)";
   ctx.fill();
 
-  drawRoundedRect(ctx, rightX, panelTop, rightColumnWidth, height - outerPadding * 2 - 56, 28);
+  drawRoundedRect(ctx, rightX, panelTop, rightPanelWidth, height - outerPadding * 2 - 56, 28);
   ctx.fillStyle = "rgba(255,255,255,0.76)";
   ctx.fill();
   ctx.strokeStyle = "rgba(148,163,184,0.22)";
@@ -488,12 +497,14 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
 
   let leftCursorY = panelTop + 28;
   const leftTextX = leftX + 30;
+  drawShareLogoMark(ctx, leftTextX, leftCursorY + 6);
+  ctx.fillStyle = "rgba(248,250,252,0.96)";
+  ctx.font = "700 24px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.textBaseline = "middle";
+  ctx.fillText("RubriCheck", leftTextX + 62, leftCursorY + 22);
+  ctx.textBaseline = "top";
 
-  ctx.fillStyle = "rgba(224,242,254,0.86)";
-  ctx.font = "700 22px Georgia, Times New Roman, serif";
-  ctx.fillText("RubriCheck Snapshot", leftTextX, leftCursorY);
-
-  leftCursorY += 42;
+  leftCursorY += 96;
   ctx.fillStyle = "#ffffff";
   ctx.font = "700 78px system-ui, -apple-system, Segoe UI, sans-serif";
   drawWrappedText(ctx, [scoreText], leftTextX, leftCursorY, scoreLineHeight);
@@ -527,24 +538,25 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
     }
 
     ctx.fillStyle = "#67e8f9";
-    ctx.fillText("•", leftTextX, leftCursorY);
+    ctx.fillText("-", leftTextX, leftCursorY);
     ctx.fillStyle = "#e2e8f0";
     leftCursorY = drawWrappedText(ctx, lines, leftTextX + 20, leftCursorY, detailLineHeight) + 10;
   }
 
-  let rightCursorY = panelTop + 28;
+  let rightCursorY = panelTop + 42;
   const rightTextX = rightX + 22;
+  const criteriaCardX = rightTextX;
 
   ctx.fillStyle = "#0f172a";
   ctx.font = "700 28px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("Criteria snapshot", rightTextX, rightCursorY);
+  ctx.fillText("Criteria", rightTextX, rightCursorY);
 
   rightCursorY += 16;
   ctx.fillStyle = "#475569";
   ctx.font = "500 17px system-ui, -apple-system, Segoe UI, sans-serif";
   rightCursorY = drawWrappedText(
     ctx,
-    wrapCanvasText(ctx, "A compact summary designed for sharing before you revise and resubmit.", rightColumnWidth - 44),
+    wrapCanvasText(ctx, "A compact summary designed for sharing before you revise and resubmit.", rightPanelWidth - 84),
     rightTextX,
     rightCursorY + 22,
     22,
@@ -552,7 +564,7 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
 
   rightCursorY += 18;
   for (const card of criteriaCards) {
-    drawRoundedRect(ctx, rightTextX - 2, rightCursorY, rightColumnWidth - 44, card.height, 20);
+    drawRoundedRect(ctx, criteriaCardX, rightCursorY, criteriaCardWidth, card.height, 20);
     ctx.fillStyle = "#ffffff";
     ctx.fill();
     ctx.strokeStyle = "rgba(14,165,233,0.18)";
@@ -560,19 +572,14 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
     ctx.stroke();
 
     let cardCursorY = rightCursorY + 18;
-    ctx.fillStyle = "#0369a1";
-    ctx.font = "700 14px system-ui, -apple-system, Segoe UI, sans-serif";
-    ctx.fillText(card.estimatedRangeText, rightTextX + 16, cardCursorY);
-
-    cardCursorY += 26;
     ctx.fillStyle = "#0f172a";
     ctx.font = "700 24px system-ui, -apple-system, Segoe UI, sans-serif";
-    cardCursorY = drawWrappedText(ctx, card.titleLines, rightTextX + 16, cardCursorY, bodyLineHeight);
+    cardCursorY = drawWrappedText(ctx, card.titleLines, criteriaCardX + 16, cardCursorY, bodyLineHeight);
 
     cardCursorY += 8;
     ctx.fillStyle = "#475569";
     ctx.font = "400 21px system-ui, -apple-system, Segoe UI, sans-serif";
-    drawWrappedText(ctx, card.feedbackLines, rightTextX + 16, cardCursorY, detailLineHeight);
+    drawWrappedText(ctx, card.feedbackLines, criteriaCardX + 16, cardCursorY, detailLineHeight);
 
     rightCursorY += card.height + 16;
   }
@@ -613,48 +620,25 @@ function downloadShareImage(blob: Blob): void {
   }, 30_000);
 }
 
-async function captureGradeSectionCanvas(element: HTMLElement): Promise<HTMLCanvasElement> {
-  const captureWidth = Math.max(1120, Math.ceil(element.getBoundingClientRect().width));
-  const host = document.createElement("div");
-  host.setAttribute("aria-hidden", "true");
-  host.style.position = "fixed";
-  host.style.left = "-20000px";
-  host.style.top = "0";
-  host.style.width = `${captureWidth + 48}px`;
-  host.style.padding = "24px";
-  host.style.background = "#f8fafc";
-  host.style.pointerEvents = "none";
-  host.style.opacity = "1";
-  host.style.zIndex = "-1";
-
-  const clone = element.cloneNode(true) as HTMLElement;
-  clone.style.width = `${captureWidth}px`;
-  clone.style.maxWidth = `${captureWidth}px`;
-  clone.style.margin = "0";
-  clone.style.transform = "none";
-  clone.querySelectorAll("[data-html2canvas-ignore='true']").forEach((node) => {
-    node.remove();
-  });
-
-  host.append(clone);
-  document.body.append(host);
+async function copyImageToClipboard(blob: Blob): Promise<boolean> {
+  if (
+    typeof window === "undefined" ||
+    !window.isSecureContext ||
+    typeof navigator === "undefined" ||
+    !navigator.clipboard?.write ||
+    !("ClipboardItem" in window)
+  ) {
+    return false;
+  }
 
   try {
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => resolve());
+    const clipboardItem = new window.ClipboardItem({
+      [blob.type || "image/png"]: blob,
     });
-
-    return await html2canvas(clone, {
-      backgroundColor: "#f8fafc",
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      windowWidth: captureWidth + 48,
-      scrollX: 0,
-      scrollY: 0,
-    });
-  } finally {
-    host.remove();
+    await navigator.clipboard.write([clipboardItem]);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -662,6 +646,13 @@ export default function Home() {
   const rubricInputRef = useRef<HTMLInputElement | null>(null);
   const assignmentInputRef = useRef<HTMLInputElement | null>(null);
   const evaluationHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const {
+    signedInEmail,
+    accountPlan,
+    remainingEvaluations,
+    refreshAccountSummary,
+    clearAccountSummary,
+  } = useAccountSummary();
 
   const [rubricMode, setRubricMode] = useState<InputMode>("file");
   const [assignmentMode, setAssignmentMode] = useState<InputMode>("file");
@@ -685,9 +676,6 @@ export default function Home() {
   const [showRedisWarning, setShowRedisWarning] = useState(false);
   const [showDailyLimitAlert, setShowDailyLimitAlert] = useState(false);
   const [dailyLimitValue, setDailyLimitValue] = useState<number | null>(null);
-  const [signedInEmail, setSignedInEmail] = useState("");
-  const [accountPlan, setAccountPlan] = useState<"free" | "pro">("free");
-  const [remainingEvaluations, setRemainingEvaluations] = useState<number | null>(null);
   const [evaluationMessageIndex, setEvaluationMessageIndex] = useState(0);
   const [showRewritePaywall, setShowRewritePaywall] = useState(false);
   const [expandedRewriteSections, setExpandedRewriteSections] = useState<Record<string, boolean>>(
@@ -712,12 +700,13 @@ export default function Home() {
   const [proRestoreNotice, setProRestoreNotice] = useState("");
   const [showEnvDebugFooter, setShowEnvDebugFooter] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [showBillingMenu, setShowBillingMenu] = useState(false);
   const [shouldFocusEvaluationHeading, setShouldFocusEvaluationHeading] = useState(false);
   const [draftRestoreNotice, setDraftRestoreNotice] = useState("");
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const billingMenuRef = useRef<HTMLDivElement | null>(null);
   const checkoutReturnSessionRef = useRef<string | null>(null);
-  const resultShareCardRef = useRef<HTMLDivElement | null>(null);
 
   const isLoading = loadingStep !== "idle";
   const selectedCheckoutPlanDisplay = PRO_CHECKOUT_DISPLAY[checkoutPlan];
@@ -733,34 +722,6 @@ export default function Home() {
 
     return loadingStepLabels[loadingStep];
   }, [evaluationMessageIndex, loadingStep]);
-
-  const refreshAccountSummary = useCallback(async () => {
-    try {
-      const response = await fetch("/api/account/summary", {
-        method: "GET",
-        cache: "no-store",
-      });
-      const data: AccountSummaryResponse = await response.json().catch(() => ({}));
-      const email = typeof data.email === "string" ? data.email.trim() : "";
-      const remaining =
-        typeof data.remainingEvaluations === "number" && Number.isFinite(data.remainingEvaluations)
-          ? Math.max(0, Math.floor(data.remainingEvaluations))
-          : null;
-      if (response.ok && data.signedIn && email) {
-        setSignedInEmail(email);
-        setAccountPlan(data.plan === "pro" ? "pro" : "free");
-        setRemainingEvaluations(remaining);
-      } else {
-        setSignedInEmail("");
-        setAccountPlan("free");
-        setRemainingEvaluations(null);
-      }
-    } catch {
-      setSignedInEmail("");
-      setAccountPlan("free");
-      setRemainingEvaluations(null);
-    }
-  }, []);
 
   const refreshEntitlementStatus = useCallback(async () => {
     if (!SHOW_PRO_FEATURES) {
@@ -786,6 +747,7 @@ export default function Home() {
 
   function openLoginModal(infoMessage?: string) {
     setShowAccountMenu(false);
+    setShowBillingMenu(false);
     setRestoreStep("email");
     setRestoreCode("");
     setRestoreError("");
@@ -793,7 +755,8 @@ export default function Home() {
     setShowLoginModal(true);
   }
 
-  function requireSignedInForEvaluation(_selectedMode: GradingMode): boolean {
+  function requireSignedInForEvaluation(selectedMode: GradingMode): boolean {
+    void selectedMode;
     return true;
   }
 
@@ -996,10 +959,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    void refreshAccountSummary();
-  }, [refreshAccountSummary]);
-
-  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
@@ -1126,20 +1085,25 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!showAccountMenu) {
+    if (!showAccountMenu && !showBillingMenu) {
       return;
     }
 
     const handleDocumentPointerDown = (event: MouseEvent) => {
       const targetNode = event.target as Node | null;
-      if (!targetNode || !accountMenuRef.current?.contains(targetNode)) {
+      if (
+        !targetNode ||
+        (!accountMenuRef.current?.contains(targetNode) && !billingMenuRef.current?.contains(targetNode))
+      ) {
         setShowAccountMenu(false);
+        setShowBillingMenu(false);
       }
     };
 
     const handleDocumentKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setShowAccountMenu(false);
+        setShowBillingMenu(false);
       }
     };
 
@@ -1150,7 +1114,7 @@ export default function Home() {
       document.removeEventListener("mousedown", handleDocumentPointerDown);
       document.removeEventListener("keydown", handleDocumentKeyDown);
     };
-  }, [showAccountMenu]);
+  }, [showAccountMenu, showBillingMenu]);
 
   useEffect(() => {
     void refreshEntitlementStatus();
@@ -1197,56 +1161,48 @@ export default function Home() {
     }));
   }
 
+  function setShareFeedbackWithReset(nextState: ShareFeedbackState, durationMs = 2200) {
+    if (copyResetTimerRef.current) {
+      clearTimeout(copyResetTimerRef.current);
+      copyResetTimerRef.current = null;
+    }
+
+    setShareFeedback(nextState);
+
+    if (nextState === "idle") {
+      return;
+    }
+
+    copyResetTimerRef.current = setTimeout(() => {
+      setShareFeedback("idle");
+    }, durationMs);
+  }
+
   async function handleShareResultsImage() {
     if (!gradeResult) {
       return;
     }
 
     setIsSharingImage(true);
-    setShareFeedback("idle");
+    setShareFeedbackWithReset("idle");
 
     try {
-      if (!resultShareCardRef.current) {
-        throw new Error("RESULT_SHARE_CARD_MISSING");
-      }
-
-      const canvas = await captureGradeSectionCanvas(resultShareCardRef.current);
+      const canvas = buildShareFallbackCanvas(gradeResult);
       const imageBlob = await canvasToBlob(canvas);
       if (!imageBlob || imageBlob.size === 0) {
         throw new Error("IMAGE_BLOB_EMPTY");
       }
 
-      const clipboardApi = navigator.clipboard;
-      const clipboardItemCtor = (
-        window as Window & { ClipboardItem?: new (items: Record<string, Blob>) => ClipboardItem }
-      ).ClipboardItem;
-
-      if (clipboardApi?.write && clipboardItemCtor) {
-        try {
-          await clipboardApi.write([new clipboardItemCtor({ "image/png": imageBlob })]);
-          setShareFeedback("copied");
-          if (copyResetTimerRef.current) {
-            clearTimeout(copyResetTimerRef.current);
-          }
-          copyResetTimerRef.current = setTimeout(() => {
-            setShareFeedback("idle");
-          }, 1800);
-          return;
-        } catch {
-          // Fallback to file download when clipboard image write is blocked.
-        }
+      const copied = await copyImageToClipboard(imageBlob);
+      if (copied) {
+        setShareFeedbackWithReset("copied", 2800);
+        return;
       }
 
       downloadShareImage(imageBlob);
-      setShareFeedback("downloaded");
-      if (copyResetTimerRef.current) {
-        clearTimeout(copyResetTimerRef.current);
-      }
-      copyResetTimerRef.current = setTimeout(() => {
-        setShareFeedback("idle");
-      }, 1800);
+      setShareFeedbackWithReset("downloaded", 3200);
     } catch {
-      setShareFeedback("idle");
+      setShareFeedbackWithReset("failed", 2800);
     } finally {
       setIsSharingImage(false);
     }
@@ -1693,6 +1649,7 @@ export default function Home() {
 
   async function handleLogout() {
     setShowAccountMenu(false);
+    setShowBillingMenu(false);
 
     try {
       await fetch("/api/account/logout", { method: "POST" });
@@ -1700,9 +1657,7 @@ export default function Home() {
       // Ignore network/logout failures and reset local session state.
     }
 
-    setSignedInEmail("");
-    setAccountPlan("free");
-    setRemainingEvaluations(null);
+    clearAccountSummary();
     setHasProAccess(false);
     setEntitlementStatus("needs_restore");
     setProRestoreNotice("");
@@ -1873,41 +1828,72 @@ export default function Home() {
                       Pricing
                     </Link>
                     {signedInEmail ? (
-                      <div ref={accountMenuRef} className="relative">
-                        <button
-                          type="button"
-                          title={signedInEmail}
-                          aria-haspopup="menu"
-                          aria-expanded={showAccountMenu}
-                          onClick={() => setShowAccountMenu((previous) => !previous)}
-                          className="inline-flex items-center gap-2 px-0.5 py-0.5 transition hover:opacity-90"
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
+                      <>
+                        <div ref={accountMenuRef} className="relative">
+                          <button
+                            type="button"
+                            title={signedInEmail}
+                            aria-haspopup="menu"
+                            aria-expanded={showAccountMenu}
+                            onClick={() => setShowAccountMenu((previous) => !previous)}
+                            className="inline-flex items-center px-0.5 py-0.5 transition hover:opacity-90"
                           >
-                            {getEmailInitial(signedInEmail)}
-                          </span>
-                          <AccountStatusPill plan={accountPlan} remainingEvaluations={remainingEvaluations} />
-                          <span className="sr-only">{signedInEmail}</span>
-                        </button>
-                        {showAccountMenu ? (
-                          <div
-                            role="menu"
-                            className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
-                          >
-                            <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
-                            <button
-                              type="button"
-                              role="menuitem"
-                              onClick={() => void handleLogout()}
-                              className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                            <span
+                              aria-hidden="true"
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-semibold ${getEmailInitialAvatarClassName(signedInEmail)}`}
                             >
-                              Log out
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
+                              {getEmailInitial(signedInEmail)}
+                            </span>
+                            <span className="sr-only">{signedInEmail}</span>
+                          </button>
+                          {showAccountMenu ? (
+                            <div
+                              role="menu"
+                              className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+                            >
+                              <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => void handleLogout()}
+                                className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                              >
+                                Log out
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                        <div ref={billingMenuRef} className="relative">
+                          <button
+                            type="button"
+                            aria-haspopup="menu"
+                            aria-expanded={showBillingMenu}
+                            onClick={() => {
+                              setShowAccountMenu(false);
+                              setShowBillingMenu((previous) => !previous);
+                            }}
+                            className="inline-flex items-center transition hover:opacity-90"
+                            title="Open billing options"
+                          >
+                            <AccountStatusPill plan={accountPlan} remainingEvaluations={remainingEvaluations} />
+                          </button>
+                          {showBillingMenu ? (
+                            <div
+                              role="menu"
+                              className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+                            >
+                              <Link
+                                href="/billing/manage"
+                                role="menuitem"
+                                onClick={() => setShowBillingMenu(false)}
+                                className="block w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                              >
+                                Billing and refunds
+                              </Link>
+                            </div>
+                          ) : null}
+                        </div>
+                      </>
                     ) : (
                       <button
                         type="button"
@@ -2275,10 +2261,7 @@ export default function Home() {
         ) : null}
 
         {gradeResult ? (
-          <section
-            ref={resultShareCardRef}
-            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
-          >
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
             <div className="border-b border-slate-100 pb-4">
               <div className="flex flex-wrap items-center gap-2">
                 <h2
@@ -2311,19 +2294,30 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handleShareResultsImage}
-                    data-html2canvas-ignore="true"
                     disabled={isSharingImage}
                     className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
                   >
                     {isSharingImage
-                      ? "Preparing image..."
+                      ? "Sharing..."
                       : shareFeedback === "copied"
-                        ? "Copied"
-                        : shareFeedback === "downloaded"
+                          ? "Image copied"
+                          : shareFeedback === "downloaded"
                           ? "Downloaded"
                           : "Share"}
                   </button>
                 </div>
+                {shareFeedback !== "idle" && shareFeedback !== "copied" ? (
+                  <p
+                    aria-live="polite"
+                    className={`mt-2 text-xs leading-5 md:text-sm ${
+                      shareFeedback === "failed" ? "text-red-600" : "text-slate-500"
+                    }`}
+                  >
+                    {shareFeedback === "downloaded"
+                          ? "Your browser blocked image clipboard access, so a PNG was downloaded instead."
+                          : "Could not generate the results image. Please try again."}
+                  </p>
+                ) : null}
                 <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
                   This is an AI-estimated range based on your rubric. Use it as guidance before
                   submission.
@@ -2413,98 +2407,92 @@ export default function Home() {
                       (isDetailedBreakdownLocked || shouldForceHideDetailedBreakdown);
 
                     return (
-                      <Fragment key={criteriaKey}>
-                        <tr>
-                          <td className="px-4 py-3 align-top font-medium">{item.name}</td>
-                          <td className="px-4 py-3 align-top">{item.max_score}</td>
-                          <td className="px-4 py-3 align-top">
-                            <span className="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-sm font-medium text-indigo-700">
-                              {formatEstimatedRangeDisplay(item.estimated_range, "-")}
-                            </span>
-                          </td>
-                          <td className="max-w-[22rem] whitespace-normal break-words px-4 py-3 align-top">
-                            <p>{rationaleText}</p>
-                            {detailedBreakdownBullets.length > 0 ? (
-                              <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-700">
-                                {detailedBreakdownBullets.map((bullet, bulletIndex) => (
-                                  <li key={`${criteriaKey}-detail-${bulletIndex}`}>{bullet}</li>
-                                ))}
-                              </ul>
-                            ) : null}
-                            {showDetailedBreakdownLockNotice ? (
-                              <p className="mt-2 text-xs font-medium text-indigo-700">
-                                {LOCKED_DETAILED_FEEDBACK_NOTICE}
-                              </p>
-                            ) : null}
-                            {!isDetailedBreakdownLocked && evidenceList.length > 0 ? (
-                              <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-600">
-                                {evidenceList.map((snippet, snippetIndex) => (
-                                  <li key={`${criteriaKey}-evidence-${snippetIndex}`}>{snippet}</li>
-                                ))}
-                              </ul>
-                            ) : null}
-                          </td>
-                        </tr>
-                        {SHOW_PRO_FEATURES ? (
-                          <tr>
-                            <td colSpan={4} className="px-4 pb-4 pt-0">
-                              <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50/80">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleRewriteSection(criteriaKey)}
-                                  className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70"
-                                >
-                                  <span>Rewrite suggestions (Pro)</span>
-                                  <span className="text-xs font-medium text-slate-500">
-                                    {isRewriteOpen ? "Hide" : "Show"}
-                                  </span>
-                                </button>
-                                {isRewriteOpen ? (
-                                  <div className="border-t border-slate-200 px-3 py-3">
-                                    {hasProAccess ? (
-                                      rewriteSuggestions.length > 0 ? (
-                                        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
-                                          {rewriteSuggestions.map((suggestion, suggestionIndex) => (
-                                            <li key={`${criteriaKey}-rewrite-${suggestionIndex}`}>{suggestion}</li>
-                                          ))}
-                                        </ul>
-                                      ) : (
-                                        <p className="text-sm text-slate-600">
-                                          Rewrite suggestions are not available for this criterion yet. Run Evaluate again to refresh this section.
-                                        </p>
-                                      )
+                      <tr key={criteriaKey}>
+                        <td className="px-4 py-3 align-top font-medium">{item.name}</td>
+                        <td className="px-4 py-3 align-top">{item.max_score}</td>
+                        <td className="px-4 py-3 align-top">
+                          <span className="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-sm font-medium text-indigo-700">
+                            {formatEstimatedRangeDisplay(item.estimated_range, "-")}
+                          </span>
+                        </td>
+                        <td className="max-w-[22rem] whitespace-normal break-words px-4 py-3 align-top">
+                          <p>{rationaleText}</p>
+                          {detailedBreakdownBullets.length > 0 ? (
+                            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-700">
+                              {detailedBreakdownBullets.map((bullet, bulletIndex) => (
+                                <li key={`${criteriaKey}-detail-${bulletIndex}`}>{bullet}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                          {showDetailedBreakdownLockNotice ? (
+                            <p className="mt-2 text-xs font-medium text-indigo-700">
+                              {LOCKED_DETAILED_FEEDBACK_NOTICE}
+                            </p>
+                          ) : null}
+                          {!isDetailedBreakdownLocked && evidenceList.length > 0 ? (
+                            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-600">
+                              {evidenceList.map((snippet, snippetIndex) => (
+                                <li key={`${criteriaKey}-evidence-${snippetIndex}`}>{snippet}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                          {SHOW_PRO_FEATURES ? (
+                            <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-slate-50/80">
+                              <button
+                                type="button"
+                                onClick={() => toggleRewriteSection(criteriaKey)}
+                                className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70"
+                              >
+                                <span>Rewrite suggestions (Pro)</span>
+                                <span className="text-xs font-medium text-slate-500">
+                                  {isRewriteOpen ? "Hide" : "Show"}
+                                </span>
+                              </button>
+                              {isRewriteOpen ? (
+                                <div className="border-t border-slate-200 px-3 py-3">
+                                  {hasProAccess ? (
+                                    rewriteSuggestions.length > 0 ? (
+                                      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                                        {rewriteSuggestions.map((suggestion, suggestionIndex) => (
+                                          <li key={`${criteriaKey}-rewrite-${suggestionIndex}`}>{suggestion}</li>
+                                        ))}
+                                      </ul>
                                     ) : (
-                                      <>
-                                        <p className="text-sm text-slate-600">
-                                          Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock.
-                                        </p>
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                          {!signedInEmail ? (
-                                            <button
-                                              type="button"
-                                              onClick={() => openLoginModal()}
-                                              className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                            >
-                                              Log in
-                                            </button>
-                                          ) : null}
+                                      <p className="text-sm text-slate-600">
+                                        Rewrite suggestions are not available for this criterion yet. Run Evaluate again to refresh this section.
+                                      </p>
+                                    )
+                                  ) : (
+                                    <>
+                                      <p className="text-sm text-slate-600">
+                                        Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock.
+                                      </p>
+                                      <div className="mt-3 flex flex-wrap gap-2">
+                                        {!signedInEmail ? (
                                           <button
                                             type="button"
-                                            onClick={() => openRewritePaywall("upgrade")}
+                                            onClick={() => openLoginModal()}
                                             className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
                                           >
-                                            Upgrade to Pro
+                                            Log in
                                           </button>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                ) : null}
-                              </div>
-                            </td>
-                          </tr>
-                        ) : null}
-                      </Fragment>
+                                        ) : null}
+                                        <button
+                                          type="button"
+                                          onClick={() => openRewritePaywall("upgrade")}
+                                          className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                                        >
+                                          Upgrade to Pro
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>

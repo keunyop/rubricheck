@@ -50,7 +50,7 @@ function getOptionalCacheRedisClient(): RubricCacheRedisClient | null {
 }
 
 function normalizeRubricText(rubricText: string): string {
-  return rubricText.replace(/\r\n?/g, "\n").trim().replace(/[\t\f\v ]+/g, " ").replace(/\n{3,}/g, "\n\n");
+  return rubricText.replace(/\r\n?/g, "\n").replace(/\s+/g, " ").trim();
 }
 
 function buildRubricCacheKey(rubricText: string, identity: RubricCacheIdentity): string {

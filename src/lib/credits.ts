@@ -27,11 +27,42 @@ export type CreditReservation = {
   lotId?: number | null;
 };
 
+export type RefundableCreditPayment = {
+  paymentId: number;
+  paymentIntentId: string;
+  creditPackId: string | null;
+  totalCredits: number;
+  remainingCredits: number;
+  amountTotal: number;
+  refundableAmount: number;
+  currency: string;
+  createdAt: string | null;
+};
+
+export type RefundableCreditSummary = {
+  payments: RefundableCreditPayment[];
+  refundableCredits: number;
+  refundableAmount: number;
+  currency: string | null;
+};
+
 type SupabaseReserveResult = {
   reserved?: unknown;
   balance_after?: unknown;
   usage_event_id?: unknown;
   lot_id?: unknown;
+};
+
+type RefundableCreditPaymentRow = {
+  payment_id?: unknown;
+  stripe_payment_intent_id?: unknown;
+  credit_pack_id?: unknown;
+  total_credits?: unknown;
+  remaining_credits?: unknown;
+  amount_total?: unknown;
+  refundable_amount?: unknown;
+  currency?: unknown;
+  created_at?: unknown;
 };
 
 let redisClient: Redis | null = null;
@@ -114,6 +145,45 @@ function parseNullableString(value: unknown): string | null {
 
   const normalized = value.trim();
   return normalized ? normalized : null;
+}
+
+function parseRefundableCreditPayment(value: unknown): RefundableCreditPayment | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const raw = value as RefundableCreditPaymentRow;
+  const paymentId = parseCredits(raw.payment_id);
+  const totalCredits = parseCredits(raw.total_credits);
+  const remainingCredits = parseCredits(raw.remaining_credits);
+  const amountTotal = parseCredits(raw.amount_total);
+  const refundableAmount = parseCredits(raw.refundable_amount);
+  const paymentIntentId = parseNullableString(raw.stripe_payment_intent_id);
+  const currency = parseNullableString(raw.currency)?.toLowerCase() ?? null;
+
+  if (
+    paymentId <= 0 ||
+    !paymentIntentId ||
+    !currency ||
+    totalCredits <= 0 ||
+    remainingCredits <= 0 ||
+    amountTotal <= 0 ||
+    refundableAmount <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    paymentId,
+    paymentIntentId,
+    creditPackId: parseNullableString(raw.credit_pack_id),
+    totalCredits,
+    remainingCredits,
+    amountTotal,
+    refundableAmount,
+    currency,
+    createdAt: parseNullableString(raw.created_at),
+  };
 }
 
 function isRedisConfigMissingError(error: unknown): boolean {
@@ -243,6 +313,42 @@ async function refundReservationSupabase(reservation: CreditReservation): Promis
   return parseCredits(raw);
 }
 
+async function listRefundableCreditPaymentsSupabase(target: CreditStorageTarget): Promise<RefundableCreditPayment[]> {
+  const owner = targetToOwner(target);
+  const raw = await callSupabaseRpc<unknown[]>("rubricheck_list_refundable_credit_payments", {
+    p_owner_type: owner.ownerType,
+    p_owner_id: owner.ownerId,
+  });
+
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw.map((row) => parseRefundableCreditPayment(row)).filter((row): row is RefundableCreditPayment => Boolean(row));
+}
+
+async function markCreditPaymentRefundedSupabase(params: {
+  target: CreditStorageTarget;
+  paymentId: number;
+  stripeRefundId: string;
+  refundedCredits: number;
+  refundedAmount: number;
+  reason?: string | null;
+}): Promise<number> {
+  const owner = targetToOwner(params.target);
+  const raw = await callSupabaseRpc<number>("rubricheck_mark_credit_payment_refunded", {
+    p_payment_id: params.paymentId,
+    p_owner_type: owner.ownerType,
+    p_owner_id: owner.ownerId,
+    p_stripe_refund_id: params.stripeRefundId,
+    p_refunded_credits: params.refundedCredits,
+    p_refunded_amount: params.refundedAmount,
+    p_reason: params.reason ?? null,
+  });
+
+  return parseCredits(raw);
+}
+
 async function ensureEmailCreditsMigratedToCustomer(email: string, customerId: string): Promise<void> {
   const normalizedEmail = normalizeEmail(email);
   const normalizedCustomerId = customerId.trim();
@@ -352,6 +458,40 @@ export async function getCreditBalanceForRequest(request: Request): Promise<numb
   return getCreditBalanceForTarget(target);
 }
 
+export async function getRefundableCreditSummaryForTarget(
+  target: CreditStorageTarget,
+): Promise<RefundableCreditSummary | null> {
+  if (!hasSupabaseConfig()) {
+    return null;
+  }
+
+  const payments = await listRefundableCreditPaymentsSupabase(target);
+  const refundableCredits = payments.reduce((sum, payment) => sum + payment.remainingCredits, 0);
+  const refundableAmount = payments.reduce((sum, payment) => sum + payment.refundableAmount, 0);
+  const currency = payments[0]?.currency ?? null;
+
+  return {
+    payments,
+    refundableCredits,
+    refundableAmount,
+    currency,
+  };
+}
+
+export async function getRefundableCreditSummaryForRequest(request: Request): Promise<RefundableCreditSummary | null> {
+  if (!hasSupabaseConfig()) {
+    return null;
+  }
+
+  const email = getCreditEmailFromCookie(request);
+  const target = await resolveCreditStorageTarget({ email });
+  if (!target) {
+    return null;
+  }
+
+  return getRefundableCreditSummaryForTarget(target);
+}
+
 export async function reserveOneCreditForRequest(request: Request): Promise<{
   reserved: boolean;
   balanceAfter: number;
@@ -409,6 +549,21 @@ export async function refundCreditReservation(reservation: CreditReservation): P
   const key = creditTargetToKey(reservation.target);
   const nextBalance = await getRedisClient().incr(key);
   return parseCredits(nextBalance);
+}
+
+export async function markCreditPaymentRefunded(params: {
+  target: CreditStorageTarget;
+  paymentId: number;
+  stripeRefundId: string;
+  refundedCredits: number;
+  refundedAmount: number;
+  reason?: string | null;
+}): Promise<number> {
+  if (!hasSupabaseConfig()) {
+    throw new Error("SUPABASE_CONFIG_MISSING");
+  }
+
+  return markCreditPaymentRefundedSupabase(params);
 }
 
 export async function grantCredits(params: {

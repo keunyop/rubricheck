@@ -45,7 +45,7 @@ export default function TermsOfServicePage() {
         <p className="mt-2 text-sm leading-6 text-slate-700">
           Paid subscriptions and top-ups are billed through third-party processors. Pricing,
           billing periods, and included usage are shown at checkout. Refund handling follows the
-          applicable payment terms and local consumer law.
+          Refund Policy, applicable payment terms, and local consumer law.
         </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">Service Availability</h2>
