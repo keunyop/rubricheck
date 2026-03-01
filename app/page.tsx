@@ -130,10 +130,9 @@ type ShareFeedbackState = "idle" | "copied" | "downloaded" | "failed";
 const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
 const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ?? "";
 const NODE_ENV = process.env.NODE_ENV?.trim().toLowerCase() ?? "";
-const IS_PRODUCTION_APP_ENV = NEXT_PUBLIC_APP_ENV === "production";
-const SHOW_PRO_FEATURES = !IS_PRODUCTION_APP_ENV;
-const SHOW_ACCOUNT_AND_PRICING = !IS_PRODUCTION_APP_ENV;
-const SHOW_BETA_BADGE = IS_PRODUCTION_APP_ENV;
+const SHOW_PRO_FEATURES = true;
+const SHOW_ACCOUNT_AND_PRICING = true;
+const SHOW_BETA_BADGE = NEXT_PUBLIC_APP_ENV === "production";
 
 const FOOTER_LEGAL_LINKS = [
   { label: "Privacy", href: "/legal/privacy" },
