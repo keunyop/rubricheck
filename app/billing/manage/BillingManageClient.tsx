@@ -85,8 +85,10 @@ export function BillingManageClient() {
   const [billingStatus, setBillingStatus] = useState<"none" | "active" | "canceling" | "canceled">("none");
   const [billingStatusPeriodEnd, setBillingStatusPeriodEnd] = useState<number | null>(null);
   const [billingStatusError, setBillingStatusError] = useState("");
-  const hasProSubscription = accountPlan === "pro" || billingStatus === "active" || billingStatus === "canceling";
-  const displayPlan = hasProSubscription ? "Pro" : (creditBalance ?? 0) > 0 ? "Top-up" : "Free";
+  const hasProAccess = accountPlan === "pro";
+  const hasManageableSubscription = billingStatus === "active" || billingStatus === "canceling";
+  const shouldShowSubscriptionSection = hasProAccess || hasManageableSubscription;
+  const displayPlan = hasProAccess ? "Pro" : (creditBalance ?? 0) > 0 ? "Top-up" : "Free";
   const billingStatusDateLabel = formatDateFromEpoch(billingStatusPeriodEnd);
 
   useEffect(() => {
@@ -310,7 +312,7 @@ export function BillingManageClient() {
                 <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Evaluations left</p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
-                    {hasProSubscription
+                    {hasProAccess
                       ? "Unlimited"
                       : typeof remainingEvaluations === "number"
                           ? String(remainingEvaluations)
@@ -318,7 +320,7 @@ export function BillingManageClient() {
                   </p>
                 </div>
               </div>
-              {hasProSubscription ? (
+              {shouldShowSubscriptionSection ? (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscription status</p>
@@ -335,10 +337,15 @@ export function BillingManageClient() {
                         : "Canceled, active until the current billing period ends"
                       : billingStatus === "active"
                         ? "Active"
-                        : accountPlan === "pro"
+                        : hasProAccess
                           ? "Pro access is still syncing"
                           : "No active subscription"}
                   </p>
+                  {!hasProAccess && hasManageableSubscription ? (
+                    <p className="mt-2 text-sm text-slate-600">
+                      A Stripe subscription was found for this email, but this account is still showing Free access in RubriCheck.
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
               {billingStatusError ? (
@@ -346,10 +353,12 @@ export function BillingManageClient() {
                   {billingStatusError}
                 </p>
               ) : null}
-              {hasProSubscription ? (
+              {shouldShowSubscriptionSection ? (
                 <>
                   <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                    {billingStatus === "canceling"
+                    {!hasManageableSubscription
+                      ? "Subscription details are still syncing. Please refresh shortly if you recently changed billing."
+                      : billingStatus === "canceling"
                       ? billingStatusDateLabel
                         ? `Renewal is canceled. Pro access remains active until ${billingStatusDateLabel}.`
                         : "Renewal is canceled. Pro access remains active until the current billing period ends."
@@ -363,7 +372,7 @@ export function BillingManageClient() {
                   <button
                     type="button"
                     onClick={() => void handleOpenBillingPortal()}
-                    disabled={isOpeningBillingPortal}
+                    disabled={isOpeningBillingPortal || !hasManageableSubscription}
                     className="mt-4 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isOpeningBillingPortal ? "Opening billing..." : "Manage or cancel subscription"}

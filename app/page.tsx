@@ -672,7 +672,6 @@ export default function Home() {
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState("");
-  const [lastRequestId, setLastRequestId] = useState("");
   const [openAiTimeoutCount, setOpenAiTimeoutCount] = useState(0);
   const [showRedisWarning, setShowRedisWarning] = useState(false);
   const [showDailyLimitAlert, setShowDailyLimitAlert] = useState(false);
@@ -1478,7 +1477,6 @@ export default function Home() {
     setGradingMode(selectedMode);
     setError("");
     setErrorCode("");
-    setLastRequestId("");
     setShowRedisWarning(false);
     setShowDailyLimitAlert(false);
     setDraftRestoreNotice("");
@@ -1579,7 +1577,6 @@ export default function Home() {
       await refreshAccountSummary();
 
       const apiErrorResponse = (data ?? {}) as GradeErrorResponse;
-      setLastRequestId(response.headers.get("x-request-id") ?? apiErrorResponse.requestId ?? "");
       setShowRedisWarning(response.headers.get("x-rubricheck-warning") === "REDIS_UNAVAILABLE");
       const apiError =
         data && typeof data === "object" && "error" in data
@@ -2214,7 +2211,6 @@ export default function Home() {
             {error && errorCode !== "OPENAI_TIMEOUT" && errorCode !== "FILE_PARSE_FAILED" ? (
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
-                {lastRequestId ? <p className="mt-1 text-xs">Request ID: {lastRequestId}</p> : null}
               </div>
             ) : null}
             {draftRestoreNotice ? (
