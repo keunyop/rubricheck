@@ -214,21 +214,10 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
-function getRestoreEmailLogoUrl(): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://rubricheck.com";
-
-  try {
-    return new URL("/rubricheck-logo.svg", appUrl).toString();
-  } catch {
-    return "https://rubricheck.com/rubricheck-logo.svg";
-  }
-}
-
 function buildRestoreOtpEmail(email: string, code: string): { subject: string; text: string; html: string } {
   const subject = "Your RubriCheck sign-in code";
   const escapedEmail = escapeHtml(email);
   const escapedCode = escapeHtml(code);
-  const logoUrl = escapeHtml(getRestoreEmailLogoUrl());
 
   return {
     subject,
@@ -244,55 +233,46 @@ function buildRestoreOtpEmail(email: string, code: string): { subject: string; t
     ].join("\n"),
     html: `<!DOCTYPE html>
 <html lang="en">
-  <body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f8fafc;padding:32px 16px;">
+  <body style="margin:0;padding:24px;background-color:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
       <tr>
-        <td align="center">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;">
+        <td>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:520px;">
             <tr>
-              <td style="padding-bottom:16px;text-align:center;">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
-                  <tr>
-                    <td style="vertical-align:middle;padding-right:12px;">
-                      <img src="${logoUrl}" alt="RubriCheck" width="96" height="38" style="display:block;border:0;outline:none;text-decoration:none;height:auto;max-width:96px;" />
-                    </td>
-                    <td style="vertical-align:middle;font-size:24px;line-height:1.1;font-weight:800;letter-spacing:-0.02em;color:#0f172a;">
-                      RubriCheck
-                    </td>
-                  </tr>
-                </table>
+              <td style="padding-bottom:16px;font-size:22px;line-height:1.2;font-weight:700;color:#111827;">
+                RubriCheck
               </td>
             </tr>
             <tr>
-              <td style="border:1px solid #e2e8f0;border-radius:24px;background-color:#ffffff;padding:40px 32px;box-shadow:0 16px 40px rgba(15,23,42,0.08);">
-                <p style="margin:0 0 12px;font-size:12px;line-height:1.4;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#6366f1;">
-                  Sign-In Verification
-                </p>
-                <h1 style="margin:0 0 12px;font-size:28px;line-height:1.2;font-weight:700;color:#0f172a;">
-                  Your sign-in code is ready
-                </h1>
-                <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#475569;">
-                  Use the verification code below to sign in to <strong style="color:#0f172a;">${escapedEmail}</strong>.
-                </p>
-                <div style="margin:0 0 24px;padding:20px 24px;border-radius:20px;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);text-align:center;">
-                  <div style="margin:0;font-size:12px;line-height:1.4;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">
-                    Verification Code
-                  </div>
-                  <div style="margin-top:10px;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:0.32em;color:#ffffff;text-indent:0.32em;">
-                    ${escapedCode}
-                  </div>
+              <td style="padding:0 0 12px;font-size:24px;line-height:1.3;font-weight:700;color:#111827;">
+                Your sign-in code
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 0 16px;font-size:16px;line-height:1.6;color:#374151;">
+                Use this verification code to sign in to <strong>${escapedEmail}</strong>.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 0 20px;">
+                <div style="display:inline-block;padding:12px 16px;border:1px solid #d1d5db;background-color:#f9fafb;font-size:32px;line-height:1;font-weight:700;letter-spacing:0.24em;color:#111827;">
+                  ${escapedCode}
                 </div>
-                <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#475569;">
-                  This code expires in <strong style="color:#0f172a;">10 minutes</strong>.
-                </p>
-                <p style="margin:0;font-size:14px;line-height:1.6;color:#64748b;">
-                  If you did not request this email, you can safely ignore it.
-                </p>
               </td>
             </tr>
             <tr>
-              <td style="padding:16px 12px 0;text-align:center;font-size:12px;line-height:1.6;color:#94a3b8;">
-                RubriCheck sign-in verification email
+              <td style="padding:0 0 8px;font-size:14px;line-height:1.6;color:#4b5563;">
+                This code expires in <strong>10 minutes</strong>.
+              </td>
+            </tr>
+            <tr>
+              <td style="font-size:14px;line-height:1.6;color:#4b5563;">
+                If you did not request this code, you can ignore this email.
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-top:20px;font-size:12px;line-height:1.6;color:#9ca3af;">
+                Sign-in verification email from RubriCheck
               </td>
             </tr>
           </table>
