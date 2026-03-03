@@ -15,6 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAccountSummary } from "./components/AccountSummaryProvider";
 import { AccountStatusPill } from "./components/AccountStatusPill";
+import { ProBadge } from "./components/ProBadge";
 import { ACTIVE_LANDING_COPY } from "../src/config/copy";
 import { PRO_CHECKOUT_DISPLAY, type ProCheckoutPlan } from "../src/config/proCheckout";
 import { getEvaluateInterstitialDecision } from "../src/lib/evaluateInterstitial";
@@ -133,7 +134,6 @@ const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowe
 const NODE_ENV = process.env.NODE_ENV?.trim().toLowerCase() ?? "";
 const SHOW_PRO_FEATURES = true;
 const SHOW_ACCOUNT_AND_PRICING = true;
-const SHOW_BETA_BADGE = NEXT_PUBLIC_APP_ENV === "production";
 
 const FOOTER_LEGAL_LINKS = [
   { label: "Privacy", href: "/legal/privacy" },
@@ -173,6 +173,15 @@ function splitDetailedBreakdownBullets(value: string): string[] {
     .map((line) => line.replace(/^[\-*]\s*/, "").trim())
     .filter((line) => line.length > 0)
     .slice(0, 5);
+}
+
+function getCriterionPrimaryFeedbackText(item: CriteriaResult): string {
+  const rationaleText = item.rationale?.trim();
+  if (rationaleText) {
+    return rationaleText;
+  }
+
+  return item.feedback.trim();
 }
 
 function formatOverallScoreDisplay(range: [number, number]): string {
@@ -441,7 +450,7 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
     const titleLines = wrapCanvasText(ctx, titleText, criteriaTextWidth);
 
     ctx.font = "400 21px system-ui, -apple-system, Segoe UI, sans-serif";
-    const feedbackLines = wrapCanvasText(ctx, item.feedback, criteriaTextWidth);
+    const feedbackLines = wrapCanvasText(ctx, getCriterionPrimaryFeedbackText(item), criteriaTextWidth);
     const height = 26 + getWrappedTextHeight(titleLines, bodyLineHeight) + 12 + getWrappedTextHeight(feedbackLines, detailLineHeight) + 24;
     return { titleLines, feedbackLines, height };
   });
@@ -1847,11 +1856,6 @@ export default function Home() {
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
                   {ACTIVE_LANDING_COPY.headline}
                 </h1>
-                {SHOW_BETA_BADGE ? (
-                  <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">
-                    Beta
-                  </span>
-                ) : null}
               </div>
               <div className="inline-flex items-center gap-2">
                 {canShowAccountActions() ? (
@@ -2405,7 +2409,13 @@ export default function Home() {
             ) : null}
 
             <div className="mt-6 hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
-              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+              <table className="min-w-full table-fixed divide-y divide-slate-200 text-left text-sm">
+                <colgroup>
+                  <col className="w-[37%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[37%]" />
+                </colgroup>
                 <thead className="bg-slate-50 text-slate-700">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Criteria</th>
@@ -2418,7 +2428,7 @@ export default function Home() {
                   {gradeResult.criteria.map((item, index) => {
                     const criteriaKey = `criteria-${index}-${item.name}`;
                     const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
-                    const rationaleText = item.rationale ?? item.feedback;
+                    const rationaleText = getCriterionPrimaryFeedbackText(item);
                     const evidenceList = item.evidence ?? [];
                     const rewriteSuggestions =
                       hasProAccess && Array.isArray(item.example_revisions)
@@ -2442,14 +2452,14 @@ export default function Home() {
 
                     return (
                       <tr key={criteriaKey}>
-                        <td className="px-4 py-3 align-top font-medium">{item.name}</td>
+                        <td className="whitespace-normal break-words px-4 py-3 align-top font-medium">{item.name}</td>
                         <td className="px-4 py-3 align-top">{item.max_score}</td>
                         <td className="px-4 py-3 align-top">
                           <span className="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-sm font-medium text-indigo-700">
                             {formatEstimatedRangeDisplay(item.estimated_range, "-")}
                           </span>
                         </td>
-                        <td className="max-w-[22rem] whitespace-normal break-words px-4 py-3 align-top">
+                        <td className="whitespace-normal break-words px-4 py-3 align-top">
                           <p>{rationaleText}</p>
                           {detailedBreakdownBullets.length > 0 ? (
                             <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-700">
@@ -2477,7 +2487,10 @@ export default function Home() {
                                 onClick={() => toggleRewriteSection(criteriaKey)}
                                 className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70"
                               >
-                                <span>Rewrite suggestions (Pro)</span>
+                                <span className="inline-flex items-center gap-2">
+                                  <span>Rewrite suggestions</span>
+                                  <ProBadge className="shrink-0" />
+                                </span>
                                 <span className="text-xs font-medium text-slate-500">
                                   {isRewriteOpen ? "Hide" : "Show"}
                                 </span>
@@ -2537,7 +2550,7 @@ export default function Home() {
               {gradeResult.criteria.map((item, index) => {
                 const criteriaKey = `criteria-${index}-${item.name}`;
                 const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
-                const rationaleText = item.rationale ?? item.feedback;
+                const rationaleText = getCriterionPrimaryFeedbackText(item);
                 const evidenceList = item.evidence ?? [];
                 const rewriteSuggestions =
                   hasProAccess && Array.isArray(item.example_revisions)
@@ -2603,7 +2616,10 @@ export default function Home() {
                           onClick={() => toggleRewriteSection(criteriaKey)}
                           className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70"
                         >
-                          <span>Rewrite suggestions (Pro)</span>
+                          <span className="inline-flex items-center gap-2">
+                            <span>Rewrite suggestions</span>
+                            <ProBadge className="shrink-0" />
+                          </span>
                           <span className="text-xs font-medium text-slate-500">
                             {isRewriteOpen ? "Hide" : "Show"}
                           </span>

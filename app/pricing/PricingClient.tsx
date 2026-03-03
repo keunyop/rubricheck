@@ -39,8 +39,6 @@ type PricingTab = "pro" | "topups";
 type AuthVerificationPurpose = "login" | "restore";
 
 const EMAIL_AVATAR_CLASS_NAME = "border-indigo-200 bg-indigo-100 text-indigo-700";
-const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
-const SHOW_BETA_BADGE = NEXT_PUBLIC_APP_ENV === "production";
 const FOOTER_LEGAL_LINKS = [
   { label: "Privacy", href: "/legal/privacy" },
   { label: "Terms", href: "/legal/terms" },
@@ -109,6 +107,7 @@ export function PricingClient() {
   const selectedCheckoutPlanDisplay = PRO_CHECKOUT_DISPLAY[checkoutPlan];
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const billingMenuRef = useRef<HTMLDivElement | null>(null);
+  const isTopUpsLocked = accountPlan === "pro";
 
   function openLoginModal(infoMessage?: string) {
     setShowAccountMenu(false);
@@ -120,6 +119,12 @@ export function PricingClient() {
     setRestoreInfo(infoMessage ?? "");
     setShowLoginModal(true);
   }
+
+  useEffect(() => {
+    if (isTopUpsLocked && activePricingTab === "topups") {
+      setActivePricingTab("pro");
+    }
+  }, [activePricingTab, isTopUpsLocked]);
 
   useEffect(() => {
     if (!showAccountMenu && !showBillingMenu) {
@@ -406,11 +411,6 @@ export function PricingClient() {
               <div className="flex items-start gap-3">
                 <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="mt-0.5 h-9 w-auto shrink-0" />
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Pricing</h1>
-                {SHOW_BETA_BADGE ? (
-                  <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">
-                    Beta
-                  </span>
-                ) : null}
               </div>
               <div className="inline-flex items-center gap-2">
                 {signedInEmail ? (
@@ -510,18 +510,26 @@ export function PricingClient() {
             </button>
             <button
               type="button"
-              onClick={() => setActivePricingTab("topups")}
+              onClick={() => {
+                if (!isTopUpsLocked) {
+                  setActivePricingTab("topups");
+                }
+              }}
+              disabled={isTopUpsLocked}
               className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                 activePricingTab === "topups"
                   ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
+                  : isTopUpsLocked
+                    ? "cursor-not-allowed text-slate-400"
+                    : "text-slate-600 hover:text-slate-900"
               }`}
+              title={isTopUpsLocked ? "Evaluation top-ups are unavailable while this account is on Pro." : undefined}
             >
               Evaluation Top-Ups
             </button>
           </div>
 
-          {activePricingTab === "pro" ? (
+          {activePricingTab === "pro" || isTopUpsLocked ? (
             <section className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-5">
               <h2 className="text-lg font-semibold text-slate-900">Upgrade to Pro</h2>
               {accountPlan === "pro" ? (

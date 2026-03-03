@@ -67,6 +67,7 @@ export function BillingManageClient() {
   const { signedInEmail, accountPlan, remainingEvaluations, creditBalance, refreshAccountSummary } = useAccountSummary();
   const [billingPortalError, setBillingPortalError] = useState("");
   const [isOpeningBillingPortal, setIsOpeningBillingPortal] = useState(false);
+  const [showBillingPortalConfirm, setShowBillingPortalConfirm] = useState(false);
   const [creditRefundError, setCreditRefundError] = useState("");
   const [creditRefundNotice, setCreditRefundNotice] = useState("");
   const [isLoadingCreditRefundSummary, setIsLoadingCreditRefundSummary] = useState(false);
@@ -203,7 +204,17 @@ export function BillingManageClient() {
     };
   }, [signedInEmail]);
 
+  function requestOpenBillingPortal() {
+    setBillingPortalError("");
+    if (!signedInEmail || !hasManageableSubscription) {
+      return;
+    }
+
+    setShowBillingPortalConfirm(true);
+  }
+
   async function handleOpenBillingPortal() {
+    setShowBillingPortalConfirm(false);
     setBillingPortalError("");
     if (!signedInEmail) {
       return;
@@ -371,7 +382,7 @@ export function BillingManageClient() {
                   ) : null}
                   <button
                     type="button"
-                    onClick={() => void handleOpenBillingPortal()}
+                    onClick={requestOpenBillingPortal}
                     disabled={isOpeningBillingPortal || !hasManageableSubscription}
                     className="mt-4 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -429,6 +440,48 @@ export function BillingManageClient() {
             )}
           </div>
         )}
+
+        {showBillingPortalConfirm ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close subscription confirmation"
+              onClick={() => setShowBillingPortalConfirm(false)}
+              className="absolute inset-0 bg-slate-950/45"
+            />
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="billing-portal-confirm-title"
+              className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            >
+              <h2 id="billing-portal-confirm-title" className="text-lg font-semibold text-slate-900">
+                Open Stripe billing?
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                You will be redirected to Stripe to manage or cancel your subscription. Continue?
+              </p>
+              <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowBillingPortalConfirm(false)}
+                  disabled={isOpeningBillingPortal}
+                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleOpenBillingPortal()}
+                  disabled={isOpeningBillingPortal}
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isOpeningBillingPortal ? "Opening billing..." : "Continue"}
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
       </section>
     </main>
   );
