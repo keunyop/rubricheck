@@ -18,14 +18,6 @@ type Metrics = {
     suspiciousRequestsByEndpoint: Record<Endpoint, number>;
     errorRequestsByEndpoint: Record<Endpoint, number>;
   };
-  topIpsByRequestCount: Array<{ key: string; count: number }>;
-  topIpsBySuspiciousCount: Array<{ key: string; count: number }>;
-  otpAnomalies: {
-    ipsByDistinctEmails10m: Array<{ key: string; count: number }>;
-    ipsByDistinctEmails1h: Array<{ key: string; count: number }>;
-    emailsByDistinctIps10m: Array<{ key: string; count: number }>;
-    emailsByDistinctIps1h: Array<{ key: string; count: number }>;
-  };
   recentSuspiciousEvents: Array<{
     timestamp: string;
     requestId: string;
@@ -41,40 +33,25 @@ function sumValues(record: Record<Endpoint, number>): number {
   return Object.values(record).reduce((acc, value) => acc + value, 0);
 }
 
-function Table({ title, rows }: { title: string; rows: Array<{ key: string; count: number }> }) {
+function formatDateTime(value: string): string {
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return value;
+  }
+}
+
+function StatCard({ label, value, sublabel }: { label: string; value: string; sublabel?: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <h3 className="mb-2 text-sm font-semibold text-slate-900">{title}</h3>
-      <table className="w-full text-left text-xs">
-        <thead className="text-slate-500">
-          <tr>
-            <th className="py-1">Key</th>
-            <th className="py-1">Count</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length === 0 ? (
-            <tr>
-              <td colSpan={2} className="py-2 text-slate-400">
-                No data
-              </td>
-            </tr>
-          ) : (
-            rows.map((row) => (
-              <tr key={row.key}>
-                <td className="py-1 font-mono text-[11px]">{row.key}</td>
-                <td className="py-1">{row.count}</td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
+      {sublabel ? <p className="mt-1 text-xs text-slate-500">{sublabel}</p> : null}
+    </article>
   );
 }
 
 export function AbuseAdminClient() {
-  const [secret, setSecret] = useState("");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -82,14 +59,9 @@ export function AbuseAdminClient() {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
-    try {
-      const headers: HeadersInit = {};
-      if (secret.trim()) {
-        headers["x-admin-secret"] = secret.trim();
-      }
 
+    try {
       const response = await fetch("/api/admin/abuse-metrics", {
-        headers,
         cache: "no-store",
       });
 
@@ -104,7 +76,7 @@ export function AbuseAdminClient() {
     } finally {
       setLoading(false);
     }
-  }, [secret]);
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -126,14 +98,16 @@ export function AbuseAdminClient() {
   }, [metrics]);
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_55%,#f8fafc_100%)] p-6 text-sm">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+    <main className="min-h-screen bg-slate-50 p-6 text-sm">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <header className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-600">Admin</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Admin</p>
               <h1 className="mt-2 text-2xl font-semibold text-slate-900">Abuse telemetry</h1>
-              <p className="mt-1 text-sm text-slate-600">Endpoint volumes, suspicious traffic, OTP anomalies, and recent flagged events.</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Simplified abuse view with totals, endpoint breakdown, and recent suspicious events.
+              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Link
@@ -152,108 +126,93 @@ export function AbuseAdminClient() {
               </button>
             </div>
           </div>
-          <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-end">
-            <label className="block md:w-80">
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Admin secret override</span>
-              <input
-                type="password"
-                value={secret}
-                onChange={(event) => setSecret(event.target.value)}
-                placeholder="Optional ADMIN_SECRET"
-                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-              />
-            </label>
-          </div>
           <p className="mt-3 text-xs text-slate-500">Mode: {metrics?.enforcementMode ?? "monitor"}</p>
           <p className="mt-1 text-xs text-slate-500">
-            Last updated: {metrics ? new Date(metrics.generatedAt).toLocaleString() : "never"}
+            Last updated: {metrics ? formatDateTime(metrics.generatedAt) : "never"}
           </p>
           {error ? <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
         </header>
 
         {totals ? (
-          <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">Total: 1h {totals.total1h} | 24h {totals.total24h}</div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              Suspicious: 1h {totals.suspicious1h} | 24h {totals.suspicious24h}
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">Errors: 1h {totals.errors1h} | 24h {totals.errors24h}</div>
+          <section className="grid gap-4 md:grid-cols-3">
+            <StatCard label="Requests 1h" value={String(totals.total1h)} sublabel={`${totals.total24h} in the last 24h`} />
+            <StatCard
+              label="Suspicious"
+              value={String(totals.suspicious1h)}
+              sublabel={`${totals.suspicious24h} suspicious requests in the last 24h`}
+            />
+            <StatCard label="Errors" value={String(totals.errors1h)} sublabel={`${totals.errors24h} errors in the last 24h`} />
           </section>
         ) : null}
 
         {metrics ? (
-          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="mb-2 font-semibold text-slate-900">Endpoint summary</h2>
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr>
-                  <th>Endpoint</th>
-                  <th>Total 1h</th>
-                  <th>Suspicious 1h</th>
-                  <th>Error 1h</th>
-                  <th>Total 24h</th>
-                  <th>Suspicious 24h</th>
-                  <th>Error 24h</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ENDPOINTS.map((endpoint) => (
-                  <tr key={endpoint}>
-                    <td className="py-1 font-mono">{endpoint}</td>
-                    <td>{metrics.last1h.totalRequestsByEndpoint[endpoint]}</td>
-                    <td>{metrics.last1h.suspiciousRequestsByEndpoint[endpoint]}</td>
-                    <td>{metrics.last1h.errorRequestsByEndpoint[endpoint]}</td>
-                    <td>{metrics.last24h.totalRequestsByEndpoint[endpoint]}</td>
-                    <td>{metrics.last24h.suspiciousRequestsByEndpoint[endpoint]}</td>
-                    <td>{metrics.last24h.errorRequestsByEndpoint[endpoint]}</td>
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">Endpoint summary</h2>
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-slate-50 text-slate-700">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Endpoint</th>
+                    <th className="px-4 py-3 font-semibold">Total 1h</th>
+                    <th className="px-4 py-3 font-semibold">Suspicious 1h</th>
+                    <th className="px-4 py-3 font-semibold">Errors 1h</th>
+                    <th className="px-4 py-3 font-semibold">Total 24h</th>
+                    <th className="px-4 py-3 font-semibold">Suspicious 24h</th>
+                    <th className="px-4 py-3 font-semibold">Errors 24h</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {ENDPOINTS.map((endpoint) => (
+                    <tr key={endpoint}>
+                      <td className="px-4 py-3 font-mono text-slate-900">{endpoint}</td>
+                      <td className="px-4 py-3 text-slate-700">{metrics.last1h.totalRequestsByEndpoint[endpoint]}</td>
+                      <td className="px-4 py-3 text-slate-700">{metrics.last1h.suspiciousRequestsByEndpoint[endpoint]}</td>
+                      <td className="px-4 py-3 text-slate-700">{metrics.last1h.errorRequestsByEndpoint[endpoint]}</td>
+                      <td className="px-4 py-3 text-slate-700">{metrics.last24h.totalRequestsByEndpoint[endpoint]}</td>
+                      <td className="px-4 py-3 text-slate-700">{metrics.last24h.suspiciousRequestsByEndpoint[endpoint]}</td>
+                      <td className="px-4 py-3 text-slate-700">{metrics.last24h.errorRequestsByEndpoint[endpoint]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
         ) : null}
 
-        <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Table title="Top IP hashes by request count (1h)" rows={metrics?.topIpsByRequestCount ?? []} />
-          <Table title="Top IP hashes by suspicious count (1h)" rows={metrics?.topIpsBySuspiciousCount ?? []} />
-          <Table title="OTP anomaly: distinct email hashes per IP (10m)" rows={metrics?.otpAnomalies.ipsByDistinctEmails10m ?? []} />
-          <Table title="OTP anomaly: distinct email hashes per IP (1h)" rows={metrics?.otpAnomalies.ipsByDistinctEmails1h ?? []} />
-          <Table title="OTP anomaly: distinct IP hashes per email hash (10m)" rows={metrics?.otpAnomalies.emailsByDistinctIps10m ?? []} />
-          <Table title="OTP anomaly: distinct IP hashes per email hash (1h)" rows={metrics?.otpAnomalies.emailsByDistinctIps1h ?? []} />
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="mb-2 font-semibold text-slate-900">Recent suspicious events</h2>
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Endpoint</th>
-                <th>Score</th>
-                <th>Reasons</th>
-                <th>Request ID</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(metrics?.recentSuspiciousEvents ?? []).length === 0 ? (
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Recent suspicious events</h2>
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-700">
                 <tr>
-                  <td colSpan={5} className="py-2 text-slate-400">
-                    No suspicious events yet.
-                  </td>
+                  <th className="px-4 py-3 font-semibold">Time</th>
+                  <th className="px-4 py-3 font-semibold">Endpoint</th>
+                  <th className="px-4 py-3 font-semibold">Score</th>
+                  <th className="px-4 py-3 font-semibold">Reasons</th>
+                  <th className="px-4 py-3 font-semibold">Request ID</th>
                 </tr>
-              ) : (
-                (metrics?.recentSuspiciousEvents ?? []).map((event) => (
-                  <tr key={event.requestId}>
-                    <td className="py-1">{new Date(event.timestamp).toLocaleString()}</td>
-                    <td className="font-mono">{event.endpoint}</td>
-                    <td>{event.score}</td>
-                    <td>{event.reasons.join(", ")}</td>
-                    <td className="font-mono">{event.requestId}</td>
+              </thead>
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {(metrics?.recentSuspiciousEvents ?? []).length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-6 text-center text-slate-500">
+                      No suspicious events yet.
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  (metrics?.recentSuspiciousEvents ?? []).map((event) => (
+                    <tr key={event.requestId}>
+                      <td className="px-4 py-3 text-slate-700">{formatDateTime(event.timestamp)}</td>
+                      <td className="px-4 py-3 font-mono text-slate-900">{event.endpoint}</td>
+                      <td className="px-4 py-3 text-slate-700">{event.score}</td>
+                      <td className="px-4 py-3 text-slate-700">{event.reasons.join(", ")}</td>
+                      <td className="px-4 py-3 font-mono text-slate-700">{event.requestId}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
       </div>
     </main>

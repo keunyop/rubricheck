@@ -110,6 +110,7 @@ export async function selectSupabaseRows<T>(params: {
   filters?: SupabaseFilter[];
   orderBy?: SupabaseOrder;
   limit?: number;
+  offset?: number;
 }): Promise<T[]> {
   const endpoint = new URL(buildTableEndpoint(params.table));
   endpoint.searchParams.set("select", params.select?.trim() || "*");
@@ -121,6 +122,9 @@ export async function selectSupabaseRows<T>(params: {
   }
   if (typeof params.limit === "number" && Number.isFinite(params.limit) && params.limit > 0) {
     endpoint.searchParams.set("limit", String(Math.floor(params.limit)));
+  }
+  if (typeof params.offset === "number" && Number.isFinite(params.offset) && params.offset >= 0) {
+    endpoint.searchParams.set("offset", String(Math.floor(params.offset)));
   }
 
   const response = await fetch(endpoint.toString(), {
@@ -139,6 +143,47 @@ export async function selectSupabaseRows<T>(params: {
   }
 
   return (await response.json()) as T[];
+}
+
+export async function selectAllSupabaseRows<T>(params: {
+  table: string;
+  select?: string;
+  filters?: SupabaseFilter[];
+  orderBy?: SupabaseOrder;
+  pageSize?: number;
+  maxRows?: number;
+}): Promise<T[]> {
+  const pageSize =
+    typeof params.pageSize === "number" && Number.isFinite(params.pageSize) && params.pageSize > 0
+      ? Math.floor(params.pageSize)
+      : 1000;
+  const maxRows =
+    typeof params.maxRows === "number" && Number.isFinite(params.maxRows) && params.maxRows > 0
+      ? Math.floor(params.maxRows)
+      : 50000;
+
+  const rows: T[] = [];
+  let offset = 0;
+
+  while (offset < maxRows) {
+    const batch = await selectSupabaseRows<T>({
+      table: params.table,
+      select: params.select,
+      filters: params.filters,
+      orderBy: params.orderBy,
+      limit: Math.min(pageSize, maxRows - offset),
+      offset,
+    });
+
+    rows.push(...batch);
+    if (batch.length < pageSize) {
+      break;
+    }
+
+    offset += batch.length;
+  }
+
+  return rows;
 }
 
 export async function updateSupabaseRows<T>(params: {
