@@ -1,10 +1,15 @@
 import type { Evaluation, GradingMode, Rubric } from "./schema";
+import {
+  canAccessDetailedFeedback,
+  canAccessRewriteSuggestions,
+  type AccountFeatureTier,
+} from "../src/lib/accountFeatureAccess.ts";
 
 const STRICT_OVERALL_PENALTY = 3;
 const STANDARD_OVERALL_BONUS = 4;
 const MAX_OVERALL_RANGE_WIDTH = 15;
 
-export type FeedbackAccessTier = "free" | "pro";
+export type FeedbackAccessTier = AccountFeatureTier;
 
 type FinalCriterion = {
   name: string;
@@ -21,6 +26,7 @@ type FinalCriterion = {
 
 export type FinalEvaluation = {
   title: string;
+  access_tier: FeedbackAccessTier;
   overall_range: [number, number];
   summary: string;
   top_improvements: string[];
@@ -208,7 +214,7 @@ function buildStandardCriteria(
       ...(evidence ? { evidence } : {}),
     };
 
-    if (tier === "free") {
+    if (!canAccessDetailedFeedback(tier)) {
       criteria.push({
         ...baseCriterion,
         detailed_breakdown_locked: true,
@@ -217,14 +223,15 @@ function buildStandardCriteria(
     }
 
     const detailedBreakdown = readDetailedBreakdown(matchedScore);
-    const exampleRevisions =
-      readExampleRevisions(matchedScore) ??
-      [buildFallbackExampleRevision(rubricCriterion.name, matchedScore.feedback)];
+    const exampleRevisions = canAccessRewriteSuggestions(tier)
+      ? readExampleRevisions(matchedScore) ??
+        [buildFallbackExampleRevision(rubricCriterion.name, matchedScore.feedback)]
+      : undefined;
 
     criteria.push({
       ...baseCriterion,
       ...(detailedBreakdown ? { detailed_breakdown: detailedBreakdown } : {}),
-      example_revisions: exampleRevisions,
+      ...(exampleRevisions ? { example_revisions: exampleRevisions } : {}),
     });
   }
 
@@ -272,7 +279,7 @@ function buildStrictCriteria(
       evidence,
     };
 
-    if (tier === "free") {
+    if (!canAccessDetailedFeedback(tier)) {
       criteria.push({
         ...baseCriterion,
         detailed_breakdown_locked: true,
@@ -281,14 +288,15 @@ function buildStrictCriteria(
     }
 
     const detailedBreakdown = readDetailedBreakdown(matchedScore);
-    const exampleRevisions =
-      readExampleRevisions(matchedScore) ??
-      [buildFallbackExampleRevision(rubricCriterion.name, matchedScore.feedback)];
+    const exampleRevisions = canAccessRewriteSuggestions(tier)
+      ? readExampleRevisions(matchedScore) ??
+        [buildFallbackExampleRevision(rubricCriterion.name, matchedScore.feedback)]
+      : undefined;
 
     criteria.push({
       ...baseCriterion,
       ...(detailedBreakdown ? { detailed_breakdown: detailedBreakdown } : {}),
-      example_revisions: exampleRevisions,
+      ...(exampleRevisions ? { example_revisions: exampleRevisions } : {}),
     });
   }
 
@@ -342,6 +350,7 @@ export function buildFinalEvaluation(
 
   return {
     title: "Evaluation Summary",
+    access_tier: tier,
     overall_range: overallRange,
     summary: evaluation.summary,
     top_improvements: topImprovements,

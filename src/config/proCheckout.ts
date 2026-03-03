@@ -6,6 +6,23 @@ export const PRO_CHECKOUT_PLANS = ["monthly", "annual"] as const;
 export type ProCheckoutPlan = (typeof PRO_CHECKOUT_PLANS)[number];
 export type ProPriceLookupKey = typeof PRO_MONTHLY_LOOKUP_KEY | typeof PRO_ANNUAL_LOOKUP_KEY;
 
+const PRO_MONTHLY_PRICE_CENTS = 799;
+const PRO_ANNUAL_PRICE_CENTS = 5999;
+
+function formatPriceLabel(amountCents: number): string {
+  return `$${(amountCents / 100).toFixed(2)}`;
+}
+
+export function buildAnnualSaveNote(monthlyPriceCents: number, annualPriceCents: number): string {
+  const monthlyAnnualTotal = monthlyPriceCents * 12;
+  if (monthlyAnnualTotal <= 0) {
+    return "Save vs monthly";
+  }
+
+  const savingsRatio = ((monthlyAnnualTotal - annualPriceCents) / monthlyAnnualTotal) * 100;
+  return `Save ~${Math.round(savingsRatio)}% vs monthly`;
+}
+
 export const PRO_CHECKOUT_DISPLAY: Record<
   ProCheckoutPlan,
   {
@@ -15,13 +32,13 @@ export const PRO_CHECKOUT_DISPLAY: Record<
   }
 > = {
   monthly: {
-    price: "$9.99",
+    price: formatPriceLabel(PRO_MONTHLY_PRICE_CENTS),
     periodLabel: "/month",
   },
   annual: {
-    price: "$79.99",
+    price: formatPriceLabel(PRO_ANNUAL_PRICE_CENTS),
     periodLabel: "/year",
-    saveNote: "Save ~33% vs monthly",
+    saveNote: buildAnnualSaveNote(PRO_MONTHLY_PRICE_CENTS, PRO_ANNUAL_PRICE_CENTS),
   },
 };
 

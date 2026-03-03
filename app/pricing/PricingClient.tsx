@@ -504,7 +504,7 @@ export function PricingClient() {
               </div>
             </div>
             <p className="mt-2 text-left text-sm text-slate-600 md:text-[15px]">
-              Choose Pro subscription or one-time evaluation top-ups.
+              Choose Pro for full access, or one-time top-ups for Strict Mode and full evaluation feedback.
             </p>
           </div>
 
@@ -548,7 +548,7 @@ export function PricingClient() {
                 <p className="mt-1 text-sm text-emerald-700">Pro is already active for this account.</p>
               ) : (
                 <p className="mt-1 text-sm text-slate-600">
-                  Unlimited evaluations with richer feedback and rewrite suggestions for better scores.
+                  Unlimited evaluations, Strict Mode, full Top Improvements, detailed criteria feedback, and rewrite suggestions.
                 </p>
               )}
               <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-slate-300 bg-slate-200 p-1.5">
@@ -630,7 +630,9 @@ export function PricingClient() {
           ) : (
             <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
               <h2 className="text-xl font-semibold text-slate-900">Evaluation Top-Ups</h2>
-              <p className="mt-1 text-base text-slate-600">One-time purchase. Credits apply to Evaluate only.</p>
+              <p className="mt-1 text-base text-slate-600">
+                One-time purchase. Credits apply to Evaluate only and unlock Strict Mode plus full evaluation feedback. Rewrite suggestions remain Pro-only.
+              </p>
               {typeof creditBalance === "number" ? (
                 <p className="mt-1 text-base text-slate-600">Current credits: {creditBalance}</p>
               ) : null}

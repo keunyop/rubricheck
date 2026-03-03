@@ -18,6 +18,13 @@ import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ProBadge } from "./components/ProBadge";
 import { isKnownAdminEmail } from "../src/config/admin";
 import { ACTIVE_LANDING_COPY } from "../src/config/copy";
+import {
+  canAccessDetailedFeedback,
+  canAccessRewriteSuggestions,
+  canUseStrictMode,
+  getVisibleTopImprovementsCount,
+  type AccountFeatureTier,
+} from "../src/lib/accountFeatureAccess";
 import { getEvaluateInterstitialDecision } from "../src/lib/evaluateInterstitial";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -76,6 +83,7 @@ type CriteriaResult = {
 
 type GradeResult = {
   title: string;
+  access_tier: AccountFeatureTier;
   overall_range: [number, number];
   summary: string;
   top_improvements: string[];
@@ -149,7 +157,8 @@ const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
 const rubricFileInputId = "rubric-file-input";
 const assignmentFileInputId = "assignment-file-input";
 const GRADING_MODE_STORAGE_KEY = "rubricheck_grading_mode";
-const LOCKED_DETAILED_FEEDBACK_NOTICE = "Detailed criterion breakdown is available with Pro.";
+const LOCKED_DETAILED_FEEDBACK_NOTICE = "Detailed feedback is locked. Buy credits or upgrade to Pro to unlock.";
+const LOCKED_TOP_IMPROVEMENTS_NOTICE = "Buy credits or upgrade to Pro to unlock the remaining improvement priorities.";
 const FREE_TRIAL_EVALUATIONS = 3;
 const EVALUATION_DRAFT_STORAGE_KEY = "rubricheck_evaluation_draft_v1";
 const EVALUATION_DRAFT_TTL_MS = 1000 * 60 * 60 * 24;
@@ -174,18 +183,25 @@ function getCriterionPrimaryFeedbackText(item: CriteriaResult): string {
   return item.feedback.trim();
 }
 
-function getCriterionShareDetailBullets(item: CriteriaResult, hasProAccess: boolean): string[] {
+function getCriterionShareDetailBullets(item: CriteriaResult, accessTier: AccountFeatureTier): string[] {
   if (!item.detailed_breakdown) {
     return [];
   }
 
-  const isDetailedBreakdownLocked = item.detailed_breakdown_locked === true;
-  const canShowDetailedBreakdown = !isDetailedBreakdownLocked || (SHOW_PRO_FEATURES && hasProAccess);
+  const canShowDetailedBreakdown = SHOW_PRO_FEATURES && canAccessDetailedFeedback(accessTier);
   if (!canShowDetailedBreakdown) {
     return [];
   }
 
   return splitDetailedBreakdownBullets(item.detailed_breakdown).slice(0, 4);
+}
+
+function getVisibleTopImprovements(result: GradeResult): string[] {
+  return result.top_improvements.slice(0, getVisibleTopImprovementsCount(result.access_tier));
+}
+
+function getLockedTopImprovementsCount(result: GradeResult): number {
+  return Math.max(0, 3 - getVisibleTopImprovements(result).length);
 }
 
 function formatOverallScoreDisplay(range: [number, number]): string {
@@ -410,7 +426,7 @@ function drawShareLogoMark(ctx: CanvasRenderingContext2D, x: number, y: number):
   }
 }
 
-function buildShareFallbackCanvas(result: GradeResult, hasProAccess: boolean): HTMLCanvasElement {
+function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
   const width = 1320;
   const outerPadding = 40;
   const panelInset = 28;
@@ -443,9 +459,12 @@ function buildShareFallbackCanvas(result: GradeResult, hasProAccess: boolean): H
   const summaryLines = wrapCanvasText(ctx, result.summary, summaryWidth);
 
   ctx.font = "500 24px system-ui, -apple-system, Segoe UI, sans-serif";
-  const improvementLines = result.top_improvements
-    .slice(0, 3)
-    .map((item) => wrapCanvasText(ctx, item, summaryWidth - 28));
+  const improvementLines = getVisibleTopImprovements(result).map((item) => wrapCanvasText(ctx, item, summaryWidth - 28));
+  const lockedImprovementCount = getLockedTopImprovementsCount(result);
+  const lockedImprovementsNote =
+    lockedImprovementCount > 0
+      ? wrapCanvasText(ctx, `${lockedImprovementCount} more improvement priorities are locked.`, summaryWidth - 8)
+      : [];
 
   const criteriaCards = criteriaItems.map((item) => {
     ctx.font = "700 24px system-ui, -apple-system, Segoe UI, sans-serif";
@@ -456,7 +475,7 @@ function buildShareFallbackCanvas(result: GradeResult, hasProAccess: boolean): H
     ctx.font = "400 21px system-ui, -apple-system, Segoe UI, sans-serif";
     const feedbackLines = wrapCanvasText(ctx, getCriterionPrimaryFeedbackText(item), criteriaTextWidth);
     ctx.font = "500 18px system-ui, -apple-system, Segoe UI, sans-serif";
-    const detailLineGroups = getCriterionShareDetailBullets(item, hasProAccess).map((bullet) =>
+    const detailLineGroups = getCriterionShareDetailBullets(item, result.access_tier).map((bullet) =>
       wrapCanvasText(ctx, `- ${bullet}`, criteriaTextWidth),
     );
     const detailHeight =
@@ -477,7 +496,7 @@ function buildShareFallbackCanvas(result: GradeResult, hasProAccess: boolean): H
   const improvementsHeight = improvementLines.reduce(
     (total, lines) => total + Math.max(bodyLineHeight, getWrappedTextHeight(lines, detailLineHeight)) + 16,
     0,
-  );
+  ) + (lockedImprovementsNote.length > 0 ? getWrappedTextHeight(lockedImprovementsNote, 22) + 18 : 0);
   const leftColumnHeight = 316 + summaryHeight + improvementsHeight + sectionGap * 2 + leftBottomPadding;
   const rightColumnHeight =
     124 + criteriaCards.reduce((total, card) => total + card.height, 0) + Math.max(0, criteriaCards.length - 1) * 16;
@@ -568,6 +587,13 @@ function buildShareFallbackCanvas(result: GradeResult, hasProAccess: boolean): H
     ctx.fillText("-", leftTextX, leftCursorY);
     ctx.fillStyle = "#e2e8f0";
     leftCursorY = drawWrappedText(ctx, lines, leftTextX + 20, leftCursorY, detailLineHeight) + 10;
+  }
+
+  if (lockedImprovementsNote.length > 0) {
+    ctx.fillStyle = "rgba(226,232,240,0.72)";
+    ctx.font = "500 18px system-ui, -apple-system, Segoe UI, sans-serif";
+    leftCursorY += 4;
+    leftCursorY = drawWrappedText(ctx, lockedImprovementsNote, leftTextX, leftCursorY, 22);
   }
 
   let rightCursorY = panelTop + 42;
@@ -721,6 +747,7 @@ export default function Home() {
   const [hasProAccess, setHasProAccess] = useState(false);
   const [entitlementStatus, setEntitlementStatus] = useState<"active" | "needs_restore">("needs_restore");
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showStrictModeUpgradeModal, setShowStrictModeUpgradeModal] = useState(false);
   const [restoreStep, setRestoreStep] = useState<RestoreStep>("email");
   const [restoreEmail, setRestoreEmail] = useState("");
   const [restoreCode, setRestoreCode] = useState("");
@@ -730,6 +757,7 @@ export default function Home() {
   const [isVerifyingRestore, setIsVerifyingRestore] = useState(false);
   const [loginModalPurpose, setLoginModalPurpose] = useState<AuthVerificationPurpose>("login");
   const canAccessAdmin = isKnownAdminEmail(signedInEmail);
+  const canUseCurrentStrictMode = canUseStrictMode(accountPlan);
   const [proRestoreNotice, setProRestoreNotice] = useState("");
   const [showEnvDebugFooter, setShowEnvDebugFooter] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
@@ -777,6 +805,7 @@ export default function Home() {
   }, []);
 
   function openLoginModal(infoMessage?: string) {
+    setShowStrictModeUpgradeModal(false);
     setShowAccountMenu(false);
     setShowBillingMenu(false);
     setLoginModalPurpose("login");
@@ -831,6 +860,13 @@ export default function Home() {
     }
 
     openLoginModal(infoMessage);
+  }
+
+  function openStrictModeUpgradeModal() {
+    setShowLoginModal(false);
+    setShowAccountMenu(false);
+    setShowBillingMenu(false);
+    setShowStrictModeUpgradeModal(true);
   }
 
   useEffect(() => {
@@ -1144,6 +1180,7 @@ export default function Home() {
 
   function goToPricingPage() {
     setShowLoginModal(false);
+    setShowStrictModeUpgradeModal(false);
     setShowAccountMenu(false);
     setShowBillingMenu(false);
     window.location.assign("/pricing");
@@ -1182,7 +1219,7 @@ export default function Home() {
     setShareFeedbackWithReset("idle");
 
     try {
-      const canvas = buildShareFallbackCanvas(gradeResult, hasProAccess);
+      const canvas = buildShareFallbackCanvas(gradeResult);
       const imageBlob = await canvasToBlob(canvas);
       if (!imageBlob || imageBlob.size === 0) {
         throw new Error("IMAGE_BLOB_EMPTY");
@@ -1344,6 +1381,8 @@ export default function Home() {
     const candidate = value as Partial<GradeResult>;
 
     const hasTitle = typeof candidate.title === "string";
+    const hasAccessTier =
+      candidate.access_tier === "free" || candidate.access_tier === "topup" || candidate.access_tier === "pro";
     const hasSummary = typeof candidate.summary === "string";
     const hasOverallRange =
       Array.isArray(candidate.overall_range) &&
@@ -1397,11 +1436,16 @@ export default function Home() {
             item.evidence.every((snippet) => typeof snippet === "string" && snippet.trim().length > 0),
         ));
 
-    return hasTitle && hasSummary && hasOverallRange && hasTopImprovements && hasCriteria && hasStrictEvidence;
+    return hasTitle && hasAccessTier && hasSummary && hasOverallRange && hasTopImprovements && hasCriteria && hasStrictEvidence;
   }
 
   async function submitGrade(selectedMode: GradingMode) {
     if (isLoading) {
+      return;
+    }
+
+    if (selectedMode === "strict" && !canUseCurrentStrictMode) {
+      openStrictModeUpgradeModal();
       return;
     }
 
@@ -1589,6 +1633,11 @@ export default function Home() {
   }
 
   function handleStrictSubmit() {
+    if (!canUseCurrentStrictMode) {
+      openStrictModeUpgradeModal();
+      return;
+    }
+
     if (!requireSignedInForEvaluation("strict")) {
       return;
     }
@@ -2229,6 +2278,52 @@ export default function Home() {
           </div>
         ) : null}
 
+        {showStrictModeUpgradeModal ? (
+          <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close Strict Mode upgrade prompt"
+              onClick={() => setShowStrictModeUpgradeModal(false)}
+              className="absolute inset-0 bg-slate-950/45"
+            />
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="strict-mode-upgrade-title"
+              className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            >
+              <div className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
+                Strict Mode
+              </div>
+              <h2 id="strict-mode-upgrade-title" className="mt-3 text-lg font-semibold text-slate-900">
+                Strict Mode is locked
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Strict Mode is available with Pro or purchased top-ups.
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                Go to pricing to upgrade or buy credits?
+              </p>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowStrictModeUpgradeModal(false)}
+                  className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={goToPricingPage}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                >
+                  Go to Pricing
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
         {gradeResult ? (
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
             <div className="border-b border-slate-100 pb-4">
@@ -2298,10 +2393,22 @@ export default function Home() {
               <div className="mt-4">
                 <h3 className="text-sm font-semibold text-slate-900">Top Improvements</h3>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
-                  {gradeResult.top_improvements.slice(0, 3).map((item, index) => (
+                  {getVisibleTopImprovements(gradeResult).map((item, index) => (
                     <li key={`${index}-${item}`}>{item}</li>
                   ))}
+                  {Array.from({ length: getLockedTopImprovementsCount(gradeResult) }).map((_, index) => (
+                    <li key={`locked-improvement-${index}`} className="list-none pl-0">
+                      <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2">
+                        <p aria-hidden="true" className="select-none text-slate-400 blur-[4px]">
+                          Unlock another prioritized improvement with Pro or purchased credits.
+                        </p>
+                      </div>
+                    </li>
+                  ))}
                 </ul>
+                {getLockedTopImprovementsCount(gradeResult) > 0 ? (
+                  <p className="mt-2 text-xs font-medium text-indigo-700">{LOCKED_TOP_IMPROVEMENTS_NOTICE}</p>
+                ) : null}
               </div>
 
             </div>
@@ -2361,25 +2468,25 @@ export default function Home() {
                     const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
                     const rationaleText = getCriterionPrimaryFeedbackText(item);
                     const evidenceList = item.evidence ?? [];
+                    const resultAccessTier = gradeResult.access_tier;
+                    const canShowDetailedBreakdown = SHOW_PRO_FEATURES && canAccessDetailedFeedback(resultAccessTier);
+                    const canShowRewriteSuggestions = SHOW_PRO_FEATURES && canAccessRewriteSuggestions(resultAccessTier);
                     const rewriteSuggestions =
-                      hasProAccess && Array.isArray(item.example_revisions)
+                      canShowRewriteSuggestions && Array.isArray(item.example_revisions)
                         ? item.example_revisions
                             .map((revision) => revision.trim())
                             .filter((revision) => revision.length > 0)
                             .slice(0, 2)
                         : [];
                     const isDetailedBreakdownLocked = item.detailed_breakdown_locked === true;
-                    const canShowDetailedBreakdown = SHOW_PRO_FEATURES && hasProAccess;
                     const detailedBreakdownBullets =
                       canShowDetailedBreakdown && item.detailed_breakdown
                         ? splitDetailedBreakdownBullets(item.detailed_breakdown)
                         : [];
-                    const shouldForceHideDetailedBreakdown =
-                      !canShowDetailedBreakdown && Boolean(item.detailed_breakdown);
                     const showDetailedBreakdownLockNotice =
                       SHOW_PRO_FEATURES &&
-                      !hasProAccess &&
-                      (isDetailedBreakdownLocked || shouldForceHideDetailedBreakdown);
+                      !canShowDetailedBreakdown &&
+                      isDetailedBreakdownLocked;
 
                     return (
                       <tr key={criteriaKey}>
@@ -2400,11 +2507,16 @@ export default function Home() {
                             </ul>
                           ) : null}
                           {showDetailedBreakdownLockNotice ? (
-                            <p className="mt-2 text-xs font-medium text-indigo-700">
-                              {LOCKED_DETAILED_FEEDBACK_NOTICE}
-                            </p>
+                            <div className="mt-2 space-y-2">
+                              <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2">
+                                <p aria-hidden="true" className="select-none text-xs text-slate-400 blur-[4px]">
+                                  Detailed criterion feedback is hidden on Free. Unlock the full explanation and supporting notes.
+                                </p>
+                              </div>
+                              <p className="text-xs font-medium text-indigo-700">{LOCKED_DETAILED_FEEDBACK_NOTICE}</p>
+                            </div>
                           ) : null}
-                          {!isDetailedBreakdownLocked && evidenceList.length > 0 ? (
+                          {canShowDetailedBreakdown && evidenceList.length > 0 ? (
                             <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-600">
                               {evidenceList.map((snippet, snippetIndex) => (
                                 <li key={`${criteriaKey}-evidence-${snippetIndex}`}>{snippet}</li>
@@ -2428,7 +2540,7 @@ export default function Home() {
                               </button>
                               {isRewriteOpen ? (
                                 <div className="border-t border-slate-200 px-3 py-3">
-                                  {hasProAccess ? (
+                                  {canShowRewriteSuggestions ? (
                                     rewriteSuggestions.length > 0 ? (
                                       <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
                                         {rewriteSuggestions.map((suggestion, suggestionIndex) => (
@@ -2443,26 +2555,30 @@ export default function Home() {
                                   ) : (
                                     <>
                                       <p className="text-sm text-slate-600">
-                                        Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock.
+                                        {hasProAccess
+                                          ? "Rewrite suggestions were not generated for this evaluation. Run Evaluate again with Pro active to refresh this section."
+                                          : "Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock."}
                                       </p>
-                                      <div className="mt-3 flex flex-wrap gap-2">
-                                        {!signedInEmail ? (
+                                      {!hasProAccess ? (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                          {!signedInEmail ? (
+                                            <button
+                                              type="button"
+                                              onClick={() => openLoginModal()}
+                                              className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                                            >
+                                              Log in
+                                            </button>
+                                          ) : null}
                                           <button
                                             type="button"
-                                            onClick={() => openLoginModal()}
+                                            onClick={goToPricingPage}
                                             className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
                                           >
-                                            Log in
+                                            Upgrade to Pro
                                           </button>
-                                        ) : null}
-                                        <button
-                                          type="button"
-                                          onClick={goToPricingPage}
-                                          className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                        >
-                                          Upgrade to Pro
-                                        </button>
-                                      </div>
+                                        </div>
+                                      ) : null}
                                     </>
                                   )}
                                 </div>
@@ -2483,25 +2599,25 @@ export default function Home() {
                 const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
                 const rationaleText = getCriterionPrimaryFeedbackText(item);
                 const evidenceList = item.evidence ?? [];
+                const resultAccessTier = gradeResult.access_tier;
+                const canShowDetailedBreakdown = SHOW_PRO_FEATURES && canAccessDetailedFeedback(resultAccessTier);
+                const canShowRewriteSuggestions = SHOW_PRO_FEATURES && canAccessRewriteSuggestions(resultAccessTier);
                 const rewriteSuggestions =
-                  hasProAccess && Array.isArray(item.example_revisions)
+                  canShowRewriteSuggestions && Array.isArray(item.example_revisions)
                     ? item.example_revisions
                         .map((revision) => revision.trim())
                         .filter((revision) => revision.length > 0)
                         .slice(0, 2)
                     : [];
                 const isDetailedBreakdownLocked = item.detailed_breakdown_locked === true;
-                const canShowDetailedBreakdown = SHOW_PRO_FEATURES && hasProAccess;
                 const detailedBreakdownBullets =
                   canShowDetailedBreakdown && item.detailed_breakdown
                     ? splitDetailedBreakdownBullets(item.detailed_breakdown)
                     : [];
-                const shouldForceHideDetailedBreakdown =
-                  !canShowDetailedBreakdown && Boolean(item.detailed_breakdown);
                 const showDetailedBreakdownLockNotice =
                   SHOW_PRO_FEATURES &&
-                  !hasProAccess &&
-                  (isDetailedBreakdownLocked || shouldForceHideDetailedBreakdown);
+                  !canShowDetailedBreakdown &&
+                  isDetailedBreakdownLocked;
 
                 return (
                   <article
@@ -2528,11 +2644,16 @@ export default function Home() {
                       </ul>
                     ) : null}
                     {showDetailedBreakdownLockNotice ? (
-                      <p className="mt-2 text-xs font-medium text-indigo-700">
-                        {LOCKED_DETAILED_FEEDBACK_NOTICE}
-                      </p>
+                      <div className="mt-2 space-y-2">
+                        <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2">
+                          <p aria-hidden="true" className="select-none text-xs text-slate-400 blur-[4px]">
+                            Detailed criterion feedback is hidden on Free. Unlock the full explanation and supporting notes.
+                          </p>
+                        </div>
+                        <p className="text-xs font-medium text-indigo-700">{LOCKED_DETAILED_FEEDBACK_NOTICE}</p>
+                      </div>
                     ) : null}
-                    {!isDetailedBreakdownLocked && evidenceList.length > 0 ? (
+                    {canShowDetailedBreakdown && evidenceList.length > 0 ? (
                       <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
                         {evidenceList.map((snippet, snippetIndex) => (
                           <li key={`${criteriaKey}-mobile-evidence-${snippetIndex}`}>{snippet}</li>
@@ -2557,7 +2678,7 @@ export default function Home() {
                         </button>
                         {isRewriteOpen ? (
                           <div className="border-t border-slate-200 px-3 py-3">
-                            {hasProAccess ? (
+                            {canShowRewriteSuggestions ? (
                               rewriteSuggestions.length > 0 ? (
                                 <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
                                   {rewriteSuggestions.map((suggestion, suggestionIndex) => (
@@ -2572,26 +2693,30 @@ export default function Home() {
                             ) : (
                               <>
                                 <p className="text-sm text-slate-600">
-                                  Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock.
+                                  {hasProAccess
+                                    ? "Rewrite suggestions were not generated for this evaluation. Run Evaluate again with Pro active to refresh this section."
+                                    : "Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock."}
                                 </p>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {!signedInEmail ? (
+                                {!hasProAccess ? (
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {!signedInEmail ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => openLoginModal()}
+                                        className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                                      >
+                                        Log in
+                                      </button>
+                                    ) : null}
                                     <button
                                       type="button"
-                                      onClick={() => openLoginModal()}
+                                      onClick={goToPricingPage}
                                       className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
                                     >
-                                      Log in
+                                      Upgrade to Pro
                                     </button>
-                                  ) : null}
-                                  <button
-                                    type="button"
-                                    onClick={goToPricingPage}
-                                    className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                  >
-                                    Upgrade to Pro
-                                  </button>
-                                </div>
+                                  </div>
+                                ) : null}
                               </>
                             )}
                           </div>

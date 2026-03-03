@@ -9,8 +9,9 @@ import {
   useRef,
   useState,
 } from "react";
+import type { AccountFeatureTier } from "../../src/lib/accountFeatureAccess";
 
-type AccountPlan = "free" | "pro";
+type AccountPlan = AccountFeatureTier;
 
 type AccountSummaryResponse = {
   signedIn?: boolean;
@@ -65,7 +66,7 @@ export function AccountSummaryProvider({ children }: { children: ReactNode }) {
 
       if (response.ok && data.signedIn && email) {
         setSignedInEmail(email);
-        setAccountPlan(data.plan === "pro" ? "pro" : "free");
+        setAccountPlan(data.plan === "pro" || data.plan === "topup" ? data.plan : "free");
         setRemainingEvaluations(remaining);
         setCreditBalance(balance);
         setHasLoadedAccountSummary(true);

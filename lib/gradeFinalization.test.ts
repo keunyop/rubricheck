@@ -43,6 +43,7 @@ const standardEvaluation: Evaluation = {
 test("standard scoring path does not apply strict penalty and does not require evidence", () => {
   const result = buildFinalEvaluation(rubric, standardEvaluation, "standard", "pro");
 
+  assert.equal(result.access_tier, "pro");
   assert.deepEqual(result.overall_range, [79, 89]);
   assert.equal(result.criteria.every((criterion) => criterion.evidence === undefined), true);
 });
@@ -80,6 +81,27 @@ test("free tier keeps base feedback but marks detailed breakdown as pro-only", (
     assert.ok(typeof criterion.feedback === "string");
     assert.equal(criterion.feedback, "Add one or two concrete examples for stronger support in this section.");
     assert.equal(criterion.detailed_breakdown_locked, true);
+    assert.equal(criterion.example_revisions, undefined);
+  }
+});
+
+test("top-up tier includes detailed breakdown but keeps rewrite suggestions locked", () => {
+  const detailedEvaluation: Evaluation = {
+    ...standardEvaluation,
+    criteria_scores: standardEvaluation.criteria_scores.map((criterion) => ({
+      ...criterion,
+      detailed_breakdown: "Pinpoint the weak evidence, then add one stronger quotation and analysis.",
+      example_revisions: ["Insert a stronger quotation.", "Explain how that quotation proves the claim."],
+    })),
+  };
+
+  const result = buildFinalEvaluation(rubric, detailedEvaluation, "standard", "topup");
+
+  assert.equal(result.access_tier, "topup");
+  for (const criterion of result.criteria) {
+    assert.equal(typeof criterion.detailed_breakdown, "string");
+    assert.equal(criterion.example_revisions, undefined);
+    assert.notEqual(criterion.detailed_breakdown_locked, true);
   }
 });
 

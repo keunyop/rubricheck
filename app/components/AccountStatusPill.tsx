@@ -1,7 +1,8 @@
 import { ProBadge } from "./ProBadge";
+import type { AccountFeatureTier } from "../../src/lib/accountFeatureAccess";
 
 type AccountStatusPillProps = {
-  plan: "free" | "pro";
+  plan: AccountFeatureTier;
   remainingEvaluations: number | null;
 };
 
@@ -18,6 +19,18 @@ export function AccountStatusPill({ plan, remainingEvaluations }: AccountStatusP
             &infin;
           </span>
           <span className="whitespace-nowrap">evaluations left</span>
+        </span>
+      </span>
+    );
+  }
+
+  if (plan === "topup") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+        <span className="whitespace-nowrap">Top-up</span>
+        <span className="text-emerald-300">•</span>
+        <span className="whitespace-nowrap">
+          {typeof remainingEvaluations === "number" ? `${remainingEvaluations} evaluations left` : "credits active"}
         </span>
       </span>
     );

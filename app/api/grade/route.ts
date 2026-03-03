@@ -7,8 +7,9 @@ import { FileParseValidationError, parseFile } from "../../../lib/parse";
 import { hashNormalizedEmail, structureRubric } from "../../../lib/rubricStructuring";
 import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
 import { createRequestContext, errorResponse } from "../../../src/lib/apiError";
+import { canUseStrictMode, resolveAccountFeatureTier } from "../../../src/lib/accountFeatureAccess";
 import { getCreditEmailFromCookie } from "../../../src/lib/creditSession";
-import { resolveCreditStorageTarget } from "../../../src/lib/credits";
+import { getCreditBalanceForRequest, resolveCreditStorageTarget } from "../../../src/lib/credits";
 import { shouldRefundReservedEvaluateCredit } from "../../../src/lib/evaluationCreditSettlement";
 import { buildFreeLimitReachedPayload } from "../../../src/lib/evaluateLimitPayload";
 import {
@@ -16,6 +17,11 @@ import {
   checkUsageLimit,
   refundUsageCreditReservation,
 } from "../../../src/lib/usageLimit";
+import {
+  getAccountEntitlementByEmail,
+  hasAccountEntitlementStore,
+  isActiveProAccountEntitlement,
+} from "../../../src/lib/accountEntitlements";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const GradeRequestSchema = z.object({
@@ -112,6 +118,28 @@ async function resolveRubricCacheIdentity(
   };
 }
 
+async function resolveCurrentFeedbackTier(
+  request: Request,
+  signedInEmail: string,
+): Promise<FeedbackAccessTier> {
+  let plan: "free" | "pro" = "free";
+
+  if (hasAccountEntitlementStore()) {
+    try {
+      const entitlement = await getAccountEntitlementByEmail(signedInEmail);
+      plan = isActiveProAccountEntitlement(entitlement) ? "pro" : "free";
+    } catch {
+      plan = "free";
+    }
+  }
+
+  const creditsBalance = await getCreditBalanceForRequest(request);
+  return resolveAccountFeatureTier({
+    plan,
+    creditsBalance,
+  });
+}
+
 export async function POST(request: Request) {
   const context = createRequestContext(request);
 
@@ -189,13 +217,28 @@ export async function POST(request: Request) {
       resolveFieldText("assignment", assignmentTextInput, assignmentFile),
     ]);
 
+    const currentFeedbackTier = await resolveCurrentFeedbackTier(request, signedInEmail);
+    if (mode === "strict" && !canUseStrictMode(currentFeedbackTier)) {
+      return errorResponse(
+        context,
+        403,
+        "STRICT_MODE_LOCKED",
+        "Strict Mode is available with Pro or purchased top-ups. Buy credits or upgrade to continue.",
+      );
+    }
+
     const usage = await checkUsageLimit(request, "evaluate");
     const usageHeaders = buildUsageLimitHeaders(usage);
     if (usage.degradedCode === "REDIS_UNAVAILABLE") {
       usageHeaders["x-rubricheck-warning"] = "REDIS_UNAVAILABLE";
     }
 
-    const feedbackTier: FeedbackAccessTier = usage.billingSource === "pro" ? "pro" : "free";
+    const feedbackTier: FeedbackAccessTier =
+      currentFeedbackTier === "pro"
+        ? "pro"
+        : currentFeedbackTier === "topup" || usage.billingSource === "credit"
+          ? "topup"
+          : "free";
 
     if (!usage.allowed) {
       if (usage.errorCode === "FREE_LIMIT_REACHED" && usage.action === "SHOW_INTERSTITIAL") {
@@ -222,7 +265,6 @@ export async function POST(request: Request) {
 
       return errorResponse(context, 429, usage.errorCode ?? "RATE_LIMITED", usage.errorMessage ?? `Free trial limit reached (${usage.limit}). Upgrade to continue.`, undefined, usageHeaders);
     }
-
     let structuredRubric;
     try {
       const cacheIdentity = await resolveRubricCacheIdentity(request);
@@ -259,7 +301,7 @@ export async function POST(request: Request) {
 
     try {
       const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode, {
-        detailLevel: feedbackTier === "pro" ? "detailed" : "diagnostic",
+        detailLevel: feedbackTier === "free" ? "diagnostic" : "detailed",
       });
       const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
       const headers = new Headers(usageHeaders);

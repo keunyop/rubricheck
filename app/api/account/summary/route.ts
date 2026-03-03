@@ -3,6 +3,7 @@ import { createRequestContext, errorResponse, successJson } from "../../../../sr
 import { getCreditEmailFromCookie } from "../../../../src/lib/creditSession";
 import { getCreditBalanceForRequest } from "../../../../src/lib/credits";
 import { getFreeEvaluateUsageCount } from "../../../../src/lib/freeUsage";
+import { resolveAccountFeatureTier } from "../../../../src/lib/accountFeatureAccess";
 import {
   getAccountEntitlementByEmail,
   hasAccountEntitlementStore,
@@ -33,11 +34,11 @@ export async function GET(request: Request) {
       });
     }
 
-    let plan: "free" | "pro" = "free";
+    let subscriptionPlan: "free" | "pro" = "free";
     if (email && hasAccountEntitlementStore()) {
       try {
         const entitlement = await getAccountEntitlementByEmail(email);
-        plan = isActiveProAccountEntitlement(entitlement) ? "pro" : "free";
+        subscriptionPlan = isActiveProAccountEntitlement(entitlement) ? "pro" : "free";
       } catch (lookupError) {
         if (!isAccountEntitlementStoreUnavailableError(lookupError)) {
           console.error("ACCOUNT_SUMMARY_ENTITLEMENT_LOOKUP_FAILED", {
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
     }
 
     let usageCount: number | null = null;
-    if (plan === "free" && email) {
+    if (subscriptionPlan === "free" && email) {
       try {
         usageCount = await getFreeEvaluateUsageCount(email);
       } catch (lookupError) {
@@ -60,13 +61,17 @@ export async function GET(request: Request) {
       }
     }
     const remainingByPlan = usageCount === null ? null : Math.max(0, FREE_TRIAL_LIMIT - usageCount);
+    const plan = resolveAccountFeatureTier({
+      plan: subscriptionPlan,
+      creditsBalance: normalizedCreditsBalance,
+    });
 
     const remainingEvaluations =
-      plan === "free"
-        ? remainingByPlan === null
+      plan === "pro"
+        ? remainingByPlan
+        : remainingByPlan === null
           ? normalizedCreditsBalance
-          : remainingByPlan + Math.max(0, normalizedCreditsBalance ?? 0)
-        : remainingByPlan;
+          : remainingByPlan + Math.max(0, normalizedCreditsBalance ?? 0);
 
     return successJson(context, {
       signedIn: true,
