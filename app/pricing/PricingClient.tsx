@@ -619,11 +619,6 @@ export function PricingClient() {
             <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
               <h2 className="text-xl font-semibold text-slate-900">Evaluation Top-Ups</h2>
               <p className="mt-1 text-base text-slate-600">One-time purchase. Credits apply to Evaluate only.</p>
-              {accountPlan === "pro" ? (
-                <p className="mt-1 text-sm font-medium text-amber-700">
-                  Top-up purchases are disabled while this account is on Pro.
-                </p>
-              ) : null}
               {typeof creditBalance === "number" ? (
                 <p className="mt-1 text-base text-slate-600">Current credits: {creditBalance}</p>
               ) : null}
@@ -661,7 +656,7 @@ export function PricingClient() {
                     <button
                       type="button"
                       onClick={() => void handleBuyCredits(packId)}
-                      disabled={isCreatingCreditCheckout || accountPlan === "pro" || !signedInEmail}
+                      disabled={isCreatingCreditCheckout || !signedInEmail}
                       className="mt-4 w-full rounded-lg bg-slate-800 px-3 py-2 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {!signedInEmail ? "Log in to Top Up" : isCreatingCreditCheckout ? "Redirecting..." : "Top up"}
