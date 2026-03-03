@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getAdminEmailFromSessionTokens } from "../../../src/lib/adminAuth";
-import { CREDIT_SESSION_COOKIE_NAME } from "../../../src/lib/creditSession";
-import { ENTITLEMENT_SESSION_COOKIE_NAME } from "../../../src/lib/entitlementSession";
-import { AbuseAdminClient } from "./AbuseAdminClient";
+import { CREDIT_SESSION_COOKIE_NAME } from "../../src/lib/creditSession";
+import { getAdminEmailFromSessionTokens } from "../../src/lib/adminAuth";
+import { ENTITLEMENT_SESSION_COOKIE_NAME } from "../../src/lib/entitlementSession";
+import { AdminDashboardClient } from "./AdminDashboardClient";
 
 function hasValidAdminSecret(adminSecretCookie: string | null): boolean {
   const expectedSecret = process.env.ADMIN_SECRET?.trim();
@@ -15,7 +15,7 @@ function hasValidAdminSecret(adminSecretCookie: string | null): boolean {
   return adminSecretCookie?.trim() === expectedSecret;
 }
 
-export default async function AbuseAdminPage() {
+export default async function AdminPage() {
   const cookieStore = await cookies();
   const adminEmail = getAdminEmailFromSessionTokens({
     creditSessionToken: cookieStore.get(CREDIT_SESSION_COOKIE_NAME)?.value ?? null,
@@ -30,5 +30,5 @@ export default async function AbuseAdminPage() {
     redirect("/pricing");
   }
 
-  return <AbuseAdminClient />;
+  return <AdminDashboardClient adminEmail={adminEmail ?? "admin"} />;
 }

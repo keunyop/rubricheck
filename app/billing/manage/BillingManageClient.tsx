@@ -68,6 +68,7 @@ export function BillingManageClient() {
   const [billingPortalError, setBillingPortalError] = useState("");
   const [isOpeningBillingPortal, setIsOpeningBillingPortal] = useState(false);
   const [showBillingPortalConfirm, setShowBillingPortalConfirm] = useState(false);
+  const [showCreditRefundConfirm, setShowCreditRefundConfirm] = useState(false);
   const [creditRefundError, setCreditRefundError] = useState("");
   const [creditRefundNotice, setCreditRefundNotice] = useState("");
   const [isLoadingCreditRefundSummary, setIsLoadingCreditRefundSummary] = useState(false);
@@ -238,7 +239,7 @@ export function BillingManageClient() {
     }
   }
 
-  async function handleRefundTopUps() {
+  function requestRefundTopUps() {
     setCreditRefundError("");
     setCreditRefundNotice("");
     if (!signedInEmail) {
@@ -247,6 +248,17 @@ export function BillingManageClient() {
 
     if (creditRefundSummary.refundableCredits <= 0 || creditRefundSummary.refundableAmount <= 0) {
       setCreditRefundError("There are no unused purchased credits to refund.");
+      return;
+    }
+
+    setShowCreditRefundConfirm(true);
+  }
+
+  async function handleRefundTopUps() {
+    setShowCreditRefundConfirm(false);
+    setCreditRefundError("");
+    setCreditRefundNotice("");
+    if (!signedInEmail) {
       return;
     }
 
@@ -424,7 +436,7 @@ export function BillingManageClient() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => void handleRefundTopUps()}
+                  onClick={requestRefundTopUps}
                   disabled={
                     !creditRefundSummary.supported ||
                     isLoadingCreditRefundSummary ||
@@ -477,6 +489,50 @@ export function BillingManageClient() {
                   className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isOpeningBillingPortal ? "Opening billing..." : "Continue"}
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {showCreditRefundConfirm ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close top-up refund confirmation"
+              onClick={() => setShowCreditRefundConfirm(false)}
+              className="absolute inset-0 bg-slate-950/45"
+            />
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="credit-refund-confirm-title"
+              className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            >
+              <h2 id="credit-refund-confirm-title" className="text-lg font-semibold text-slate-900">
+                Refund unused top-ups?
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                {`This will refund ${creditRefundSummary.refundableCredits} unused purchased credits for ${formatCurrencyAmount(
+                  creditRefundSummary.refundableAmount,
+                  creditRefundSummary.currency,
+                )}. Continue?`}
+              </p>
+              <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowCreditRefundConfirm(false)}
+                  disabled={isRefundingCredits}
+                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleRefundTopUps()}
+                  disabled={isRefundingCredits}
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isRefundingCredits ? "Refunding..." : "Continue"}
                 </button>
               </div>
             </section>

@@ -2,7 +2,7 @@ import { Redis } from "@upstash/redis";
 
 import { getCustomerIdByEmail, setCustomerIdByEmail } from "./entitlement.ts";
 import { getCreditEmailFromCookie } from "./creditSession.ts";
-import { callSupabaseRpc, hasSupabaseConfig } from "./supabaseRest.ts";
+import { callSupabaseRpc, hasSupabaseConfig, selectSupabaseRows, updateSupabaseRows } from "./supabaseRest.ts";
 
 const CREDITS_BY_CUSTOMER_KEY_PREFIX = "rubricheck:credits:customer:";
 const CREDITS_BY_EMAIL_KEY_PREFIX = "rubricheck:credits:email:";
@@ -62,6 +62,13 @@ type RefundableCreditPaymentRow = {
   amount_total?: unknown;
   refundable_amount?: unknown;
   currency?: unknown;
+  created_at?: unknown;
+};
+
+type CreditLotRow = {
+  id?: unknown;
+  remaining_credits?: unknown;
+  total_credits?: unknown;
   created_at?: unknown;
 };
 
@@ -186,6 +193,26 @@ function parseRefundableCreditPayment(value: unknown): RefundableCreditPayment |
   };
 }
 
+function parseCreditLotRow(value: unknown): { id: number; remainingCredits: number; totalCredits: number } | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const raw = value as CreditLotRow;
+  const id = parseCredits(raw.id);
+  const remainingCredits = parseCredits(raw.remaining_credits);
+  const totalCredits = parseCredits(raw.total_credits);
+  if (id <= 0 || totalCredits <= 0) {
+    return null;
+  }
+
+  return {
+    id,
+    remainingCredits,
+    totalCredits,
+  };
+}
+
 function isRedisConfigMissingError(error: unknown): boolean {
   return error instanceof Error && error.message === "UPSTASH_REDIS_CONFIG_MISSING";
 }
@@ -265,6 +292,52 @@ async function grantCreditsSupabase(params: {
     p_currency: params.currency ?? null,
   });
   return parseCredits(raw);
+}
+
+async function decrementCreditsSupabase(target: CreditStorageTarget, amount: number): Promise<number> {
+  const owner = targetToOwner(target);
+  const lots = (
+    await selectSupabaseRows<unknown>({
+      table: "credit_lots",
+      select: "id,remaining_credits,total_credits,created_at",
+      filters: [
+        { column: "owner_type", value: owner.ownerType },
+        { column: "owner_id", value: owner.ownerId },
+      ],
+      orderBy: { column: "created_at", ascending: true },
+      limit: 5000,
+    })
+  )
+    .map((row) => parseCreditLotRow(row))
+    .filter((row): row is NonNullable<typeof row> => Boolean(row))
+    .filter((row) => row.remainingCredits > 0);
+
+  let remainingToRemove = Math.max(0, Math.floor(amount));
+  const availableBalance = lots.reduce((sum, lot) => sum + lot.remainingCredits, 0);
+  if (availableBalance < remainingToRemove) {
+    throw new Error("INSUFFICIENT_CREDITS");
+  }
+
+  for (const lot of lots) {
+    if (remainingToRemove <= 0) {
+      break;
+    }
+
+    const decrement = Math.min(remainingToRemove, lot.remainingCredits);
+    const nextRemaining = lot.remainingCredits - decrement;
+    await updateSupabaseRows({
+      table: "credit_lots",
+      patch: {
+        remaining_credits: nextRemaining,
+        updated_at: new Date().toISOString(),
+      },
+      filters: [{ column: "id", value: lot.id }],
+      select: "id",
+    });
+    remainingToRemove -= decrement;
+  }
+
+  return getCreditBalanceForTarget(target);
 }
 
 async function reserveOneCreditSupabase(target: CreditStorageTarget): Promise<{
@@ -608,6 +681,64 @@ export async function grantCredits(params: {
   }
 
   return incrementCreditsByKey(creditTargetToKey(target), amount);
+}
+
+export async function adjustCreditsForTarget(target: CreditStorageTarget, amount: number): Promise<number> {
+  const normalizedAmount = Math.trunc(amount);
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount === 0) {
+    throw new Error("INVALID_CREDIT_AMOUNT");
+  }
+
+  if (normalizedAmount > 0) {
+    if (hasSupabaseConfig()) {
+      return grantCreditsSupabase({
+        amount: normalizedAmount,
+        target,
+        customerId: target.type === "customer" ? target.customerId : null,
+        email: target.type === "email" ? target.email : null,
+      });
+    }
+
+    if (!hasRedisConfig()) {
+      throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
+    }
+
+    return incrementCreditsByKey(creditTargetToKey(target), normalizedAmount);
+  }
+
+  const amountToRemove = Math.abs(normalizedAmount);
+  if (hasSupabaseConfig()) {
+    return decrementCreditsSupabase(target, amountToRemove);
+  }
+
+  if (!hasRedisConfig()) {
+    throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
+  }
+
+  const key = creditTargetToKey(target);
+  const currentBalance = await readCreditsByKey(key);
+  if (currentBalance < amountToRemove) {
+    throw new Error("INSUFFICIENT_CREDITS");
+  }
+
+  return incrementCreditsByKey(key, -amountToRemove);
+}
+
+export async function adjustCredits(params: {
+  amount: number;
+  email?: string | null;
+  customerId?: string | null;
+}): Promise<{ balance: number; target: CreditStorageTarget }> {
+  const target = await resolveCreditStorageTarget({
+    email: params.email ?? null,
+    customerId: params.customerId ?? null,
+  });
+  if (!target) {
+    throw new Error("CREDIT_IDENTITY_MISSING");
+  }
+
+  const balance = await adjustCreditsForTarget(target, params.amount);
+  return { balance, target };
 }
 
 export async function markCreditsSessionProcessed(sessionId: string): Promise<boolean> {

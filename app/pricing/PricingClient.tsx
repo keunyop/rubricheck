@@ -7,6 +7,7 @@ import { useAccountSummary } from "../components/AccountSummaryProvider";
 import { AccountStatusPill } from "../components/AccountStatusPill";
 import { SubpageBackHomeLink } from "../components/SubpageBackHomeLink";
 
+import { isKnownAdminEmail } from "../../src/config/admin";
 import { CREDIT_PACK_IDS, getCreditPackLabel, getCreditPackMarketingLabel, getCreditPackPriceLabel } from "../../src/config/creditPacks";
 import { PRO_CHECKOUT_DISPLAY, type ProCheckoutPlan } from "../../src/config/proCheckout";
 
@@ -108,6 +109,7 @@ export function PricingClient() {
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const billingMenuRef = useRef<HTMLDivElement | null>(null);
   const isTopUpsLocked = accountPlan === "pro";
+  const canAccessAdmin = isKnownAdminEmail(signedInEmail);
 
   function openLoginModal(infoMessage?: string) {
     setShowAccountMenu(false);
@@ -438,6 +440,16 @@ export function PricingClient() {
                           className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
                         >
                           <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
+                          {canAccessAdmin ? (
+                            <Link
+                              href="/admin"
+                              role="menuitem"
+                              onClick={() => setShowAccountMenu(false)}
+                              className="mt-1 block w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                            >
+                              Admin
+                            </Link>
+                          ) : null}
                           <button
                             type="button"
                             role="menuitem"
