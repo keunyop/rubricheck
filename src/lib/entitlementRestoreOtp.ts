@@ -205,10 +205,101 @@ function isValidOtpCode(code: string): boolean {
   return /^\d{6}$/.test(code);
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function getRestoreEmailLogoUrl(): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://rubricheck.com";
+
+  try {
+    return new URL("/rubricheck-logo.svg", appUrl).toString();
+  } catch {
+    return "https://rubricheck.com/rubricheck-logo.svg";
+  }
+}
+
+function buildRestoreOtpEmail(email: string, code: string): { subject: string; text: string; html: string } {
+  const subject = "Your RubriCheck restore code";
+  const escapedEmail = escapeHtml(email);
+  const escapedCode = escapeHtml(code);
+  const logoUrl = escapeHtml(getRestoreEmailLogoUrl());
+
+  return {
+    subject,
+    text: [
+      "RubriCheck account recovery",
+      "",
+      `Use this verification code to restore access to ${email}:`,
+      "",
+      code,
+      "",
+      "This code expires in 10 minutes.",
+      "If you did not request this code, you can ignore this email.",
+    ].join("\n"),
+    html: `<!DOCTYPE html>
+<html lang="en">
+  <body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#0f172a;">
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f8fafc;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;">
+            <tr>
+              <td style="padding-bottom:16px;text-align:center;">
+                <img src="${logoUrl}" alt="RubriCheck" width="160" height="64" style="display:inline-block;border:0;outline:none;text-decoration:none;height:auto;max-width:160px;" />
+              </td>
+            </tr>
+            <tr>
+              <td style="border:1px solid #e2e8f0;border-radius:24px;background-color:#ffffff;padding:40px 32px;box-shadow:0 16px 40px rgba(15,23,42,0.08);">
+                <p style="margin:0 0 12px;font-size:12px;line-height:1.4;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#6366f1;">
+                  Account Recovery
+                </p>
+                <h1 style="margin:0 0 12px;font-size:28px;line-height:1.2;font-weight:700;color:#0f172a;">
+                  Your restore code is ready
+                </h1>
+                <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#475569;">
+                  Use the verification code below to restore access to <strong style="color:#0f172a;">${escapedEmail}</strong>.
+                </p>
+                <div style="margin:0 0 24px;padding:20px 24px;border-radius:20px;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);text-align:center;">
+                  <div style="margin:0;font-size:12px;line-height:1.4;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">
+                    Verification Code
+                  </div>
+                  <div style="margin-top:10px;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:0.32em;color:#ffffff;text-indent:0.32em;">
+                    ${escapedCode}
+                  </div>
+                </div>
+                <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#475569;">
+                  This code expires in <strong style="color:#0f172a;">10 minutes</strong>.
+                </p>
+                <p style="margin:0;font-size:14px;line-height:1.6;color:#64748b;">
+                  If you did not request this email, you can safely ignore it.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 12px 0;text-align:center;font-size:12px;line-height:1.6;color:#94a3b8;">
+                RubriCheck account recovery email
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`,
+  };
+}
+
 async function sendOtpEmail(email: string, code: string): Promise<void> {
   const resendApiKey = process.env.RESEND_API_KEY?.trim();
   const otpFromEmail = process.env.OTP_FROM_EMAIL?.trim();
   const isProduction = isProductionEnvironment();
+  const message = buildRestoreOtpEmail(email, code);
 
   if (resendApiKey && otpFromEmail) {
     try {
@@ -221,8 +312,9 @@ async function sendOtpEmail(email: string, code: string): Promise<void> {
         body: JSON.stringify({
           from: otpFromEmail,
           to: [email],
-          subject: "Your RubriCheck restore code",
-          text: `Your RubriCheck code is ${code}. It expires in 10 minutes.`,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
         }),
       });
 
