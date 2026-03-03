@@ -225,7 +225,7 @@ function getRestoreEmailLogoUrl(): string {
 }
 
 function buildRestoreOtpEmail(email: string, code: string): { subject: string; text: string; html: string } {
-  const subject = "Your RubriCheck restore code";
+  const subject = "Your RubriCheck sign-in code";
   const escapedEmail = escapeHtml(email);
   const escapedCode = escapeHtml(code);
   const logoUrl = escapeHtml(getRestoreEmailLogoUrl());
@@ -233,9 +233,9 @@ function buildRestoreOtpEmail(email: string, code: string): { subject: string; t
   return {
     subject,
     text: [
-      "RubriCheck account recovery",
+      "RubriCheck sign-in verification",
       "",
-      `Use this verification code to restore access to ${email}:`,
+      `Use this verification code to sign in to ${email}:`,
       "",
       code,
       "",
@@ -251,19 +251,28 @@ function buildRestoreOtpEmail(email: string, code: string): { subject: string; t
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;">
             <tr>
               <td style="padding-bottom:16px;text-align:center;">
-                <img src="${logoUrl}" alt="RubriCheck" width="160" height="64" style="display:inline-block;border:0;outline:none;text-decoration:none;height:auto;max-width:160px;" />
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+                  <tr>
+                    <td style="vertical-align:middle;padding-right:12px;">
+                      <img src="${logoUrl}" alt="RubriCheck" width="96" height="38" style="display:block;border:0;outline:none;text-decoration:none;height:auto;max-width:96px;" />
+                    </td>
+                    <td style="vertical-align:middle;font-size:24px;line-height:1.1;font-weight:800;letter-spacing:-0.02em;color:#0f172a;">
+                      RubriCheck
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
             <tr>
               <td style="border:1px solid #e2e8f0;border-radius:24px;background-color:#ffffff;padding:40px 32px;box-shadow:0 16px 40px rgba(15,23,42,0.08);">
                 <p style="margin:0 0 12px;font-size:12px;line-height:1.4;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:#6366f1;">
-                  Account Recovery
+                  Sign-In Verification
                 </p>
                 <h1 style="margin:0 0 12px;font-size:28px;line-height:1.2;font-weight:700;color:#0f172a;">
-                  Your restore code is ready
+                  Your sign-in code is ready
                 </h1>
                 <p style="margin:0 0 24px;font-size:16px;line-height:1.7;color:#475569;">
-                  Use the verification code below to restore access to <strong style="color:#0f172a;">${escapedEmail}</strong>.
+                  Use the verification code below to sign in to <strong style="color:#0f172a;">${escapedEmail}</strong>.
                 </p>
                 <div style="margin:0 0 24px;padding:20px 24px;border-radius:20px;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);text-align:center;">
                   <div style="margin:0;font-size:12px;line-height:1.4;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:#94a3b8;">
@@ -283,7 +292,7 @@ function buildRestoreOtpEmail(email: string, code: string): { subject: string; t
             </tr>
             <tr>
               <td style="padding:16px 12px 0;text-align:center;font-size:12px;line-height:1.6;color:#94a3b8;">
-                RubriCheck account recovery email
+                RubriCheck sign-in verification email
               </td>
             </tr>
           </table>
