@@ -9,89 +9,8 @@ export const STRICT_JSON_SYSTEM_INSTRUCTION = [
   "Apply strict and conservative grading with no benefit of doubt.",
 ].join(" ");
 
-function buildCriterionJsonSchema(
-  mode: GradingMode,
-  detailLevel: EvaluationDetailLevel,
-): Record<string, unknown> {
-  const evidenceArraySchema = {
-    type: "array",
-    items: { type: "string" },
-    minItems: 1,
-    maxItems: 2,
-  } as const;
-  const criterionProperties: Record<string, unknown> = {
-    name: { type: "string" },
-    score: { type: "integer" },
-    rationale: { type: "string" },
-    estimated_range: {
-      type: "array",
-      items: { type: "integer" },
-      minItems: 2,
-      maxItems: 2,
-    },
-    feedback: { type: "string" },
-    evidence:
-      mode === "strict"
-        ? evidenceArraySchema
-        : {
-            anyOf: [evidenceArraySchema, { type: "null" }],
-          },
-  };
-
-  const required = ["name", "score", "rationale", "estimated_range", "feedback", "evidence"];
-
-  if (detailLevel === "detailed") {
-    criterionProperties.detailed_breakdown = {
-      anyOf: [{ type: "string" }, { type: "null" }],
-    };
-    criterionProperties.example_revisions = {
-      type: "array",
-      items: { type: "string" },
-      minItems: 1,
-      maxItems: 2,
-    };
-    required.push("detailed_breakdown", "example_revisions");
-  }
-
-  return {
-    type: "object",
-    additionalProperties: false,
-    properties: criterionProperties,
-    required,
-  };
-}
-
-export function buildEvaluationJsonSchema(
-  rubric: Rubric,
-  mode: GradingMode,
-  detailLevel: EvaluationDetailLevel = "diagnostic",
-): Record<string, unknown> {
-  const criteriaCount = Math.max(1, rubric.criteria.length);
-
-  return {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      summary: { type: "string" },
-      criteria_scores: {
-        type: "array",
-        minItems: criteriaCount,
-        maxItems: criteriaCount,
-        items: buildCriterionJsonSchema(mode, detailLevel),
-      },
-      top_improvements: {
-        type: "array",
-        items: { type: "string" },
-        minItems: 3,
-        maxItems: 3,
-      },
-    },
-    required: ["summary", "criteria_scores", "top_improvements"],
-  };
-}
-
 function buildSchemaDescription(mode: GradingMode, detailLevel: EvaluationDetailLevel): string {
-  const evidenceShape = mode === "strict" ? '["string", "string"]' : '["string"] | null';
+  const evidenceShape = mode === "strict" ? '["string", "string"]' : '["string"]';
 
   if (detailLevel === "detailed") {
     return `{
@@ -172,7 +91,7 @@ function buildRules(mode: GradingMode, detailLevel: EvaluationDetailLevel): stri
     ...sharedRules,
     "- summary must be 1-2 sentences, <= 280 chars, and neutral in tone.",
     "- top_improvements must contain exactly 3 items, each <= 120 chars.",
-    "- evidence may be null in standard mode when explicit snippets are not useful.",
+    "- evidence is optional in standard mode; omit it if not useful.",
     "- Do not include numbering prefixes in top_improvements.",
     "- No markdown. No extra keys. No extra text.",
   ];

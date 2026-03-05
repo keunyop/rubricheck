@@ -11,8 +11,6 @@ const client = new OpenAI({ apiKey });
 const DEFAULT_OPENAI_TIMEOUT_MS = 180_000;
 const MIN_OPENAI_TIMEOUT_MS = 30_000;
 const MAX_OPENAI_TIMEOUT_MS = 600_000;
-const MIN_OPENAI_MAX_OUTPUT_TOKENS = 256;
-const MAX_OPENAI_MAX_OUTPUT_TOKENS = 16_384;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -43,11 +41,6 @@ function isAbortLikeError(error: unknown): boolean {
   const record = asRecord(error);
   const errorType = typeof record?.type === "string" ? record.type.toLowerCase() : "";
   return errorType.includes("abort") || errorType.includes("timeout");
-}
-
-function resolveStringField(record: UnknownRecord | null, key: string): string {
-  const value = record?.[key];
-  return typeof value === "string" ? value : "";
 }
 
 function collectResponseTextCandidates(response: unknown): string[] {
@@ -144,17 +137,8 @@ function parseModelJsonFromResponse(response: unknown): unknown {
   throw new Error("MODEL_JSON_PARSE_FAILED");
 }
 
-export type JsonResponseSchema = {
-  name: string;
-  schema: Record<string, unknown>;
-  strict?: boolean;
-};
-
-export type JsonModelOptions = {
+type JsonModelOptions = {
   systemInstruction?: string;
-  maxOutputTokens?: number;
-  responseSchema?: JsonResponseSchema;
-  retryOnMaxOutputTokens?: boolean;
 };
 
 const DEFAULT_JSON_SYSTEM_INSTRUCTION =
@@ -174,36 +158,6 @@ function resolveOpenAiTimeoutMs(): number {
   return Math.max(MIN_OPENAI_TIMEOUT_MS, Math.min(MAX_OPENAI_TIMEOUT_MS, parsed));
 }
 
-function resolveMaxOutputTokens(raw: number | undefined): number | null {
-  if (typeof raw !== "number" || !Number.isFinite(raw)) {
-    return null;
-  }
-
-  const rounded = Math.round(raw);
-  return Math.max(MIN_OPENAI_MAX_OUTPUT_TOKENS, Math.min(MAX_OPENAI_MAX_OUTPUT_TOKENS, rounded));
-}
-
-function wasTruncatedByMaxOutputTokens(response: unknown): boolean {
-  const record = asRecord(response);
-  if (!record) {
-    return false;
-  }
-
-  const status = resolveStringField(record, "status").toLowerCase();
-  if (status !== "incomplete") {
-    return false;
-  }
-
-  const incompleteDetails = asRecord(record.incomplete_details);
-  const reason = resolveStringField(incompleteDetails, "reason").toLowerCase();
-  return reason.includes("max_output_tokens") || reason.includes("max_tokens");
-}
-
-function growOutputTokenBudget(currentBudget: number): number {
-  const grown = Math.round(currentBudget * 1.6) + 128;
-  return Math.max(MIN_OPENAI_MAX_OUTPUT_TOKENS, Math.min(MAX_OPENAI_MAX_OUTPUT_TOKENS, grown));
-}
-
 async function callJsonModel(
   modelEnvKey: "STRUCTURE_MODEL" | "EVALUATION_MODEL",
   prompt: string,
@@ -221,73 +175,34 @@ async function callJsonModel(
     abortController.abort("OPENAI_TIMEOUT");
   }, timeoutMs);
 
-  const retryOnMaxOutputTokens = options?.retryOnMaxOutputTokens ?? true;
-  const maxAttempts = retryOnMaxOutputTokens ? 2 : 1;
-  let outputTokenBudget = resolveMaxOutputTokens(options?.maxOutputTokens);
-  let parseFailure: unknown = null;
-
+  let response: unknown;
   try {
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      let response: unknown;
-      try {
-        const requestPayload: Record<string, unknown> = {
-          model,
-          input: [
-            {
-              role: "system",
-              content: options?.systemInstruction ?? DEFAULT_JSON_SYSTEM_INSTRUCTION,
-            },
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-        };
-
-        if (outputTokenBudget !== null) {
-          requestPayload.max_output_tokens = outputTokenBudget;
-        }
-
-        if (options?.responseSchema) {
-          requestPayload.text = {
-            format: {
-              type: "json_schema",
-              name: options.responseSchema.name,
-              schema: options.responseSchema.schema,
-              strict: options.responseSchema.strict ?? true,
-            },
-          };
-        }
-
-        response = await client.responses.create(requestPayload as never, {
-          signal: abortController.signal,
-        });
-      } catch (error) {
-        if (abortController.signal.aborted || isAbortLikeError(error)) {
-          throw new Error("OPENAI_TIMEOUT");
-        }
-
-        throw error;
-      }
-
-      try {
-        return parseModelJsonFromResponse(response);
-      } catch (error) {
-        parseFailure = error;
-      }
-
-      const hitOutputTokenCap = wasTruncatedByMaxOutputTokens(response);
-      if (!retryOnMaxOutputTokens || !hitOutputTokenCap || outputTokenBudget === null || attempt >= maxAttempts) {
-        break;
-      }
-
-      outputTokenBudget = growOutputTokenBudget(outputTokenBudget);
+    response = await client.responses.create({
+      model,
+      input: [
+        {
+          role: "system",
+          content: options?.systemInstruction ?? DEFAULT_JSON_SYSTEM_INSTRUCTION,
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    }, {
+      signal: abortController.signal,
+    });
+  } catch (error) {
+    if (abortController.signal.aborted || isAbortLikeError(error)) {
+      throw new Error("OPENAI_TIMEOUT");
     }
 
-    throw parseFailure ?? new Error("MODEL_JSON_PARSE_FAILED");
+    throw error;
   } finally {
     clearTimeout(timeoutHandle);
   }
+
+  return parseModelJsonFromResponse(response);
 }
 
 export async function callStructureModel(prompt: string, options?: JsonModelOptions): Promise<unknown> {

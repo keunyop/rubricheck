@@ -1622,10 +1622,9 @@ export default function Home() {
       setResultMode(selectedMode);
       const elapsedMs = performance.now() - startedAt;
       const requestId = response.headers.get("x-request-id") ?? "unknown";
-      const servedVariant = response.headers.get("x-eval-variant") ?? "unknown";
       requestAnimationFrame(() => {
         console.log(
-          `[RubriCheck][GradeTiming] mode=${selectedMode} totalMs=${elapsedMs.toFixed(1)} variant=${servedVariant} requestId=${requestId} startedAt=${startedAtIso}`,
+          `[RubriCheck][GradeTiming] mode=${selectedMode} totalMs=${elapsedMs.toFixed(1)} requestId=${requestId} startedAt=${startedAtIso}`,
         );
       });
     } catch {

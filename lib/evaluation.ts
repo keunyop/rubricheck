@@ -4,7 +4,6 @@ import {
   STRICT_JSON_SYSTEM_INSTRUCTION,
   type EvaluationDetailLevel,
 } from "./evaluationPrompt";
-import type { JsonModelOptions } from "./openai";
 import { normalizeModelEvaluation } from "./evaluationNormalization.ts";
 import {
   EvaluationSchema,
@@ -41,24 +40,20 @@ export async function evaluateAssignment(
   mode: GradingMode = GradingModeSchema.enum.standard,
   options?: {
     detailLevel?: EvaluationDetailLevel;
-    modelOptions?: JsonModelOptions;
   },
 ): Promise<Evaluation> {
-  const detailLevel = options?.detailLevel ?? "diagnostic";
   const prompt = buildEvaluationPrompt(
     rubric,
     assignmentText,
     mode,
-    detailLevel,
+    options?.detailLevel ?? "diagnostic",
   );
 
   try {
-    const baseModelOptions = options?.modelOptions;
-    const modelOptions =
+    const modelResult =
       mode === "strict"
-        ? { ...baseModelOptions, systemInstruction: STRICT_JSON_SYSTEM_INSTRUCTION }
-        : baseModelOptions;
-    const modelResult = await callEvaluationModel(prompt, modelOptions);
+        ? await callEvaluationModel(prompt, { systemInstruction: STRICT_JSON_SYSTEM_INSTRUCTION })
+        : await callEvaluationModel(prompt);
     const normalizedResult = normalizeModelEvaluation(modelResult);
     return parseEvaluationByMode(mode, normalizedResult);
   } catch (error) {

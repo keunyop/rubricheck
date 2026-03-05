@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "harness:simulate": "node scripts/simulate_harness.mjs",
-    "test:unit": "node --test --test-concurrency=1 --experimental-strip-types --experimental-specifier-resolution=node lib/evaluation.test.ts lib/modelOptimization.test.ts lib/evaluationQuality.test.ts src/lib/entitlementSession.test.ts src/lib/entitlementRestore.test.ts src/config/proCheckout.test.ts src/config/creditPacks.test.ts src/lib/evaluationCreditsPolicy.test.ts src/lib/evaluateLimitPayload.test.ts src/lib/evaluateInterstitial.test.ts src/lib/evaluationFeatureBilling.test.ts src/lib/evaluationCreditSettlement.test.ts src/lib/creditsGrant.test.ts src/lib/freeUsageActor.test.ts"
+    "test:unit": "node --test --test-concurrency=1 --experimental-strip-types --experimental-specifier-resolution=node lib/evaluation.test.ts src/lib/entitlementSession.test.ts src/lib/entitlementRestore.test.ts src/config/proCheckout.test.ts src/config/creditPacks.test.ts src/lib/evaluationCreditsPolicy.test.ts src/lib/evaluateLimitPayload.test.ts src/lib/evaluateInterstitial.test.ts src/lib/evaluationFeatureBilling.test.ts src/lib/evaluationCreditSettlement.test.ts src/lib/creditsGrant.test.ts src/lib/freeUsageActor.test.ts"
   },
   "dependencies": {
     "@upstash/redis": "^1.36.2",
