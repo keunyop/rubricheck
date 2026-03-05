@@ -9,6 +9,83 @@ export const STRICT_JSON_SYSTEM_INSTRUCTION = [
   "Apply strict and conservative grading with no benefit of doubt.",
 ].join(" ");
 
+function buildCriterionJsonSchema(
+  mode: GradingMode,
+  detailLevel: EvaluationDetailLevel,
+): Record<string, unknown> {
+  const evidenceRequired = mode === "strict";
+  const criterionProperties: Record<string, unknown> = {
+    name: { type: "string" },
+    score: { type: "integer" },
+    rationale: { type: "string" },
+    estimated_range: {
+      type: "array",
+      items: { type: "integer" },
+      minItems: 2,
+      maxItems: 2,
+    },
+    feedback: { type: "string" },
+    evidence: {
+      type: "array",
+      items: { type: "string" },
+      minItems: 1,
+      maxItems: 2,
+    },
+  };
+
+  const required = ["name", "score", "rationale", "estimated_range", "feedback"];
+  if (evidenceRequired) {
+    required.push("evidence");
+  }
+
+  if (detailLevel === "detailed") {
+    criterionProperties.detailed_breakdown = { type: "string" };
+    criterionProperties.example_revisions = {
+      type: "array",
+      items: { type: "string" },
+      minItems: 1,
+      maxItems: 2,
+    };
+    required.push("example_revisions");
+  }
+
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: criterionProperties,
+    required,
+  };
+}
+
+export function buildEvaluationJsonSchema(
+  rubric: Rubric,
+  mode: GradingMode,
+  detailLevel: EvaluationDetailLevel = "diagnostic",
+): Record<string, unknown> {
+  const criteriaCount = Math.max(1, rubric.criteria.length);
+
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      summary: { type: "string" },
+      criteria_scores: {
+        type: "array",
+        minItems: criteriaCount,
+        maxItems: criteriaCount,
+        items: buildCriterionJsonSchema(mode, detailLevel),
+      },
+      top_improvements: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 3,
+        maxItems: 3,
+      },
+    },
+    required: ["summary", "criteria_scores", "top_improvements"],
+  };
+}
+
 function buildSchemaDescription(mode: GradingMode, detailLevel: EvaluationDetailLevel): string {
   const evidenceShape = mode === "strict" ? '["string", "string"]' : '["string"]';
 

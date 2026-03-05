@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const startedAt = Date.now();
   const response = await gradePost(request);
   const requestId = response.headers.get("x-request-id") ?? "unknown";
-  const telemetry = await recordAbuseTelemetry({
+  const telemetryPromise = recordAbuseTelemetry({
     requestId,
     endpoint: "evaluate",
     request,
@@ -21,16 +21,26 @@ export async function POST(request: Request) {
     fileType: request.headers.get("content-type") ?? undefined,
   });
 
-  if (shouldEnforceForSuspicious(telemetry.suspicious)) {
-    return NextResponse.json(
-      {
-        code: "ABUSE_BLOCKED",
-        message: "Request blocked by abuse controls.",
-        requestId,
-      },
-      { status: 429, headers: { "x-request-id": requestId } },
-    );
+  if (process.env.ABUSE_ENFORCEMENT_MODE === "enforce") {
+    const telemetry = await telemetryPromise;
+    if (shouldEnforceForSuspicious(telemetry.suspicious)) {
+      return NextResponse.json(
+        {
+          code: "ABUSE_BLOCKED",
+          message: "Request blocked by abuse controls.",
+          requestId,
+        },
+        { status: 429, headers: { "x-request-id": requestId } },
+      );
+    }
+    return response;
   }
 
+  void telemetryPromise.catch((error) => {
+    console.warn("ABUSE_TELEMETRY_ASYNC_FAILED", {
+      requestId,
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+  });
   return response;
 }

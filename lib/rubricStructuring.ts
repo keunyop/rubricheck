@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { Redis } from "@upstash/redis";
 
 import { callStructureModel } from "./openai";
+import type { JsonModelOptions } from "./openai";
 import { RubricSchema, type Rubric } from "./schema";
 
 export const RUBRIC_CACHE_VERSION = "v1";
@@ -29,7 +30,8 @@ type StructureRubricOptions = {
   cacheIdentity?: RubricCacheIdentity | null;
   requestId?: string;
   cacheRedisOverride?: RubricCacheRedisClient | null;
-  modelCaller?: (prompt: string) => Promise<unknown>;
+  modelCaller?: (prompt: string, modelOptions?: JsonModelOptions) => Promise<unknown>;
+  modelOptions?: JsonModelOptions;
 };
 
 function getOptionalCacheRedisClient(): RubricCacheRedisClient | null {
@@ -143,7 +145,7 @@ export async function structureRubric(rubricText: string, options: StructureRubr
   ].join("\n");
 
   try {
-    const modelResult = await (options.modelCaller ?? callStructureModel)(prompt);
+    const modelResult = await (options.modelCaller ?? callStructureModel)(prompt, options.modelOptions);
     const parsed = RubricSchema.safeParse(modelResult);
 
     if (!parsed.success) {

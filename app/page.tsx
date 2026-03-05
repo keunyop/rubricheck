@@ -1488,6 +1488,9 @@ export default function Home() {
       return;
     }
 
+    const startedAt = performance.now();
+    const startedAtIso = new Date().toISOString();
+
     try {
       setLoadingStep("uploading");
       let requestPromise: Promise<Response>;
@@ -1617,6 +1620,14 @@ export default function Home() {
       setShouldFocusEvaluationHeading(true);
       setGradeResult(data);
       setResultMode(selectedMode);
+      const elapsedMs = performance.now() - startedAt;
+      const requestId = response.headers.get("x-request-id") ?? "unknown";
+      const servedVariant = response.headers.get("x-eval-variant") ?? "unknown";
+      requestAnimationFrame(() => {
+        console.log(
+          `[RubriCheck][GradeTiming] mode=${selectedMode} totalMs=${elapsedMs.toFixed(1)} variant=${servedVariant} requestId=${requestId} startedAt=${startedAtIso}`,
+        );
+      });
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

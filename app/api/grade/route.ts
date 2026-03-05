@@ -2,7 +2,18 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { evaluateAssignment } from "../../../lib/evaluation";
+import {
+  assessFinalEvaluationQuality,
+  EVALUATION_QUALITY_GUARDRAIL_VERSION,
+} from "../../../lib/evaluationQuality";
 import { buildFinalEvaluation, type FeedbackAccessTier } from "../../../lib/gradeFinalization";
+import {
+  buildEvaluationModelOptions,
+  buildStructureModelOptions,
+  resolveEvaluationOptimizationVariant,
+  type EvaluationOptimizationVariant,
+  type ServedEvaluationVariant,
+} from "../../../lib/modelOptimization";
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
 import { hashNormalizedEmail, structureRubric } from "../../../lib/rubricStructuring";
 import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
@@ -212,12 +223,21 @@ export async function POST(request: Request) {
       return errorResponse(context, 400, "MISSING_INPUT", "Please provide both a rubric and an assignment.");
     }
 
+    const currentFeedbackTierPromise = resolveCurrentFeedbackTier(request, signedInEmail);
+    const cacheIdentityPromise = resolveRubricCacheIdentity(request).catch((error) => {
+      console.warn("RUBRIC_CACHE_IDENTITY_RESOLUTION_FAILED", {
+        requestId: context.requestId,
+        reason: error instanceof Error ? error.message : "unknown",
+      });
+      return null;
+    });
     const [rubricText, assignmentText] = await Promise.all([
       resolveFieldText("rubric", rubricTextInput, rubricFile),
       resolveFieldText("assignment", assignmentTextInput, assignmentFile),
     ]);
 
-    const currentFeedbackTier = await resolveCurrentFeedbackTier(request, signedInEmail);
+    const usagePromise = mode === "strict" ? null : checkUsageLimit(request, "evaluate");
+    const currentFeedbackTier = await currentFeedbackTierPromise;
     if (mode === "strict" && !canUseStrictMode(currentFeedbackTier)) {
       return errorResponse(
         context,
@@ -227,7 +247,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const usage = await checkUsageLimit(request, "evaluate");
+    const usage = usagePromise ? await usagePromise : await checkUsageLimit(request, "evaluate");
     const usageHeaders = buildUsageLimitHeaders(usage);
     if (usage.degradedCode === "REDIS_UNAVAILABLE") {
       usageHeaders["x-rubricheck-warning"] = "REDIS_UNAVAILABLE";
@@ -265,48 +285,81 @@ export async function POST(request: Request) {
 
       return errorResponse(context, 429, usage.errorCode ?? "RATE_LIMITED", usage.errorMessage ?? `Free trial limit reached (${usage.limit}). Upgrade to continue.`, undefined, usageHeaders);
     }
-    let structuredRubric;
-    try {
-      const cacheIdentity = await resolveRubricCacheIdentity(request);
-      structuredRubric = await structureRubric(rubricText, {
+    const detailLevel = feedbackTier === "free" ? "diagnostic" : "detailed";
+    const cacheIdentity = await cacheIdentityPromise;
+    const { requestedVariant, rolloutPercent } = resolveEvaluationOptimizationVariant(context.requestId, {
+      headerOverride: request.headers.get("x-eval-variant-override"),
+    });
+    let servedVariant: ServedEvaluationVariant = requestedVariant;
+
+    async function runGradingPipeline(variant: EvaluationOptimizationVariant) {
+      const structuredRubric = await structureRubric(rubricText, {
         cacheIdentity,
         requestId: context.requestId,
+        modelOptions: buildStructureModelOptions(variant, rubricText),
       });
-    } catch (error) {
-      if (
-        shouldRefundReservedEvaluateCredit({
-          billingSource: usage.billingSource,
-          hasReservation: Boolean(usage.creditReservation),
-          evaluationSucceeded: false,
-        })
-      ) {
-        try {
-          await refundUsageCreditReservation(usage);
-        } catch (refundError) {
-          console.error("CREDIT_RESERVATION_REFUND_FAILED", { requestId: context.requestId, refundError });
+      const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode, {
+        detailLevel,
+        modelOptions: buildEvaluationModelOptions(variant, structuredRubric, mode, detailLevel),
+      });
+      const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
+      const quality = assessFinalEvaluationQuality(structuredRubric, finalEvaluation, mode);
+      return { finalEvaluation, quality };
+    }
+
+    console.info("EVAL_OPTIMIZATION_VARIANT_ASSIGNED", {
+      requestId: context.requestId,
+      requestedVariant,
+      rolloutPercent,
+      mode,
+      detailLevel,
+    });
+    try {
+      let gradingResult;
+      try {
+        gradingResult = await runGradingPipeline(requestedVariant);
+      } catch (pipelineError) {
+        if (
+          requestedVariant === "optimized" &&
+          !(pipelineError instanceof Error && pipelineError.message === "OPENAI_TIMEOUT")
+        ) {
+          console.warn("EVAL_OPTIMIZED_PIPELINE_FAILED_FALLBACK_CONTROL", {
+            requestId: context.requestId,
+            reason: pipelineError instanceof Error ? pipelineError.message : "unknown",
+          });
+          servedVariant = "fallback_control";
+          gradingResult = await runGradingPipeline("control");
+        } else {
+          throw pipelineError;
         }
       }
 
-      if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
-        return errorResponse(
-          context,
-          504,
-          "OPENAI_TIMEOUT",
-          "Our AI reviewer is taking longer than usual. Please retry in a moment.",
-        );
+      if (requestedVariant === "optimized" && !gradingResult.quality.passed) {
+        console.warn("EVAL_QUALITY_GUARDRAIL_FALLBACK_CONTROL", {
+          requestId: context.requestId,
+          hardFailures: gradingResult.quality.hardFailures,
+          metrics: gradingResult.quality.metrics,
+        });
+        servedVariant = "fallback_control";
+        gradingResult = await runGradingPipeline("control");
       }
-      console.error("RUBRIC_STRUCTURE_FAILED", { requestId: context.requestId, error });
-      return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.");
-    }
 
-    try {
-      const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode, {
-        detailLevel: feedbackTier === "free" ? "diagnostic" : "detailed",
+      console.info("EVAL_QUALITY_GUARDRAIL_CHECK", {
+        requestId: context.requestId,
+        requestedVariant,
+        servedVariant,
+        guardrailVersion: EVALUATION_QUALITY_GUARDRAIL_VERSION,
+        passed: gradingResult.quality.passed,
+        hardFailures: gradingResult.quality.hardFailures,
+        metrics: gradingResult.quality.metrics,
       });
-      const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
+
       const headers = new Headers(usageHeaders);
       headers.set("x-request-id", context.requestId);
-      return NextResponse.json(finalEvaluation, { headers });
+      headers.set("x-eval-variant", servedVariant);
+      headers.set("x-eval-rollout-percent", String(rolloutPercent));
+      headers.set("x-eval-guardrail-version", EVALUATION_QUALITY_GUARDRAIL_VERSION);
+      return NextResponse.json(gradingResult.finalEvaluation, { headers });
     } catch (error) {
       if (
         shouldRefundReservedEvaluateCredit({
@@ -333,7 +386,12 @@ export async function POST(request: Request) {
         );
       }
 
-      console.error("EVALUATION_FAILED", { requestId: context.requestId, error });
+      if (error instanceof Error && error.message === "RUBRIC_STRUCTURE_FAILED") {
+        console.error("RUBRIC_STRUCTURE_FAILED", { requestId: context.requestId, servedVariant, error });
+        return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.");
+      }
+
+      console.error("EVALUATION_FAILED", { requestId: context.requestId, servedVariant, error });
       return errorResponse(context, 500, "EVALUATION_FAILED", "We hit an unexpected error while grading. Please retry.", undefined, usageHeaders);
     }
   } catch (error) {
