@@ -13,7 +13,12 @@ function buildCriterionJsonSchema(
   mode: GradingMode,
   detailLevel: EvaluationDetailLevel,
 ): Record<string, unknown> {
-  const evidenceRequired = mode === "strict";
+  const evidenceArraySchema = {
+    type: "array",
+    items: { type: "string" },
+    minItems: 1,
+    maxItems: 2,
+  } as const;
   const criterionProperties: Record<string, unknown> = {
     name: { type: "string" },
     score: { type: "integer" },
@@ -25,28 +30,27 @@ function buildCriterionJsonSchema(
       maxItems: 2,
     },
     feedback: { type: "string" },
-    evidence: {
-      type: "array",
-      items: { type: "string" },
-      minItems: 1,
-      maxItems: 2,
-    },
+    evidence:
+      mode === "strict"
+        ? evidenceArraySchema
+        : {
+            anyOf: [evidenceArraySchema, { type: "null" }],
+          },
   };
 
-  const required = ["name", "score", "rationale", "estimated_range", "feedback"];
-  if (evidenceRequired) {
-    required.push("evidence");
-  }
+  const required = ["name", "score", "rationale", "estimated_range", "feedback", "evidence"];
 
   if (detailLevel === "detailed") {
-    criterionProperties.detailed_breakdown = { type: "string" };
+    criterionProperties.detailed_breakdown = {
+      anyOf: [{ type: "string" }, { type: "null" }],
+    };
     criterionProperties.example_revisions = {
       type: "array",
       items: { type: "string" },
       minItems: 1,
       maxItems: 2,
     };
-    required.push("example_revisions");
+    required.push("detailed_breakdown", "example_revisions");
   }
 
   return {
@@ -87,7 +91,7 @@ export function buildEvaluationJsonSchema(
 }
 
 function buildSchemaDescription(mode: GradingMode, detailLevel: EvaluationDetailLevel): string {
-  const evidenceShape = mode === "strict" ? '["string", "string"]' : '["string"]';
+  const evidenceShape = mode === "strict" ? '["string", "string"]' : '["string"] | null';
 
   if (detailLevel === "detailed") {
     return `{
@@ -168,7 +172,7 @@ function buildRules(mode: GradingMode, detailLevel: EvaluationDetailLevel): stri
     ...sharedRules,
     "- summary must be 1-2 sentences, <= 280 chars, and neutral in tone.",
     "- top_improvements must contain exactly 3 items, each <= 120 chars.",
-    "- evidence is optional in standard mode; omit it if not useful.",
+    "- evidence may be null in standard mode when explicit snippets are not useful.",
     "- Do not include numbering prefixes in top_improvements.",
     "- No markdown. No extra keys. No extra text.",
   ];

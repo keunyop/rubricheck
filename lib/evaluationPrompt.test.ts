@@ -22,7 +22,7 @@ const rubric: Rubric = {
 test("standard prompt excludes strict-only instructions", () => {
   const prompt = buildEvaluationPrompt(rubric, "Sample assignment", "standard", "diagnostic");
 
-  assert.ok(prompt.includes("- evidence is optional in standard mode; omit it if not useful."));
+  assert.ok(prompt.includes("- evidence may be null in standard mode when explicit snippets are not useful."));
   assert.ok(!prompt.includes("Be conservative. Do not give benefit of doubt"));
   assert.ok(!prompt.includes("evidence is required and must contain 1-2 items per criterion."));
   assert.ok(!prompt.includes("<= 60% of criterion max_score"));
