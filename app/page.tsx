@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import html2canvas from "html2canvas";
 import Image from "next/image";
 import Link from "next/link";
 import { useAccountSummary } from "./components/AccountSummaryProvider";
@@ -29,6 +30,7 @@ import { getEvaluateInterstitialDecision } from "../src/lib/evaluateInterstitial
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"];
+const MAX_ADMIN_REAL_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
 
 type InputMode = "file" | "text";
 type InputField = "rubric" | "assignment";
@@ -126,6 +128,14 @@ type RestoreVerifyResponse = {
 type RestoreStep = "email" | "code";
 type ShareFeedbackState = "idle" | "copied" | "downloaded" | "failed";
 type AuthVerificationPurpose = "login" | "restore";
+type ComparisonImage = {
+  name: string;
+  src: string;
+};
+
+type ComparisonImagesResponse = {
+  images?: ComparisonImage[];
+};
 
 const NEXT_PUBLIC_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() ?? "development";
 const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowerCase() ?? "";
@@ -220,6 +230,30 @@ function formatEstimatedRangeDisplay(range: [number, number], separator: "~" | "
   }
 
   return `${low}${separator}${high}`;
+}
+
+function parseScoreValue(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
+    return null;
+  }
+
+  return Math.round(parsed * 10) / 10;
+}
+
+function calculateMatchPercentage(range: [number, number], realScore: number): number {
+  const [low, high] = range;
+  if (realScore >= low && realScore <= high) {
+    return 100;
+  }
+
+  const distance = realScore < low ? low - realScore : realScore - high;
+  return Math.max(0, Math.round(100 - distance));
 }
 
 function formatFileSize(bytes: number): string {
@@ -704,10 +738,53 @@ async function copyImageToClipboard(blob: Blob): Promise<boolean> {
   }
 }
 
+async function readImageFileAsDataUrl(file: File): Promise<string> {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("IMAGE_READ_FAILED"));
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string" || result.length === 0) {
+        reject(new Error("IMAGE_READ_FAILED"));
+        return;
+      }
+      resolve(result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function loadImageForCanvas(source: string): Promise<HTMLImageElement> {
+  return await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("IMAGE_LOAD_FAILED"));
+    image.src = source;
+  });
+}
+
+function drawImageContained(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  const scale = Math.min(width / image.width, height / image.height);
+  const drawWidth = image.width * scale;
+  const drawHeight = image.height * scale;
+  const offsetX = x + (width - drawWidth) / 2;
+  const offsetY = y + (height - drawHeight) / 2;
+  context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+}
+
 export default function Home() {
   const rubricInputRef = useRef<HTMLInputElement | null>(null);
   const assignmentInputRef = useRef<HTMLInputElement | null>(null);
   const evaluationHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const evaluationCaptureRef = useRef<HTMLElement | null>(null);
   const {
     signedInEmail,
     accountPlan,
@@ -744,6 +821,16 @@ export default function Home() {
   );
   const [isSharingImage, setIsSharingImage] = useState(false);
   const [shareFeedback, setShareFeedback] = useState<ShareFeedbackState>("idle");
+  const [comparisonImages, setComparisonImages] = useState<ComparisonImage[]>([]);
+  const [isComparisonCollapsed, setIsComparisonCollapsed] = useState(false);
+  const [selectedComparisonImage, setSelectedComparisonImage] = useState<ComparisonImage | null>(null);
+  const [canScrollComparisonLeft, setCanScrollComparisonLeft] = useState(false);
+  const [canScrollComparisonRight, setCanScrollComparisonRight] = useState(false);
+  const [showAdminCombineModal, setShowAdminCombineModal] = useState(false);
+  const [adminRealScoreInput, setAdminRealScoreInput] = useState("");
+  const [adminRealScoreImageFile, setAdminRealScoreImageFile] = useState<File | null>(null);
+  const [adminCombineError, setAdminCombineError] = useState("");
+  const [isAdminCombining, setIsAdminCombining] = useState(false);
   const [hasProAccess, setHasProAccess] = useState(false);
   const [entitlementStatus, setEntitlementStatus] = useState<"active" | "needs_restore">("needs_restore");
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -765,6 +852,7 @@ export default function Home() {
   const [shouldFocusEvaluationHeading, setShouldFocusEvaluationHeading] = useState(false);
   const [draftRestoreNotice, setDraftRestoreNotice] = useState("");
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const comparisonGalleryRef = useRef<HTMLDivElement | null>(null);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const billingMenuRef = useRef<HTMLDivElement | null>(null);
   const checkoutReturnSessionRef = useRef<string | null>(null);
@@ -1135,6 +1223,72 @@ export default function Home() {
   }, [gradeResult, shouldFocusEvaluationHeading]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadComparisonImages() {
+      try {
+        const response = await fetch("/api/comparison-images", {
+          method: "GET",
+          cache: "no-store",
+        });
+        const data: ComparisonImagesResponse = await response.json().catch(() => ({}));
+        const images = Array.isArray(data.images)
+          ? data.images.filter(
+              (item) =>
+                item &&
+                typeof item === "object" &&
+                typeof item.name === "string" &&
+                typeof item.src === "string",
+            )
+          : [];
+
+        if (cancelled) {
+          return;
+        }
+
+        setComparisonImages(images);
+      } catch {
+        if (!cancelled) {
+          setComparisonImages([]);
+        }
+      }
+    }
+
+    void loadComparisonImages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const updateComparisonGalleryScrollState = useCallback(() => {
+    const galleryElement = comparisonGalleryRef.current;
+    if (!galleryElement || isComparisonCollapsed) {
+      setCanScrollComparisonLeft(false);
+      setCanScrollComparisonRight(false);
+      return;
+    }
+
+    const maxScrollLeft = galleryElement.scrollWidth - galleryElement.clientWidth;
+    setCanScrollComparisonLeft(galleryElement.scrollLeft > 2);
+    setCanScrollComparisonRight(galleryElement.scrollLeft < maxScrollLeft - 2);
+  }, [isComparisonCollapsed]);
+
+  useEffect(() => {
+    const refreshScrollState = () => {
+      requestAnimationFrame(() => {
+        updateComparisonGalleryScrollState();
+      });
+    };
+
+    refreshScrollState();
+    window.addEventListener("resize", refreshScrollState);
+    return () => {
+      window.removeEventListener("resize", refreshScrollState);
+    };
+  }, [comparisonImages.length, isComparisonCollapsed, updateComparisonGalleryScrollState]);
+
+  useEffect(() => {
     return () => {
       if (copyResetTimerRef.current) {
         clearTimeout(copyResetTimerRef.current);
@@ -1208,6 +1362,269 @@ export default function Home() {
     copyResetTimerRef.current = setTimeout(() => {
       setShareFeedback("idle");
     }, durationMs);
+  }
+
+  function handleScrollComparisonGallery(direction: "left" | "right") {
+    const galleryElement = comparisonGalleryRef.current;
+    if (!galleryElement) {
+      return;
+    }
+
+    const scrollAmount = Math.max(260, Math.floor(galleryElement.clientWidth * 0.72));
+    const delta = direction === "left" ? -scrollAmount : scrollAmount;
+    galleryElement.scrollBy({ left: delta, behavior: "smooth" });
+  }
+
+  function openAdminCombineModal() {
+    if (!canAccessAdmin || !gradeResult) {
+      return;
+    }
+
+    setAdminCombineError("");
+    setAdminRealScoreInput("");
+    setAdminRealScoreImageFile(null);
+    setShowAdminCombineModal(true);
+  }
+
+  function closeAdminCombineModal() {
+    if (isAdminCombining) {
+      return;
+    }
+
+    setShowAdminCombineModal(false);
+    setAdminCombineError("");
+    setAdminRealScoreInput("");
+    setAdminRealScoreImageFile(null);
+  }
+
+  function handleAdminRealImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setAdminCombineError("");
+    setAdminRealScoreImageFile(file);
+  }
+
+  async function captureEvaluationAreaDataUrl(): Promise<string> {
+    if (!gradeResult) {
+      throw new Error("GRADE_RESULT_MISSING");
+    }
+
+    if (!evaluationCaptureRef.current) {
+      const fallbackCanvas = buildShareFallbackCanvas(gradeResult);
+      return fallbackCanvas.toDataURL("image/png");
+    }
+
+    try {
+      const capturedCanvas = await html2canvas(evaluationCaptureRef.current, {
+        backgroundColor: "#ffffff",
+        scale: Math.min(1.5, window.devicePixelRatio || 1),
+        useCORS: true,
+        logging: false,
+      });
+
+      const capturedDataUrl = capturedCanvas.toDataURL("image/png");
+      if (capturedDataUrl.startsWith("data:image/png")) {
+        return capturedDataUrl;
+      }
+    } catch {
+      // Fallback rendering below.
+    }
+
+    const fallbackCanvas = buildShareFallbackCanvas(gradeResult);
+    return fallbackCanvas.toDataURL("image/png");
+  }
+
+  async function buildAdminCombinedImageDataUrl(
+    rubricImageSrc: string,
+    realImageSrc: string,
+    rubricScoreLabel: string,
+    realScoreLabel: string,
+    matchPercentage: number,
+  ): Promise<string> {
+    const [rubricImage, realImage] = await Promise.all([
+      loadImageForCanvas(rubricImageSrc),
+      loadImageForCanvas(realImageSrc),
+    ]);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1800;
+    canvas.height = 1080;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("COMBINED_CANVAS_CONTEXT_MISSING");
+    }
+
+    const outerPadding = 44;
+    const cardGap = 28;
+    const headerHeight = 170;
+    const cardWidth = (canvas.width - outerPadding * 2 - cardGap) / 2;
+    const cardHeight = canvas.height - outerPadding * 2 - headerHeight;
+    const leftCardX = outerPadding;
+    const rightCardX = outerPadding + cardWidth + cardGap;
+    const cardY = outerPadding + headerHeight;
+
+    const backgroundGradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+    backgroundGradient.addColorStop(0, "#eef2ff");
+    backgroundGradient.addColorStop(1, "#f8fafc");
+    context.fillStyle = backgroundGradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.textBaseline = "top";
+    context.textAlign = "center";
+    context.fillStyle = "#1e293b";
+    context.font = "800 84px system-ui, -apple-system, Segoe UI, sans-serif";
+    context.fillText(`${matchPercentage}%`, canvas.width / 2, 36);
+    context.fillStyle = "#475569";
+    context.font = "700 30px system-ui, -apple-system, Segoe UI, sans-serif";
+    context.fillText("MATCH", canvas.width / 2, 124);
+    context.textAlign = "left";
+
+    drawRoundedRect(context, leftCardX, cardY, cardWidth, cardHeight, 24);
+    context.fillStyle = "#ffffff";
+    context.fill();
+    context.strokeStyle = "#e2e8f0";
+    context.lineWidth = 2;
+    context.stroke();
+
+    drawRoundedRect(context, rightCardX, cardY, cardWidth, cardHeight, 24);
+    context.fillStyle = "#ffffff";
+    context.fill();
+    context.strokeStyle = "#e2e8f0";
+    context.lineWidth = 2;
+    context.stroke();
+
+    context.fillStyle = "#334155";
+    context.font = "700 26px system-ui, -apple-system, Segoe UI, sans-serif";
+    context.fillText("RubriCheck", leftCardX + 24, cardY + 20);
+    context.fillStyle = "#4338ca";
+    context.font = "700 34px system-ui, -apple-system, Segoe UI, sans-serif";
+    context.fillText(`${rubricScoreLabel} / 100`, leftCardX + 24, cardY + 58);
+
+    context.fillStyle = "#334155";
+    context.font = "700 26px system-ui, -apple-system, Segoe UI, sans-serif";
+    context.fillText("Real", rightCardX + 24, cardY + 20);
+    context.fillStyle = "#0f766e";
+    context.font = "700 34px system-ui, -apple-system, Segoe UI, sans-serif";
+    context.fillText(`${realScoreLabel} / 100`, rightCardX + 24, cardY + 58);
+
+    const imageInset = 20;
+    const imageTopOffset = 118;
+    const imageBoxHeight = cardHeight - imageTopOffset - imageInset;
+    drawRoundedRect(
+      context,
+      leftCardX + imageInset,
+      cardY + imageTopOffset,
+      cardWidth - imageInset * 2,
+      imageBoxHeight,
+      16,
+    );
+    context.fillStyle = "#f8fafc";
+    context.fill();
+
+    drawRoundedRect(
+      context,
+      rightCardX + imageInset,
+      cardY + imageTopOffset,
+      cardWidth - imageInset * 2,
+      imageBoxHeight,
+      16,
+    );
+    context.fillStyle = "#f8fafc";
+    context.fill();
+
+    drawImageContained(
+      context,
+      rubricImage,
+      leftCardX + imageInset + 10,
+      cardY + imageTopOffset + 10,
+      cardWidth - imageInset * 2 - 20,
+      imageBoxHeight - 20,
+    );
+    drawImageContained(
+      context,
+      realImage,
+      rightCardX + imageInset + 10,
+      cardY + imageTopOffset + 10,
+      cardWidth - imageInset * 2 - 20,
+      imageBoxHeight - 20,
+    );
+
+    return canvas.toDataURL("image/png");
+  }
+
+  async function handleAdminCombineSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canAccessAdmin) {
+      return;
+    }
+
+    if (!gradeResult) {
+      setAdminCombineError("Run grading first.");
+      return;
+    }
+
+    const parsedRealScore = parseScoreValue(adminRealScoreInput);
+    if (parsedRealScore === null) {
+      setAdminCombineError("Enter a real score between 0 and 100.");
+      return;
+    }
+
+    if (!adminRealScoreImageFile) {
+      setAdminCombineError("Upload a real score image.");
+      return;
+    }
+
+    if (!adminRealScoreImageFile.type.startsWith("image/")) {
+      setAdminCombineError("Only image files are supported.");
+      return;
+    }
+
+    if (adminRealScoreImageFile.size > MAX_ADMIN_REAL_IMAGE_SIZE_BYTES) {
+      setAdminCombineError("Real image must be 8MB or smaller.");
+      return;
+    }
+
+    setIsAdminCombining(true);
+    setAdminCombineError("");
+
+    try {
+      const evaluationImageSrc = await captureEvaluationAreaDataUrl();
+      const realImageSrc = await readImageFileAsDataUrl(adminRealScoreImageFile);
+      const matchPercentage = calculateMatchPercentage(gradeResult.overall_range, parsedRealScore);
+      const combinedImageSrc = await buildAdminCombinedImageDataUrl(
+        evaluationImageSrc,
+        realImageSrc,
+        formatOverallScoreDisplay(gradeResult.overall_range),
+        String(parsedRealScore),
+        matchPercentage,
+      );
+
+      const createdImage: ComparisonImage = {
+        name: `combined-${Date.now()}.png`,
+        src: combinedImageSrc,
+      };
+      setComparisonImages((previous) => [createdImage, ...previous]);
+      setSelectedComparisonImage(createdImage);
+      setShowAdminCombineModal(false);
+      setAdminRealScoreInput("");
+      setAdminRealScoreImageFile(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "COMBINE_FAILED";
+      if (message === "IMAGE_READ_FAILED" || message === "IMAGE_LOAD_FAILED") {
+        setAdminCombineError("Real image format is not supported. Use PNG, JPG, WEBP, or GIF.");
+      } else if (message === "COMBINED_CANVAS_CONTEXT_MISSING") {
+        setAdminCombineError("Your browser could not create a canvas image. Please retry.");
+      } else {
+        setAdminCombineError("Could not create a combined image. Please try again.");
+      }
+    } finally {
+      setIsAdminCombining(false);
+    }
   }
 
   async function handleShareResultsImage() {
@@ -1466,6 +1883,12 @@ export default function Home() {
     setExpandedRewriteSections({});
     setIsSharingImage(false);
     setShareFeedback("idle");
+    setSelectedComparisonImage(null);
+    setShowAdminCombineModal(false);
+    setAdminRealScoreInput("");
+    setAdminRealScoreImageFile(null);
+    setAdminCombineError("");
+    setIsAdminCombining(false);
 
     const stepTimers: Array<ReturnType<typeof setTimeout>> = [];
 
@@ -1675,6 +2098,12 @@ export default function Home() {
     setRestoreInfo("");
     setGradeResult(null);
     setResultMode(null);
+    setSelectedComparisonImage(null);
+    setShowAdminCombineModal(false);
+    setAdminRealScoreInput("");
+    setAdminRealScoreImageFile(null);
+    setAdminCombineError("");
+    setIsAdminCombining(false);
 
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
@@ -2334,8 +2763,190 @@ export default function Home() {
           </div>
         ) : null}
 
+        <section className="-mb-2 overflow-hidden rounded-2xl border border-slate-200 bg-[linear-gradient(160deg,#ffffff_0%,#f8fafc_58%,#eef2ff_100%)] p-4 shadow-sm md:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-slate-900">RubriCheck vs Real Gallery</h2>
+            <div className="flex items-center gap-2">
+              {canAccessAdmin ? (
+                <button
+                  type="button"
+                  onClick={openAdminCombineModal}
+                  disabled={!gradeResult}
+                  className="rounded-lg border border-indigo-300 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Combine
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setIsComparisonCollapsed((previous) => !previous)}
+                aria-expanded={!isComparisonCollapsed}
+                className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700"
+              >
+                {isComparisonCollapsed ? "Expand" : "Collapse"}
+              </button>
+            </div>
+          </div>
+          {!isComparisonCollapsed ? (
+            comparisonImages.length > 0 ? (
+              <div className="relative mt-2 rounded-xl border border-slate-200/80 bg-white/70 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                {canScrollComparisonLeft ? (
+                  <button
+                    type="button"
+                    onClick={() => handleScrollComparisonGallery("left")}
+                    className="absolute -left-2.5 top-1/2 z-10 -translate-y-1/2 rounded-full border border-slate-300 bg-white/95 px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm"
+                    aria-label="Scroll gallery left"
+                  >
+                    {"<"}
+                  </button>
+                ) : null}
+                {canScrollComparisonRight ? (
+                  <button
+                    type="button"
+                    onClick={() => handleScrollComparisonGallery("right")}
+                    className="absolute -right-2.5 top-1/2 z-10 -translate-y-1/2 rounded-full border border-slate-300 bg-white/95 px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm"
+                    aria-label="Scroll gallery right"
+                  >
+                    {">"}
+                  </button>
+                ) : null}
+                <div
+                  ref={comparisonGalleryRef}
+                  onScroll={updateComparisonGalleryScrollState}
+                  className="flex gap-2 overflow-x-auto px-0.5 pb-0.5 pt-0.5 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {comparisonImages.map((image) => (
+                    <button
+                      key={image.src}
+                      type="button"
+                      onClick={() => setSelectedComparisonImage(image)}
+                      className="w-24 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-200 md:w-28 lg:w-32"
+                    >
+                      <div className="flex h-20 items-center justify-center bg-slate-100 p-1.5 md:h-24">
+                        <Image
+                          src={image.src}
+                          alt={image.name}
+                          width={1200}
+                          height={800}
+                          unoptimized
+                          className="max-h-full w-auto rounded-md border border-slate-200 bg-white object-contain"
+                        />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-5 text-xs text-slate-600">
+                Add images to `public/comparison/` to show the gallery.
+              </div>
+            )
+          ) : null}
+        </section>
+
+        {showAdminCombineModal ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close combine image modal"
+              onClick={closeAdminCombineModal}
+              className="absolute inset-0 bg-slate-950/60"
+            />
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="combine-modal-title"
+              className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+            >
+              <h2 id="combine-modal-title" className="text-lg font-semibold text-slate-900">
+                Create Combined Image
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                RubriCheck score: {gradeResult ? formatOverallScoreDisplay(gradeResult.overall_range) : "-"} / 100
+              </p>
+              <form className="mt-4 space-y-4" onSubmit={handleAdminCombineSubmit}>
+                <label className="block text-sm font-medium text-slate-700">
+                  Real score
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={adminRealScoreInput}
+                    onChange={(event) => setAdminRealScoreInput(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    placeholder="e.g. 87"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Real image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAdminRealImageFileChange}
+                    className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs file:font-semibold file:text-slate-700"
+                  />
+                  {adminRealScoreImageFile ? (
+                    <p className="mt-1 text-xs text-slate-500">{adminRealScoreImageFile.name}</p>
+                  ) : null}
+                </label>
+                {adminCombineError ? <p className="text-sm text-red-600">{adminCombineError}</p> : null}
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeAdminCombineModal}
+                    disabled={isAdminCombining}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isAdminCombining}
+                    className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isAdminCombining ? "Creating..." : "Create"}
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+        ) : null}
+
+        {selectedComparisonImage ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <button
+              type="button"
+              aria-label="Close comparison image preview"
+              onClick={() => setSelectedComparisonImage(null)}
+              className="absolute inset-0 bg-slate-950/70"
+            />
+            <div className="relative w-full max-w-6xl rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl">
+              <button
+                type="button"
+                aria-label="Close preview"
+                onClick={() => setSelectedComparisonImage(null)}
+                className="absolute right-3 top-3 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700"
+              >
+                Close
+              </button>
+              <div className="flex max-h-[84vh] items-center justify-center p-2 pt-8">
+                <Image
+                  src={selectedComparisonImage.src}
+                  alt={selectedComparisonImage.name}
+                  width={2200}
+                  height={1600}
+                  unoptimized
+                  className="h-auto max-h-[78vh] w-auto rounded-lg object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {gradeResult ? (
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+          <section ref={evaluationCaptureRef} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
             <div className="border-b border-slate-100 pb-4">
               <div className="flex flex-wrap items-center gap-2">
                 <h2
@@ -2354,51 +2965,52 @@ export default function Home() {
             </div>
 
             <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 md:p-5">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Estimated Score Range
-                    </p>
-                    <p className="mt-2 text-3xl font-semibold tracking-tight text-indigo-700 md:text-4xl">
-                      {formatOverallScoreDisplay(gradeResult.overall_range)}{" "}
-                      <span className="text-xl md:text-2xl">/ 100</span>
-                    </p>
+              <div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Estimated Score Range
+                      </p>
+                      <p className="mt-2 text-3xl font-semibold tracking-tight text-indigo-700 md:text-4xl">
+                        {formatOverallScoreDisplay(gradeResult.overall_range)}{" "}
+                        <span className="text-xl md:text-2xl">/ 100</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleShareResultsImage}
+                      disabled={isSharingImage}
+                      className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
+                    >
+                      {isSharingImage
+                        ? "Sharing..."
+                        : shareFeedback === "copied"
+                            ? "Image copied"
+                            : shareFeedback === "downloaded"
+                            ? "Downloaded"
+                            : "Share"}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleShareResultsImage}
-                    disabled={isSharingImage}
-                    className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
-                  >
-                    {isSharingImage
-                      ? "Sharing..."
-                      : shareFeedback === "copied"
-                          ? "Image copied"
-                          : shareFeedback === "downloaded"
-                          ? "Downloaded"
-                          : "Share"}
-                  </button>
-                </div>
-                {shareFeedback !== "idle" && shareFeedback !== "copied" ? (
-                  <p
-                    aria-live="polite"
-                    className={`mt-2 text-xs leading-5 md:text-sm ${
-                      shareFeedback === "failed" ? "text-red-600" : "text-slate-500"
-                    }`}
-                  >
-                    {shareFeedback === "downloaded"
-                          ? "Your browser blocked image clipboard access, so a PNG was downloaded instead."
-                          : "Could not generate the results image. Please try again."}
+                  {shareFeedback !== "idle" && shareFeedback !== "copied" ? (
+                    <p
+                      aria-live="polite"
+                      className={`mt-2 text-xs leading-5 md:text-sm ${
+                        shareFeedback === "failed" ? "text-red-600" : "text-slate-500"
+                      }`}
+                    >
+                      {shareFeedback === "downloaded"
+                            ? "Your browser blocked image clipboard access, so a PNG was downloaded instead."
+                            : "Could not generate the results image. Please try again."}
+                    </p>
+                  ) : null}
+                  <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
+                    This is an AI-estimated range based on your rubric. Use it as guidance before
+                    submission.
                   </p>
-                ) : null}
-                <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
-                  This is an AI-estimated range based on your rubric. Use it as guidance before
-                  submission.
-                </p>
+                </div>
+                <p className="mt-4 text-sm leading-6 text-slate-700 md:text-[15px]">{gradeResult.summary}</p>
               </div>
-
-              <p className="mt-4 text-sm leading-6 text-slate-700 md:text-[15px]">{gradeResult.summary}</p>
 
               <div className="mt-4">
                 <h3 className="text-sm font-semibold text-slate-900">Top Improvements</h3>
@@ -2420,7 +3032,6 @@ export default function Home() {
                   <p className="mt-2 text-xs font-medium text-indigo-700">{LOCKED_TOP_IMPROVEMENTS_NOTICE}</p>
                 ) : null}
               </div>
-
             </div>
 
             {SHOW_PRO_FEATURES && !hasProAccess ? (
@@ -2459,10 +3070,10 @@ export default function Home() {
             <div className="mt-6 hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
               <table className="min-w-full table-fixed divide-y divide-slate-200 text-left text-sm">
                 <colgroup>
-                  <col className="w-[37%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[16%]" />
-                  <col className="w-[37%]" />
+                  <col className="w-[25%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[52%]" />
                 </colgroup>
                 <thead className="bg-slate-50 text-slate-700">
                   <tr>
