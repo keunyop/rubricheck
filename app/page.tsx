@@ -2763,7 +2763,7 @@ export default function Home() {
           </div>
         ) : null}
 
-        <section className="-mb-2 overflow-hidden rounded-2xl border border-slate-200 bg-[linear-gradient(160deg,#ffffff_0%,#f8fafc_58%,#eef2ff_100%)] p-4 shadow-sm md:p-5">
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-[linear-gradient(160deg,#ffffff_0%,#f8fafc_58%,#eef2ff_100%)] p-4 shadow-sm md:p-5">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-slate-900">RubriCheck vs Real Gallery</h2>
             <div className="flex items-center gap-2">
