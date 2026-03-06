@@ -48,7 +48,7 @@ RubriCheck focuses on practical feedback:
 
 Users can:
 
-- upload `PDF`, `DOCX`, or `TXT`
+- upload `PDF`, `DOCX`, `TXT`, `PNG`, `JPG`, or `JPEG`
 - paste rubric text directly
 - paste assignment text directly
 
@@ -73,7 +73,7 @@ Users can review the result, export a shareable summary image, and revise before
 
 - AI-assisted rubric structuring and draft evaluation
 - Standard mode and Strict mode for different grading expectations
-- File parsing pipeline for `PDF`, `DOCX`, and `TXT`
+- File parsing pipeline for `PDF`, `DOCX`, `TXT`, and image OCR (`PNG`, `JPG`, `JPEG`)
 - Usage limiting with Upstash Redis
 - Pro / paid feature surface for rewrite and expanded access
 - Stripe checkout and entitlement recovery flow
@@ -87,11 +87,16 @@ RubriCheck was designed as a practical SaaS-style AI product rather than a proto
 - Backend: `Next.js Route Handlers`
 - AI integration: `OpenAI API`
 - Validation: `Zod`
-- File parsing: `pdf-parse`, `mammoth`
+- File parsing: `pdf-parse`, `mammoth`, `Google Cloud Vision OCR` (image inputs)
 - Billing: `Stripe`
 - Rate limiting and lightweight session data: `Upstash Redis`
 - Data / billing ledger: `Supabase Postgres`
 - Deployment and monitoring: `Vercel Analytics`, `Vercel Speed Insights`
+
+## Environment
+
+- `GOOGLE_CLOUD_VISION_API_KEY`: API key for Google Vision OCR
+- `GOOGLE_VISION_LANGUAGE_HINTS` (optional): comma-separated OCR language hints (default: `en,ko`)
 
 ## What This Project Demonstrates
 

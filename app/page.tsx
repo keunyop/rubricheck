@@ -29,7 +29,7 @@ import {
 import { getEvaluateInterstitialDecision } from "../src/lib/evaluateInterstitial";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt"];
+const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt", ".png", ".jpg", ".jpeg"];
 const MAX_ADMIN_REAL_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
 
 type InputMode = "file" | "text";
@@ -165,7 +165,9 @@ const evaluationRotatingMessages = [
 ];
 const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
 const rubricFileInputId = "rubric-file-input";
+const rubricCameraInputId = "rubric-camera-input";
 const assignmentFileInputId = "assignment-file-input";
+const assignmentCameraInputId = "assignment-camera-input";
 const GRADING_MODE_STORAGE_KEY = "rubricheck_grading_mode";
 const LOCKED_DETAILED_FEEDBACK_NOTICE = "Detailed feedback is locked. Buy credits or upgrade to Pro to unlock.";
 const LOCKED_TOP_IMPROVEMENTS_NOTICE = "Buy credits or upgrade to Pro to unlock the remaining improvement priorities.";
@@ -278,7 +280,7 @@ function validateFile(file: File): string | null {
   const extension = getFileExtension(file.name);
 
   if (!ACCEPTED_EXTENSIONS.includes(extension)) {
-    return "Unsupported file type. Please upload PDF, DOCX, or TXT.";
+    return "Unsupported file type. Please upload PDF, DOCX, TXT, PNG, JPG, or JPEG.";
   }
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -782,7 +784,9 @@ function drawImageContained(
 
 export default function Home() {
   const rubricInputRef = useRef<HTMLInputElement | null>(null);
+  const rubricCameraInputRef = useRef<HTMLInputElement | null>(null);
   const assignmentInputRef = useRef<HTMLInputElement | null>(null);
+  const assignmentCameraInputRef = useRef<HTMLInputElement | null>(null);
   const evaluationHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const evaluationCaptureRef = useRef<HTMLElement | null>(null);
   const {
@@ -1664,9 +1668,26 @@ export default function Home() {
       setAssignmentFile(null);
     }
 
-    const targetRef = inputRef ?? (field === "rubric" ? rubricInputRef : assignmentInputRef);
-    if (targetRef.current) {
-      targetRef.current.value = "";
+    if (inputRef?.current) {
+      inputRef.current.value = "";
+      return;
+    }
+
+    if (field === "rubric") {
+      if (rubricInputRef.current) {
+        rubricInputRef.current.value = "";
+      }
+      if (rubricCameraInputRef.current) {
+        rubricCameraInputRef.current.value = "";
+      }
+      return;
+    }
+
+    if (assignmentInputRef.current) {
+      assignmentInputRef.current.value = "";
+    }
+    if (assignmentCameraInputRef.current) {
+      assignmentCameraInputRef.current.value = "";
     }
   }
 
@@ -1764,11 +1785,15 @@ export default function Home() {
 
     if (message === "FILE_PARSE_FAILED" || message === "TEXT_EXTRACTION_FAILED") {
       const target = data.field === "rubric" ? "Rubric" : "Assignment";
-      return `Text extraction failed for ${target}. Please upload a text-based PDF/DOCX or paste the text.`;
+      return `Text extraction failed for ${target}. Try a clearer photo, upload another format, or paste text.`;
+    }
+
+    if (message === "OCR_UNAVAILABLE") {
+      return "Image OCR is temporarily unavailable. Please retry or paste text directly.";
     }
 
     if (message === "UNSUPPORTED_FILE_TYPE") {
-      return "Unsupported file type. Please upload PDF, DOCX, or TXT.";
+      return "Unsupported file type. Please upload PDF, DOCX, TXT, PNG, JPG, or JPEG.";
     }
 
     if (message === "FILE_TOO_LARGE") {
@@ -2423,7 +2448,17 @@ export default function Home() {
                       id={rubricFileInputId}
                       ref={rubricInputRef}
                       type="file"
-                      accept=".pdf,.docx,.txt"
+                      accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
+                      className="hidden"
+                      onBlur={restoreBrowserFocus}
+                      onChange={(event) => handleFileInputChange("rubric", event)}
+                    />
+                    <input
+                      id={rubricCameraInputId}
+                      ref={rubricCameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
                       className="hidden"
                       onBlur={restoreBrowserFocus}
                       onChange={(event) => handleFileInputChange("rubric", event)}
@@ -2452,13 +2487,21 @@ export default function Home() {
                       }`}
                     >
                       <p className="text-sm font-medium text-slate-700">Drag and drop a file here</p>
-                      <p className="mt-1 text-xs text-slate-500">PDF, DOCX, or TXT up to 5MB</p>
-                      <label
-                        htmlFor={rubricFileInputId}
-                        className="mt-4 inline-flex cursor-pointer rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      >
-                        Choose File
-                      </label>
+                      <p className="mt-1 text-xs text-slate-500">PDF, DOCX, TXT, PNG, JPG, or JPEG up to 5MB</p>
+                      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                        <label
+                          htmlFor={rubricFileInputId}
+                          className="inline-flex cursor-pointer rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                        >
+                          Choose File
+                        </label>
+                        <label
+                          htmlFor={rubricCameraInputId}
+                          className="inline-flex cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                        >
+                          Take Photo
+                        </label>
+                      </div>
                     </div>
                     {rubricFile ? (
                       <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -2536,7 +2579,17 @@ export default function Home() {
                       id={assignmentFileInputId}
                       ref={assignmentInputRef}
                       type="file"
-                      accept=".pdf,.docx,.txt"
+                      accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
+                      className="hidden"
+                      onBlur={restoreBrowserFocus}
+                      onChange={(event) => handleFileInputChange("assignment", event)}
+                    />
+                    <input
+                      id={assignmentCameraInputId}
+                      ref={assignmentCameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
                       className="hidden"
                       onBlur={restoreBrowserFocus}
                       onChange={(event) => handleFileInputChange("assignment", event)}
@@ -2565,13 +2618,21 @@ export default function Home() {
                       }`}
                     >
                       <p className="text-sm font-medium text-slate-700">Drag and drop a file here</p>
-                      <p className="mt-1 text-xs text-slate-500">PDF, DOCX, or TXT up to 5MB</p>
-                      <label
-                        htmlFor={assignmentFileInputId}
-                        className="mt-4 inline-flex cursor-pointer rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                      >
-                        Choose File
-                      </label>
+                      <p className="mt-1 text-xs text-slate-500">PDF, DOCX, TXT, PNG, JPG, or JPEG up to 5MB</p>
+                      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                        <label
+                          htmlFor={assignmentFileInputId}
+                          className="inline-flex cursor-pointer rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                        >
+                          Choose File
+                        </label>
+                        <label
+                          htmlFor={assignmentCameraInputId}
+                          className="inline-flex cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                        >
+                          Take Photo
+                        </label>
+                      </div>
                     </div>
                     {assignmentFile ? (
                       <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">

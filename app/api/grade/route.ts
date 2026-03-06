@@ -68,7 +68,7 @@ async function resolveFieldText(field: FieldName, textValue: string | null, file
   }
 
   try {
-    return await parseFile(file);
+    return await parseFile(file, { field });
   } catch (error) {
     if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED") {
       throw new Error(`FILE_PARSE_FAILED:${field}`);
@@ -76,6 +76,10 @@ async function resolveFieldText(field: FieldName, textValue: string | null, file
 
     if (error instanceof Error && error.message === "UNSUPPORTED_FILE_TYPE") {
       throw new Error(`UNSUPPORTED_FILE_TYPE:${field}`);
+    }
+
+    if (error instanceof Error && error.message === "GOOGLE_VISION_OCR_UNAVAILABLE") {
+      throw new Error(`OCR_UNAVAILABLE:${field}`);
     }
 
     throw error;
@@ -356,15 +360,26 @@ export async function POST(request: Request) {
 
     if (error instanceof Error && error.message.startsWith("UNSUPPORTED_FILE_TYPE:")) {
       const field = error.message.split(":")[1] as FieldName;
-      return errorResponse(context, 400, "UNSUPPORTED_FILE_TYPE", "Unsupported file type. Upload PDF, DOCX, or TXT.", { field });
+      return errorResponse(context, 400, "UNSUPPORTED_FILE_TYPE", "Unsupported file type. Upload PDF, DOCX, TXT, PNG, JPG, or JPEG.", { field });
     }
 
     if (error instanceof Error && error.message.startsWith("FILE_PARSE_FAILED:")) {
       const field = error.message.split(":")[1] as FieldName;
       return errorResponse(context, 400, "FILE_PARSE_FAILED", "We couldn't extract enough text from that file. Try again, upload another format, or paste text.", {
         field,
-        hint: "If this is a scanned PDF, OCR may be required before upload.",
+        hint: "If this is a photo, retake with better lighting, crop tightly, and keep text straight.",
       });
+    }
+
+    if (error instanceof Error && error.message.startsWith("OCR_UNAVAILABLE:")) {
+      const field = error.message.split(":")[1] as FieldName;
+      return errorResponse(
+        context,
+        503,
+        "OCR_UNAVAILABLE",
+        "Image OCR is temporarily unavailable. Please retry or paste text directly.",
+        { field },
+      );
     }
 
     if (error instanceof FileParseValidationError) {
