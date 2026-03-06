@@ -18,36 +18,40 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://rubricheck.com"),
   title: {
-    default: "RubriCheck | AI Rubric Grading Assistant",
+    default: "RubriCheck | AI Rubric Grader and Assignment Feedback Tool",
     template: "%s | RubriCheck",
   },
   description:
-    "RubriCheck helps students and educators evaluate drafts against rubrics with AI-powered criterion feedback, score ranges, and revision guidance.",
+    "RubriCheck is an AI rubric grader and rubric checker for students and educators. Evaluate essay and assignment drafts with criterion-level feedback, score ranges, and revision guidance before submission.",
   applicationName: "RubriCheck",
-  alternates: {
-    canonical: "/",
-  },
   keywords: [
+    "ai rubric grader",
+    "rubric checker",
     "rubric grading",
     "ai grading assistant",
     "assignment feedback",
-    "rubric checker",
-    "draft evaluation",
+    "essay feedback",
+    "essay grader",
+    "assignment grader",
+    "rubric feedback",
+    "pre-submission feedback",
     "student writing feedback",
+    "teacher rubric tool",
+    "draft evaluation",
   ],
   openGraph: {
     type: "website",
     url: "https://rubricheck.com",
     siteName: "RubriCheck",
-    title: "RubriCheck | AI Rubric Grading Assistant",
+    title: "RubriCheck | AI Rubric Grader and Assignment Feedback Tool",
     description:
-      "Evaluate assignment drafts against rubrics with criterion-level feedback and actionable revision guidance.",
+      "Use RubriCheck to check essays and assignments against rubrics with AI-powered feedback, score ranges, and revision guidance.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RubriCheck | AI Rubric Grading Assistant",
+    title: "RubriCheck | AI Rubric Grader and Assignment Feedback Tool",
     description:
-      "Evaluate assignment drafts against rubrics with criterion-level feedback and actionable revision guidance.",
+      "Check essays and assignments against rubrics with AI-powered feedback, score ranges, and revision guidance.",
   },
   robots: {
     index: true,
@@ -75,7 +79,7 @@ const webAppJsonLd = {
   operatingSystem: "Web",
   url: "https://rubricheck.com",
   description:
-    "RubriCheck helps students and educators evaluate assignment drafts against rubrics with AI-powered feedback.",
+    "RubriCheck helps students and educators evaluate essay and assignment drafts against rubrics with AI-powered feedback.",
   offers: {
     "@type": "Offer",
     price: "0",

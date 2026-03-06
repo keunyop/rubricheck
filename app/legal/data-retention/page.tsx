@@ -4,6 +4,12 @@ import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
 export const metadata: Metadata = {
   title: "Data Retention Policy",
   description: "How long RubriCheck stores evaluation and billing data.",
+  alternates: {
+    canonical: "/legal/data-retention",
+  },
+  openGraph: {
+    url: "https://rubricheck.com/legal/data-retention",
+  },
 };
 
 export default function DataRetentionPolicyPage() {

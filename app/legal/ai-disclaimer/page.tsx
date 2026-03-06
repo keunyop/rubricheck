@@ -4,6 +4,12 @@ import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
 export const metadata: Metadata = {
   title: "AI Disclaimer",
   description: "Important limitations for RubriCheck AI-generated feedback.",
+  alternates: {
+    canonical: "/legal/ai-disclaimer",
+  },
+  openGraph: {
+    url: "https://rubricheck.com/legal/ai-disclaimer",
+  },
 };
 
 export default function AIDisclaimerPage() {

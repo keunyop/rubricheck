@@ -1,8 +1,8 @@
 export const LANDING_COPY = {
-  headline: "RubriCheck",
+  headline: "AI Rubric Grader for Assignment Draft Feedback",
   subtitle: {
-    A: "Get calm, rubric-aligned feedback before you submit so you can revise with confidence.",
-    B: "Build pre-submission confidence with a quick rubric check and clear next steps.",
+    A: "Check essays and assignments against your rubric before submission with criterion-level feedback, score ranges, and clear revision guidance.",
+    B: "Run a quick rubric check on your draft and get focused feedback before you submit.",
   },
 } as const;
 

@@ -6,6 +6,12 @@ import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
 export const metadata: Metadata = {
   title: "Refund Policy",
   description: "Refund terms for RubriCheck Pro subscriptions and top-up credits.",
+  alternates: {
+    canonical: "/legal/refund-policy",
+  },
+  openGraph: {
+    url: "https://rubricheck.com/legal/refund-policy",
+  },
 };
 
 export default function RefundPolicyPage() {
