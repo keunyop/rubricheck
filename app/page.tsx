@@ -28,8 +28,10 @@ import {
 } from "../src/lib/accountFeatureAccess";
 import { getEvaluateInterstitialDecision } from "../src/lib/evaluateInterstitial";
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_TOTAL_FIELD_UPLOAD_BYTES = 30 * 1024 * 1024;
 const ACCEPTED_EXTENSIONS = [".pdf", ".docx", ".txt", ".png", ".jpg", ".jpeg"];
+const MULTI_UPLOAD_IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg"]);
 const MAX_ADMIN_REAL_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
 
 type InputMode = "file" | "text";
@@ -276,15 +278,34 @@ function getFileExtension(fileName: string): string {
   return index >= 0 ? fileName.slice(index).toLowerCase() : "";
 }
 
-function validateFile(file: File): string | null {
-  const extension = getFileExtension(file.name);
+function validateFiles(files: File[]): string | null {
+  if (files.length === 0) {
+    return "Please select at least one file.";
+  }
 
-  if (!ACCEPTED_EXTENSIONS.includes(extension)) {
+  const hasUnsupportedType = files.some((file) => {
+    const extension = getFileExtension(file.name);
+    return !ACCEPTED_EXTENSIONS.includes(extension);
+  });
+  if (hasUnsupportedType) {
     return "Unsupported file type. Please upload PDF, DOCX, TXT, PNG, JPG, or JPEG.";
   }
 
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    return "File is too large. Max size is 5MB.";
+  if (files.length > 1) {
+    const allImages = files.every((file) => MULTI_UPLOAD_IMAGE_EXTENSIONS.has(getFileExtension(file.name)));
+    if (!allImages) {
+      return "Multiple files are supported for photos only. Upload one PDF/DOCX/TXT file or multiple images.";
+    }
+  }
+
+  const hasOversizedFile = files.some((file) => file.size > MAX_FILE_SIZE_BYTES);
+  if (hasOversizedFile) {
+    return "File is too large. Max size is 10MB per file.";
+  }
+
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalBytes > MAX_TOTAL_FIELD_UPLOAD_BYTES) {
+    return "Total upload is too large. Keep each section under 30MB.";
   }
 
   return null;
@@ -801,8 +822,8 @@ export default function Home() {
   const [rubricMode, setRubricMode] = useState<InputMode>("file");
   const [assignmentMode, setAssignmentMode] = useState<InputMode>("file");
 
-  const [rubricFile, setRubricFile] = useState<File | null>(null);
-  const [assignmentFile, setAssignmentFile] = useState<File | null>(null);
+  const [rubricFiles, setRubricFiles] = useState<File[]>([]);
+  const [assignmentFiles, setAssignmentFiles] = useState<File[]>([]);
   const [rubricText, setRubricText] = useState("");
   const [assignmentText, setAssignmentText] = useState("");
   const [gradingMode, setGradingMode] = useState<GradingMode>("standard");
@@ -1663,9 +1684,9 @@ export default function Home() {
 
   function clearFile(field: InputField, inputRef?: RefObject<HTMLInputElement | null>) {
     if (field === "rubric") {
-      setRubricFile(null);
+      setRubricFiles([]);
     } else {
-      setAssignmentFile(null);
+      setAssignmentFiles([]);
     }
 
     if (inputRef?.current) {
@@ -1715,8 +1736,10 @@ export default function Home() {
     setAssignmentText("");
   }
 
-  function applyFileSelection(field: InputField, file: File) {
-    const validationError = validateFile(file);
+  function applyFileSelection(field: InputField, selectedFiles: File[], mode: "replace" | "append" = "replace") {
+    const existingFiles = field === "rubric" ? rubricFiles : assignmentFiles;
+    const nextFiles = mode === "append" ? [...existingFiles, ...selectedFiles] : selectedFiles;
+    const validationError = validateFiles(nextFiles);
     if (validationError) {
       setError(validationError);
       clearFile(field);
@@ -1725,20 +1748,24 @@ export default function Home() {
 
     setError("");
     if (field === "rubric") {
-      setRubricFile(file);
+      setRubricFiles(nextFiles);
     } else {
-      setAssignmentFile(file);
+      setAssignmentFiles(nextFiles);
     }
   }
 
-  function handleFileInputChange(field: InputField, event: ChangeEvent<HTMLInputElement>) {
-    const selectedFile = event.target.files?.[0];
-    if (!selectedFile) {
+  function handleFileInputChange(
+    field: InputField,
+    event: ChangeEvent<HTMLInputElement>,
+    mode: "replace" | "append" = "replace",
+  ) {
+    const selectedFiles = event.target.files ? Array.from(event.target.files) : [];
+    if (selectedFiles.length === 0) {
       restoreBrowserFocus();
       return;
     }
 
-    applyFileSelection(field, selectedFile);
+    applyFileSelection(field, selectedFiles, mode);
     restoreBrowserFocus();
   }
 
@@ -1756,12 +1783,7 @@ export default function Home() {
       return;
     }
 
-    if (files.length > 1) {
-      setError("Please drop only one file.");
-      return;
-    }
-
-    applyFileSelection(field, files[0]);
+    applyFileSelection(field, Array.from(files));
   }
 
   function mapApiError(data: GradeErrorResponse): string {
@@ -1797,7 +1819,15 @@ export default function Home() {
     }
 
     if (message === "FILE_TOO_LARGE") {
-      return "File is too large. Max size is 5MB.";
+      return "File is too large. Max size is 10MB per file.";
+    }
+
+    if (message === "FILE_TOTAL_TOO_LARGE") {
+      return "Total upload is too large. Keep each section under 30MB.";
+    }
+
+    if (message === "MULTI_FILE_IMAGES_ONLY") {
+      return "Multiple files are supported for photos only. Upload one PDF/DOCX/TXT file or multiple images.";
     }
 
     if (message === "INVALID_MODE") {
@@ -1917,23 +1947,29 @@ export default function Home() {
 
     const stepTimers: Array<ReturnType<typeof setTimeout>> = [];
 
-    const rubricProvided = rubricMode === "file" ? rubricFile !== null : rubricText.trim().length > 0;
+    const rubricProvided = rubricMode === "file" ? rubricFiles.length > 0 : rubricText.trim().length > 0;
     const assignmentProvided =
-      assignmentMode === "file" ? assignmentFile !== null : assignmentText.trim().length > 0;
+      assignmentMode === "file" ? assignmentFiles.length > 0 : assignmentText.trim().length > 0;
 
     if (!rubricProvided || !assignmentProvided) {
       setError("Please provide both a rubric and an assignment.");
       return;
     }
 
-    if (rubricMode === "file" && rubricFile && rubricFile.size > MAX_FILE_SIZE_BYTES) {
-      setError("File is too large. Max size is 5MB.");
-      return;
+    if (rubricMode === "file") {
+      const rubricValidationError = validateFiles(rubricFiles);
+      if (rubricValidationError) {
+        setError(rubricValidationError);
+        return;
+      }
     }
 
-    if (assignmentMode === "file" && assignmentFile && assignmentFile.size > MAX_FILE_SIZE_BYTES) {
-      setError("File is too large. Max size is 5MB.");
-      return;
+    if (assignmentMode === "file") {
+      const assignmentValidationError = validateFiles(assignmentFiles);
+      if (assignmentValidationError) {
+        setError(assignmentValidationError);
+        return;
+      }
     }
 
     const startedAt = performance.now();
@@ -1959,21 +1995,25 @@ export default function Home() {
         const formData = new FormData();
 
         if (rubricMode === "file") {
-          if (!rubricFile) {
+          if (rubricFiles.length === 0) {
             setError("Please provide both a rubric and an assignment.");
             return;
           }
-          formData.append("rubric", rubricFile);
+          for (const file of rubricFiles) {
+            formData.append("rubric", file);
+          }
         } else {
           formData.append("rubricText", rubricText.trim());
         }
 
         if (assignmentMode === "file") {
-          if (!assignmentFile) {
+          if (assignmentFiles.length === 0) {
             setError("Please provide both a rubric and an assignment.");
             return;
           }
-          formData.append("assignment", assignmentFile);
+          for (const file of assignmentFiles) {
+            formData.append("assignment", file);
+          }
         } else {
           formData.append("assignmentText", assignmentText.trim());
         }
@@ -2054,6 +2094,8 @@ export default function Home() {
         setErrorCode(apiCode || apiError);
         if ((apiCode || apiError) === "OPENAI_TIMEOUT") {
           setOpenAiTimeoutCount((prev) => prev + 1);
+        } else {
+          setOpenAiTimeoutCount(0);
         }
         return;
       }
@@ -2075,7 +2117,8 @@ export default function Home() {
           `[RubriCheck][GradeTiming] mode=${selectedMode} totalMs=${elapsedMs.toFixed(1)} requestId=${requestId} startedAt=${startedAtIso}`,
         );
       });
-    } catch {
+    } catch (error) {
+      console.error("EVALUATION_REQUEST_FAILED", error);
       setError("Something went wrong. Please try again.");
     } finally {
       for (const timer of stepTimers) {
@@ -2448,6 +2491,7 @@ export default function Home() {
                       id={rubricFileInputId}
                       ref={rubricInputRef}
                       type="file"
+                      multiple
                       accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
                       className="hidden"
                       onBlur={restoreBrowserFocus}
@@ -2461,7 +2505,7 @@ export default function Home() {
                       capture="environment"
                       className="hidden"
                       onBlur={restoreBrowserFocus}
-                      onChange={(event) => handleFileInputChange("rubric", event)}
+                      onChange={(event) => handleFileInputChange("rubric", event, "append")}
                     />
                     <div
                       onDragEnter={(event) => {
@@ -2487,7 +2531,6 @@ export default function Home() {
                       }`}
                     >
                       <p className="text-sm font-medium text-slate-700">Drag and drop a file here</p>
-                      <p className="mt-1 text-xs text-slate-500">PDF, DOCX, TXT, PNG, JPG, or JPEG up to 5MB</p>
                       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                         <label
                           htmlFor={rubricFileInputId}
@@ -2503,11 +2546,17 @@ export default function Home() {
                         </label>
                       </div>
                     </div>
-                    {rubricFile ? (
+                    {rubricFiles.length > 0 ? (
                       <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
-                        <p className="truncate text-sm text-slate-700">
-                          {rubricFile.name} ({formatFileSize(rubricFile.size)})
-                        </p>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-slate-700">
+                            {rubricFiles.length} file{rubricFiles.length > 1 ? "s" : ""} selected (
+                            {formatFileSize(rubricFiles.reduce((sum, file) => sum + file.size, 0))})
+                          </p>
+                          <p className="truncate text-xs text-slate-500">
+                            {rubricFiles.map((file) => file.name).join(", ")}
+                          </p>
+                        </div>
                         <button
                           type="button"
                           onClick={() => clearFile("rubric")}
@@ -2579,6 +2628,7 @@ export default function Home() {
                       id={assignmentFileInputId}
                       ref={assignmentInputRef}
                       type="file"
+                      multiple
                       accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
                       className="hidden"
                       onBlur={restoreBrowserFocus}
@@ -2592,7 +2642,7 @@ export default function Home() {
                       capture="environment"
                       className="hidden"
                       onBlur={restoreBrowserFocus}
-                      onChange={(event) => handleFileInputChange("assignment", event)}
+                      onChange={(event) => handleFileInputChange("assignment", event, "append")}
                     />
                     <div
                       onDragEnter={(event) => {
@@ -2618,7 +2668,6 @@ export default function Home() {
                       }`}
                     >
                       <p className="text-sm font-medium text-slate-700">Drag and drop a file here</p>
-                      <p className="mt-1 text-xs text-slate-500">PDF, DOCX, TXT, PNG, JPG, or JPEG up to 5MB</p>
                       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                         <label
                           htmlFor={assignmentFileInputId}
@@ -2634,11 +2683,17 @@ export default function Home() {
                         </label>
                       </div>
                     </div>
-                    {assignmentFile ? (
+                    {assignmentFiles.length > 0 ? (
                       <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
-                        <p className="truncate text-sm text-slate-700">
-                          {assignmentFile.name} ({formatFileSize(assignmentFile.size)})
-                        </p>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-slate-700">
+                            {assignmentFiles.length} file{assignmentFiles.length > 1 ? "s" : ""} selected (
+                            {formatFileSize(assignmentFiles.reduce((sum, file) => sum + file.size, 0))})
+                          </p>
+                          <p className="truncate text-xs text-slate-500">
+                            {assignmentFiles.map((file) => file.name).join(", ")}
+                          </p>
+                        </div>
                         <button
                           type="button"
                           onClick={() => clearFile("assignment")}

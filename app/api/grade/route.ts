@@ -23,7 +23,9 @@ import {
   isActiveProAccountEntitlement,
 } from "../../../src/lib/accountEntitlements";
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_TOTAL_FIELD_UPLOAD_BYTES = 30 * 1024 * 1024;
+const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg"]);
 const GradeRequestSchema = z.object({
   mode: GradingModeSchema.default("standard"),
 });
@@ -35,12 +37,13 @@ const JsonGradeRequestSchema = z.object({
 
 type FieldName = "rubric" | "assignment";
 
-function getUploadedFile(formData: FormData, fieldName: FieldName): File | null {
-  const value = formData.get(fieldName);
-  if (!(value instanceof File)) {
-    return null;
-  }
-  return value;
+type UploadedFileValidationResult =
+  | { code: "FILE_TOO_LARGE"; field: FieldName }
+  | { code: "FILE_TOTAL_TOO_LARGE"; field: FieldName }
+  | { code: "MULTI_FILE_IMAGES_ONLY"; field: FieldName };
+
+function getUploadedFiles(formData: FormData, fieldName: FieldName): File[] {
+  return formData.getAll(fieldName).filter((value): value is File => value instanceof File && value.size > 0);
 }
 
 function getTextInput(formData: FormData, fieldName: "rubricText" | "assignmentText"): string | null {
@@ -51,38 +54,86 @@ function getTextInput(formData: FormData, fieldName: "rubricText" | "assignmentT
   return value.trim().length > 0 ? value : null;
 }
 
-function validateFileSize(file: File, fieldName: FieldName): { field: FieldName } | null {
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    return { field: fieldName };
+function getFileExtension(fileName: string): string {
+  const index = fileName.lastIndexOf(".");
+  return index >= 0 ? fileName.slice(index).toLowerCase() : "";
+}
+
+function isImageFile(file: File): boolean {
+  return IMAGE_EXTENSIONS.has(getFileExtension(file.name));
+}
+
+function validateUploadedFiles(files: File[], fieldName: FieldName): UploadedFileValidationResult | null {
+  if (files.some((file) => file.size > MAX_FILE_SIZE_BYTES)) {
+    return { code: "FILE_TOO_LARGE", field: fieldName };
   }
+
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalBytes > MAX_TOTAL_FIELD_UPLOAD_BYTES) {
+    return { code: "FILE_TOTAL_TOO_LARGE", field: fieldName };
+  }
+
+  if (files.length > 1 && !files.every((file) => isImageFile(file))) {
+    return { code: "MULTI_FILE_IMAGES_ONLY", field: fieldName };
+  }
+
   return null;
 }
 
-async function resolveFieldText(field: FieldName, textValue: string | null, file: File | null): Promise<string> {
+function mapFieldParseError(error: unknown, field: FieldName): never {
+  if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED") {
+    throw new Error(`FILE_PARSE_FAILED:${field}`);
+  }
+
+  if (error instanceof Error && error.message === "UNSUPPORTED_FILE_TYPE") {
+    throw new Error(`UNSUPPORTED_FILE_TYPE:${field}`);
+  }
+
+  if (error instanceof Error && error.message === "GOOGLE_VISION_OCR_UNAVAILABLE") {
+    throw new Error(`OCR_UNAVAILABLE:${field}`);
+  }
+
+  throw error;
+}
+
+async function resolveFieldText(field: FieldName, textValue: string | null, files: File[]): Promise<string> {
   if (textValue !== null) {
     return textValue;
   }
 
-  if (!file) {
+  if (files.length === 0) {
     throw new Error("MISSING_INPUT");
   }
 
-  try {
-    return await parseFile(file, { field });
-  } catch (error) {
-    if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED") {
+  if (files.length > 1) {
+    if (!files.every((file) => isImageFile(file))) {
+      throw new Error(`MULTI_FILE_IMAGES_ONLY:${field}`);
+    }
+
+    const chunks: string[] = [];
+    for (const file of files) {
+      try {
+        const parsed = await parseFile(file, { field, requireMeaningfulText: false });
+        const trimmed = parsed.trim();
+        if (trimmed.length > 0) {
+          chunks.push(trimmed);
+        }
+      } catch (error) {
+        mapFieldParseError(error, field);
+      }
+    }
+
+    if (chunks.length === 0) {
       throw new Error(`FILE_PARSE_FAILED:${field}`);
     }
 
-    if (error instanceof Error && error.message === "UNSUPPORTED_FILE_TYPE") {
-      throw new Error(`UNSUPPORTED_FILE_TYPE:${field}`);
-    }
+    return chunks.join("\n\n");
+  }
 
-    if (error instanceof Error && error.message === "GOOGLE_VISION_OCR_UNAVAILABLE") {
-      throw new Error(`OCR_UNAVAILABLE:${field}`);
-    }
-
-    throw error;
+  try {
+    return await parseFile(files[0], { field });
+  } catch (error) {
+    mapFieldParseError(error, field);
   }
 }
 
@@ -155,8 +206,8 @@ export async function POST(request: Request) {
 
     const contentType = request.headers.get("content-type") ?? "";
     let mode: GradingMode = "standard";
-    let rubricFile: File | null = null;
-    let assignmentFile: File | null = null;
+    let rubricFiles: File[] = [];
+    let assignmentFiles: File[] = [];
     let rubricTextInput: string | null = null;
     let assignmentTextInput: string | null = null;
 
@@ -188,31 +239,67 @@ export async function POST(request: Request) {
       }
 
       mode = parsedRequest.data.mode;
-      rubricFile = getUploadedFile(formData, "rubric");
-      assignmentFile = getUploadedFile(formData, "assignment");
+      rubricFiles = getUploadedFiles(formData, "rubric");
+      assignmentFiles = getUploadedFiles(formData, "assignment");
       rubricTextInput = getTextInput(formData, "rubricText");
       assignmentTextInput = getTextInput(formData, "assignmentText");
     }
 
-    if (rubricFile) {
-      const rubricSizeError = validateFileSize(rubricFile, "rubric");
-      if (rubricSizeError) {
-        return errorResponse(context, 400, "FILE_TOO_LARGE", "Rubric file is too large. Max size is 5MB.", rubricSizeError);
-      }
+    const rubricValidation = validateUploadedFiles(rubricFiles, "rubric");
+    if (rubricValidation?.code === "FILE_TOO_LARGE") {
+      return errorResponse(context, 400, "FILE_TOO_LARGE", "Rubric file is too large. Max size is 10MB per file.", {
+        field: rubricValidation.field,
+      });
+    }
+    if (rubricValidation?.code === "FILE_TOTAL_TOO_LARGE") {
+      return errorResponse(
+        context,
+        400,
+        "FILE_TOTAL_TOO_LARGE",
+        "Rubric upload is too large. Keep total uploads under 30MB.",
+        { field: rubricValidation.field },
+      );
+    }
+    if (rubricValidation?.code === "MULTI_FILE_IMAGES_ONLY") {
+      return errorResponse(
+        context,
+        400,
+        "MULTI_FILE_IMAGES_ONLY",
+        "Multiple rubric files are supported for photos only. Upload one PDF/DOCX/TXT file or multiple images.",
+        { field: rubricValidation.field },
+      );
     }
 
-    if (assignmentFile) {
-      const assignmentSizeError = validateFileSize(assignmentFile, "assignment");
-      if (assignmentSizeError) {
-        return errorResponse(context, 400, "FILE_TOO_LARGE", "Assignment file is too large. Max size is 5MB.", assignmentSizeError);
-      }
+    const assignmentValidation = validateUploadedFiles(assignmentFiles, "assignment");
+    if (assignmentValidation?.code === "FILE_TOO_LARGE") {
+      return errorResponse(context, 400, "FILE_TOO_LARGE", "Assignment file is too large. Max size is 10MB per file.", {
+        field: assignmentValidation.field,
+      });
+    }
+    if (assignmentValidation?.code === "FILE_TOTAL_TOO_LARGE") {
+      return errorResponse(
+        context,
+        400,
+        "FILE_TOTAL_TOO_LARGE",
+        "Assignment upload is too large. Keep total uploads under 30MB.",
+        { field: assignmentValidation.field },
+      );
+    }
+    if (assignmentValidation?.code === "MULTI_FILE_IMAGES_ONLY") {
+      return errorResponse(
+        context,
+        400,
+        "MULTI_FILE_IMAGES_ONLY",
+        "Multiple assignment files are supported for photos only. Upload one PDF/DOCX/TXT file or multiple images.",
+        { field: assignmentValidation.field },
+      );
     }
 
-    if (!rubricTextInput && !rubricFile) {
+    if (!rubricTextInput && rubricFiles.length === 0) {
       return errorResponse(context, 400, "MISSING_INPUT", "Please provide both a rubric and an assignment.");
     }
 
-    if (!assignmentTextInput && !assignmentFile) {
+    if (!assignmentTextInput && assignmentFiles.length === 0) {
       return errorResponse(context, 400, "MISSING_INPUT", "Please provide both a rubric and an assignment.");
     }
 
@@ -225,8 +312,8 @@ export async function POST(request: Request) {
       return null;
     });
     const [rubricText, assignmentText] = await Promise.all([
-      resolveFieldText("rubric", rubricTextInput, rubricFile),
-      resolveFieldText("assignment", assignmentTextInput, assignmentFile),
+      resolveFieldText("rubric", rubricTextInput, rubricFiles),
+      resolveFieldText("assignment", assignmentTextInput, assignmentFiles),
     ]);
 
     const usagePromise = mode === "strict" ? null : checkUsageLimit(request, "evaluate");
@@ -378,6 +465,17 @@ export async function POST(request: Request) {
         503,
         "OCR_UNAVAILABLE",
         "Image OCR is temporarily unavailable. Please retry or paste text directly.",
+        { field },
+      );
+    }
+
+    if (error instanceof Error && error.message.startsWith("MULTI_FILE_IMAGES_ONLY:")) {
+      const field = error.message.split(":")[1] as FieldName;
+      return errorResponse(
+        context,
+        400,
+        "MULTI_FILE_IMAGES_ONLY",
+        "Multiple files are supported for photos only. Upload one PDF/DOCX/TXT file or multiple images.",
         { field },
       );
     }

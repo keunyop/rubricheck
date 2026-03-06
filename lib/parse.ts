@@ -30,6 +30,7 @@ type VisionOcrClient = {
 type ParseFileOptions = {
   field?: ParsedField;
   visionOcrClient?: VisionOcrClient;
+  requireMeaningfulText?: boolean;
 };
 
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg"]);
@@ -172,13 +173,19 @@ export function cleanupOcrText(text: string, field: ParsedField): string {
     .trim();
 }
 
-async function parseImageWithOcr(file: File, field: ParsedField, visionOcrClient?: VisionOcrClient): Promise<string> {
+async function parseImageWithOcr(
+  file: File,
+  field: ParsedField,
+  visionOcrClient: VisionOcrClient | undefined,
+  requireMeaningfulText: boolean,
+): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const imageContentBase64 = Buffer.from(arrayBuffer).toString("base64");
   const ocrClient = visionOcrClient ?? createGoogleVisionOcrClient();
   const ocrText = await ocrClient.extractText({ imageContentBase64, field });
   const cleaned = cleanupOcrText(ocrText, field);
-  return ensureMeaningfulText(normalizeText(cleaned), file.name);
+  const normalized = normalizeText(cleaned);
+  return requireMeaningfulText ? ensureMeaningfulText(normalized, file.name) : normalized;
 }
 
 export async function parseFile(file: File, options: ParseFileOptions = {}): Promise<string> {
@@ -188,6 +195,7 @@ export async function parseFile(file: File, options: ParseFileOptions = {}): Pro
 
   const extension = getFileExtension(file.name);
   const field = options.field ?? "assignment";
+  const requireMeaningfulText = options.requireMeaningfulText ?? true;
 
   if (extension === ".pdf") {
     const arrayBuffer = await file.arrayBuffer();
@@ -197,7 +205,7 @@ export async function parseFile(file: File, options: ParseFileOptions = {}): Pro
       const pdfParse = loadPdfParse();
       const result = await pdfParse(buffer);
       const normalizedText = normalizeText(result.text ?? "");
-      return ensureMeaningfulText(normalizedText, file.name);
+      return requireMeaningfulText ? ensureMeaningfulText(normalizedText, file.name) : normalizedText;
     } catch (error) {
       if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED") {
         throw error;
@@ -213,7 +221,7 @@ export async function parseFile(file: File, options: ParseFileOptions = {}): Pro
     try {
       const result = await mammoth.extractRawText({ buffer });
       const normalizedText = normalizeText(result.value ?? "");
-      return ensureMeaningfulText(normalizedText, file.name);
+      return requireMeaningfulText ? ensureMeaningfulText(normalizedText, file.name) : normalizedText;
     } catch (error) {
       if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED") {
         throw error;
@@ -229,7 +237,7 @@ export async function parseFile(file: File, options: ParseFileOptions = {}): Pro
   }
 
   if (IMAGE_EXTENSIONS.has(extension)) {
-    return parseImageWithOcr(file, field, options.visionOcrClient);
+    return parseImageWithOcr(file, field, options.visionOcrClient, requireMeaningfulText);
   }
 
   throw new Error("UNSUPPORTED_FILE_TYPE");
