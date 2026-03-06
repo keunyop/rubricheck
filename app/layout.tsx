@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://rubricheck.com"),
   title: {
-    default: "RubriCheck | AI Rubric Grader and Assignment Feedback Tool",
+    default: "RubriCheck",
     template: "%s | RubriCheck",
   },
   description:
@@ -43,13 +43,13 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://rubricheck.com",
     siteName: "RubriCheck",
-    title: "RubriCheck | AI Rubric Grader and Assignment Feedback Tool",
+    title: "RubriCheck",
     description:
       "Use RubriCheck to check essays and assignments against rubrics with AI-powered feedback, score ranges, and revision guidance.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RubriCheck | AI Rubric Grader and Assignment Feedback Tool",
+    title: "RubriCheck",
     description:
       "Check essays and assignments against rubrics with AI-powered feedback, score ranges, and revision guidance.",
   },
