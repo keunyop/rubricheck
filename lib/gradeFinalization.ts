@@ -1,4 +1,5 @@
 import type { Evaluation, GradingMode, Rubric } from "./schema";
+import type { HiddenAiDocumentAlert } from "./hiddenAiAlert.ts";
 import {
   canAccessDetailedFeedback,
   canAccessRewriteSuggestions,
@@ -31,6 +32,7 @@ export type FinalEvaluation = {
   summary: string;
   top_improvements: string[];
   criteria: FinalCriterion[];
+  hidden_ai_alert?: HiddenAiDocumentAlert;
 };
 
 type EvaluationCriterionScore = Evaluation["criteria_scores"][number];

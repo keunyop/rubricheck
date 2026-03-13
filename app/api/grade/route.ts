@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { evaluateAssignment } from "../../../lib/evaluation";
 import { buildFinalEvaluation, type FeedbackAccessTier } from "../../../lib/gradeFinalization";
+import { detectHiddenAiAlert } from "../../../lib/hiddenAiAlert";
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
 import { hashNormalizedEmail, structureRubric } from "../../../lib/rubricStructuring";
 import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
@@ -315,6 +316,7 @@ export async function POST(request: Request) {
       resolveFieldText("rubric", rubricTextInput, rubricFiles),
       resolveFieldText("assignment", assignmentTextInput, assignmentFiles),
     ]);
+    const hiddenAiAlert = detectHiddenAiAlert({ rubricText, assignmentText });
 
     const usagePromise = mode === "strict" ? null : checkUsageLimit(request, "evaluate");
     const currentFeedbackTier = await currentFeedbackTierPromise;
@@ -406,7 +408,10 @@ export async function POST(request: Request) {
       const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
       const headers = new Headers(usageHeaders);
       headers.set("x-request-id", context.requestId);
-      return NextResponse.json(finalEvaluation, { headers });
+      return NextResponse.json(
+        hiddenAiAlert ? { ...finalEvaluation, hidden_ai_alert: hiddenAiAlert } : finalEvaluation,
+        { headers },
+      );
     } catch (error) {
       if (
         shouldRefundReservedEvaluateCredit({

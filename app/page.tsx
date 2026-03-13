@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useAccountSummary } from "./components/AccountSummaryProvider";
 import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ProBadge } from "./components/ProBadge";
+import type { HiddenAiAlertSource } from "../lib/hiddenAiAlert";
 import { isKnownAdminEmail } from "../src/config/admin";
 import { ACTIVE_LANDING_COPY } from "../src/config/copy";
 import {
@@ -93,6 +94,11 @@ type GradeResult = {
   summary: string;
   top_improvements: string[];
   criteria: CriteriaResult[];
+  hidden_ai_alert?: {
+    code: "HIDDEN_AI_TEXT";
+    sources: HiddenAiAlertSource[];
+    message: string;
+  };
 };
 
 type EntitlementStatusResponse = {
@@ -217,6 +223,14 @@ function getVisibleTopImprovements(result: GradeResult): string[] {
 
 function getLockedTopImprovementsCount(result: GradeResult): number {
   return Math.max(0, 3 - getVisibleTopImprovements(result).length);
+}
+
+function formatHiddenAiAlertSources(sources: HiddenAiAlertSource[]): string {
+  if (sources.length === 2) {
+    return "Rubric and assignment";
+  }
+
+  return sources[0] === "rubric" ? "Rubric" : "Assignment";
 }
 
 function formatOverallScoreDisplay(range: [number, number]): string {
@@ -1897,6 +1911,18 @@ export default function Home() {
               row.evidence.every((snippet) => typeof snippet === "string" && snippet.trim().length > 0)))
         );
       });
+    const hasValidHiddenAiAlert =
+      candidate.hidden_ai_alert === undefined ||
+      (candidate.hidden_ai_alert !== null &&
+        typeof candidate.hidden_ai_alert === "object" &&
+        candidate.hidden_ai_alert.code === "HIDDEN_AI_TEXT" &&
+        Array.isArray(candidate.hidden_ai_alert.sources) &&
+        candidate.hidden_ai_alert.sources.length >= 1 &&
+        candidate.hidden_ai_alert.sources.length <= 2 &&
+        candidate.hidden_ai_alert.sources.every(
+          (source) => source === "rubric" || source === "assignment",
+        ) &&
+        typeof candidate.hidden_ai_alert.message === "string");
 
     const hasStrictEvidence =
       mode !== "strict" ||
@@ -1909,7 +1935,16 @@ export default function Home() {
             item.evidence.every((snippet) => typeof snippet === "string" && snippet.trim().length > 0),
         ));
 
-    return hasTitle && hasAccessTier && hasSummary && hasOverallRange && hasTopImprovements && hasCriteria && hasStrictEvidence;
+    return (
+      hasTitle &&
+      hasAccessTier &&
+      hasSummary &&
+      hasOverallRange &&
+      hasTopImprovements &&
+      hasCriteria &&
+      hasValidHiddenAiAlert &&
+      hasStrictEvidence
+    );
   }
 
   async function submitGrade(selectedMode: GradingMode) {
@@ -3078,11 +3113,26 @@ export default function Home() {
                     {"\u{1F525}"} Strict Mode
                   </span>
                 ) : null}
+                {gradeResult.hidden_ai_alert ? (
+                  <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                    Hidden AI text detected
+                  </span>
+                ) : null}
               </div>
             </div>
 
             <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 md:p-5">
               <div>
+                {gradeResult.hidden_ai_alert ? (
+                  <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                    <p className="text-sm font-semibold text-amber-900">
+                      {formatHiddenAiAlertSources(gradeResult.hidden_ai_alert.sources)} warning
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-amber-800">
+                      {gradeResult.hidden_ai_alert.message}
+                    </p>
+                  </div>
+                ) : null}
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
