@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SEO_LANDING_PAGES } from "../src/config/seoPages";
 
 const BASE_URL = "https://rubricheck.com";
 
@@ -17,6 +18,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.8,
     },
+    ...SEO_LANDING_PAGES.map((page) => ({
+      url: `${BASE_URL}${page.path}`,
+      lastModified,
+      changeFrequency:
+        page.slug === "how-to-use-a-rubric-to-check-an-assignment"
+          ? ("monthly" as const)
+          : ("weekly" as const),
+      priority:
+        page.slug === "rubric-checker" || page.slug === "ai-rubric-grader"
+          ? 0.9
+          : 0.8,
+    })),
     {
       url: `${BASE_URL}/legal/privacy`,
       lastModified,

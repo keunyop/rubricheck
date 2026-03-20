@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
+import { buildNoIndexMetadata } from "../../../src/lib/seo";
 import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
+
+export const metadata: Metadata = buildNoIndexMetadata(
+  "Checkout Canceled",
+  "Checkout status page for canceled RubriCheck purchases.",
+);
 
 export default function BillingCancelPage() {
   return (

@@ -1,10 +1,17 @@
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { CREDIT_SESSION_COOKIE_NAME } from "../../src/lib/creditSession";
 import { getAdminEmailFromSessionTokens } from "../../src/lib/adminAuth";
 import { ENTITLEMENT_SESSION_COOKIE_NAME } from "../../src/lib/entitlementSession";
+import { buildNoIndexMetadata } from "../../src/lib/seo";
 import { AdminDashboardClient } from "./AdminDashboardClient";
+
+export const metadata: Metadata = buildNoIndexMetadata(
+  "Admin Dashboard",
+  "Private admin dashboard for RubriCheck staff.",
+);
 
 function hasValidAdminSecret(adminSecretCookie: string | null): boolean {
   const expectedSecret = process.env.ADMIN_SECRET?.trim();
