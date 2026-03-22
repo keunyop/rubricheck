@@ -1,5 +1,5 @@
 export const LANDING_COPY = {
-  headline: "RubriCheck AI Rubric Checker",
+  headline: "RubriCheck",
   subtitle: {
     A: "Upload your assignment and rubric to estimate likely scores, get criterion-level feedback, and revise before submission.",
     B: "Run a quick rubric check on assignment and essay drafts, then focus on the next changes most likely to improve your result.",
