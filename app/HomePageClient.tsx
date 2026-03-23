@@ -161,6 +161,26 @@ const FOOTER_LEGAL_LINKS = [
   { label: "Data Retention", href: "/legal/data-retention" },
 ] as const;
 
+const HOME_PRODUCT_HIGHLIGHTS = [
+  {
+    title: "Criterion-level feedback",
+    description:
+      "See how the draft lines up with individual rubric criteria instead of relying on a generic writing score.",
+  },
+  {
+    title: "Score prediction ranges",
+    description:
+      "Use AI-estimated score ranges to understand likely outcomes before the official grade is given.",
+  },
+  {
+    title: "Faster revision decisions",
+    description:
+      "Focus revision time on the feedback that matters most before a deadline, not on low-impact edits first.",
+  },
+] as const;
+
+const HOME_PRODUCT_TAGS = ["For students", "Rubric-first", "Pre-submission"] as const;
+
 const loadingStepLabels: Record<Exclude<LoadingStep, "idle">, string> = {
   uploading: "Uploading...",
   parsing: "Parsing files...",
@@ -3626,104 +3646,147 @@ export default function Home() {
           </div>
         ) : null}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-          <div className="max-w-3xl">
-            <h2 className="text-2xl font-semibold text-slate-900">
-              AI rubric checking for assignments before submission
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-700 md:text-[15px]">
-              RubriCheck is built for students who want a rubric-based draft
-              check before they submit. Upload the rubric and assignment,
-              review likely score ranges, and focus on the changes most likely
-              to improve your result.
-            </p>
-          </div>
+        {!gradeResult ? (
+          <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-[linear-gradient(180deg,#fcfdff_0%,#f3f6fb_100%)] p-5 shadow-[0_28px_70px_-52px_rgba(15,23,42,0.5)] md:p-7">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-20 top-0 h-56 w-56 rounded-full bg-sky-200/35 blur-3xl"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -left-10 bottom-0 h-44 w-44 rounded-full bg-amber-100/60 blur-3xl"
+            />
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <article className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-              <h3 className="text-base font-semibold text-slate-900">
-                Criterion-level feedback
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                See how the draft lines up with individual rubric criteria
-                instead of relying on a generic writing score.
-              </p>
-            </article>
-            <article className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-              <h3 className="text-base font-semibold text-slate-900">
-                Score prediction ranges
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Use AI-estimated score ranges to understand likely outcomes
-                before the official grade is given.
-              </p>
-            </article>
-            <article className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-              <h3 className="text-base font-semibold text-slate-900">
-                Faster revision decisions
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Focus revision time on the feedback that matters most before a
-                deadline, not on low-impact edits first.
-              </p>
-            </article>
-          </div>
-        </section>
+            <div className="relative">
+              <div className="mb-6 flex flex-col gap-3 border-b border-slate-200/80 pb-5 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                    More About RubriCheck
+                  </p>
+                </div>
+                <div className="inline-flex self-start rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm">
+                  Product details
+                </div>
+              </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-6 shadow-sm md:p-8">
-          <div className="max-w-3xl">
-            <h2 className="text-2xl font-semibold text-slate-900">
-              Explore rubric checker use cases
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-700 md:text-[15px]">
-              These pages target the highest-intent SEO themes we want to rank
-              for first, while keeping every click close to conversion.
-            </p>
-          </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {HOME_INTERNAL_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
-              >
-                <p className="text-base font-semibold text-slate-900">
-                  {link.label}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {link.description}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </section>
+              <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                <section className="rounded-[1.75rem] border border-amber-200/70 bg-[linear-gradient(180deg,#fffdf7_0%,#fff6e7_100%)] p-6 shadow-[0_18px_40px_-34px_rgba(180,83,9,0.35)]">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="max-w-3xl">
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700/80">
+                        Product Overview
+                      </p>
+                      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+                        AI rubric checking for assignments before submission
+                      </h2>
+                    </div>
+                    <div className="inline-flex rounded-full border border-amber-300/70 bg-white/80 px-3 py-1 text-xs font-semibold text-amber-800">
+                      Student workflow
+                    </div>
+                  </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-          <div className="max-w-3xl">
-            <h2 className="text-2xl font-semibold text-slate-900">
-              RubriCheck FAQ
-            </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-700 md:text-[15px]">
-              These answers make the homepage clearer for both users and search
-              engines while staying close to the actual product workflow.
-            </p>
-          </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {HOME_FAQ_ITEMS.map((item) => (
-              <article
-                key={item.question}
-                className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
-              >
-                <h3 className="text-base font-semibold text-slate-900">
-                  {item.question}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {item.answer}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
+                  <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-700 md:text-[15px]">
+                    RubriCheck is built for students who want a rubric-based draft check before they submit. Upload the
+                    rubric and assignment, review likely score ranges, and focus on the changes most likely to improve
+                    your result.
+                  </p>
+
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {HOME_PRODUCT_TAGS.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex rounded-full border border-amber-200 bg-white/75 px-3 py-1 text-xs font-medium text-slate-700"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                    {HOME_PRODUCT_HIGHLIGHTS.map((item) => (
+                      <article
+                        key={item.title}
+                        className="rounded-2xl border border-white/80 bg-white/75 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+                      >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Highlight
+                        </p>
+                        <h3 className="mt-2 text-base font-semibold text-slate-900">{item.title}</h3>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+
+                <div className="grid gap-4">
+                  <section className="rounded-[1.75rem] border border-slate-200/80 bg-white/92 p-5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.35)]">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="max-w-2xl">
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Use Cases</p>
+                        <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
+                          Explore rubric checker use cases
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          These pages target the highest-intent SEO themes we want to rank for first, while keeping every
+                          click close to conversion.
+                        </p>
+                      </div>
+                      <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
+                        Explore
+                      </div>
+                    </div>
+
+                    <div className="mt-5 space-y-2">
+                      {HOME_INTERNAL_LINKS.map((link) => (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          className="group flex items-start justify-between gap-4 rounded-2xl border border-transparent px-3 py-3 transition hover:border-slate-200 hover:bg-slate-50"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-base font-semibold text-slate-900">{link.label}</p>
+                            <p className="mt-1 text-sm leading-6 text-slate-600">{link.description}</p>
+                          </div>
+                          <span className="mt-0.5 shrink-0 text-sm font-semibold text-slate-400 transition group-hover:text-slate-700">
+                            Open
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="rounded-[1.75rem] border border-slate-200/80 bg-white/82 p-5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.22)]">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="max-w-2xl">
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">FAQ</p>
+                        <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">RubriCheck FAQ</h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          These answers make the homepage clearer for both users and search engines while staying close to
+                          the actual product workflow.
+                        </p>
+                      </div>
+                      <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
+                        Quick answers
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid gap-3">
+                      {HOME_FAQ_ITEMS.map((item) => (
+                        <article
+                          key={item.question}
+                          className="rounded-2xl border border-slate-200 bg-white px-4 py-4"
+                        >
+                          <h3 className="text-base font-semibold text-slate-900">{item.question}</h3>
+                          <p className="mt-2 text-sm leading-6 text-slate-600">{item.answer}</p>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <footer className="mt-10 px-1 py-2">
           <div className="flex flex-col gap-3 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
