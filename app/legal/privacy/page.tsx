@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
+import { buildMetadata } from "../../../src/lib/seo";
 import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Privacy Policy",
   description: "How RubriCheck collects, uses, and protects personal data.",
-  alternates: {
-    canonical: "/legal/privacy",
-  },
-  openGraph: {
-    url: "https://rubricheck.com/legal/privacy",
-  },
-};
+  path: "/legal/privacy",
+});
 
 export default function PrivacyPolicyPage() {
   return (

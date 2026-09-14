@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { FREE_TRIAL_LIMIT } from "../config/plans";
 
 export const SITE_NAME = "RubriCheck";
 export const SITE_URL = "https://rubricheck.com";
 export const CANONICAL_HOST = "rubricheck.com";
-export const DEFAULT_OG_IMAGE_PATH = "/screenshot/Hero.png";
+export const DEFAULT_OG_IMAGE_PATH = "/opengraph-image";
 
 export type FaqItem = {
   question: string;
@@ -60,10 +61,11 @@ export function buildMetadata({
     description,
     keywords,
     alternates: {
-      canonical: canonicalPath,
+      canonical: absoluteUrl(canonicalPath),
     },
     openGraph: {
       type: "website",
+      locale: "en_US",
       url: absoluteUrl(canonicalPath),
       siteName: SITE_NAME,
       title,
@@ -113,6 +115,7 @@ export function buildOrganizationSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": absoluteUrl("/#organization"),
     name: SITE_NAME,
     url: SITE_URL,
     logo: absoluteUrl("/rubricheck-logo.svg"),
@@ -123,6 +126,8 @@ export function buildWebSiteSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": absoluteUrl("/#website"),
+    publisher: { "@id": absoluteUrl("/#organization") },
     name: SITE_NAME,
     url: SITE_URL,
     inLanguage: "en-US",
@@ -137,6 +142,8 @@ export function buildSoftwareApplicationSchema({
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
+    "@id": absoluteUrl("/#software"),
+    publisher: { "@id": absoluteUrl("/#organization") },
     name,
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
@@ -145,6 +152,8 @@ export function buildSoftwareApplicationSchema({
     inLanguage: "en-US",
     offers: {
       "@type": "Offer",
+      name: `Free trial: ${FREE_TRIAL_LIMIT} evaluations`,
+      url: absoluteUrl("/pricing"),
       price: "0",
       priceCurrency: "USD",
     },
@@ -159,30 +168,18 @@ export function buildWebPageSchema({
   return {
     "@context": "https://schema.org",
     "@type": "WebPage",
+    "@id": `${absoluteUrl(path)}#webpage`,
+    about: { "@id": absoluteUrl("/#software") },
     name: title,
     url: absoluteUrl(path),
     description,
     isPartOf: {
       "@type": "WebSite",
+      "@id": absoluteUrl("/#website"),
       name: SITE_NAME,
       url: SITE_URL,
     },
     inLanguage: "en-US",
-  };
-}
-
-export function buildFaqSchema(items: FaqItem[]) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: items.map((item) => ({
-      "@type": "Question",
-      name: item.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.answer,
-      },
-    })),
   };
 }
 

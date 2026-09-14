@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
+import { buildMetadata } from "../../../src/lib/seo";
 import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Terms of Service",
   description: "Terms governing the use of RubriCheck.",
-  alternates: {
-    canonical: "/legal/terms",
-  },
-  openGraph: {
-    url: "https://rubricheck.com/legal/terms",
-  },
-};
+  path: "/legal/terms",
+});
 
 export default function TermsOfServicePage() {
   return (

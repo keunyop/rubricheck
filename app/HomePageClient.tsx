@@ -12,7 +12,6 @@ import {
   useRef,
   useState,
 } from "react";
-import html2canvas from "html2canvas";
 import Image from "next/image";
 import Link from "next/link";
 import { useAccountSummary } from "./components/AccountSummaryProvider";
@@ -1481,6 +1480,7 @@ export default function Home() {
     }
 
     try {
+      const { default: html2canvas } = await import("html2canvas");
       const capturedCanvas = await html2canvas(evaluationCaptureRef.current, {
         backgroundColor: "#ffffff",
         scale: Math.min(1.5, window.devicePixelRatio || 1),
@@ -2385,9 +2385,9 @@ export default function Home() {
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-indigo-200/40 blur-3xl" />
           <div className="relative mb-6 border-b border-slate-100 pb-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 flex-col items-start gap-3">
                 <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="h-9 w-auto" />
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+                <h1 className="max-w-2xl text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
                   {ACTIVE_LANDING_COPY.headline}
                 </h1>
               </div>
@@ -2493,9 +2493,14 @@ export default function Home() {
             <p className="mt-2 text-sm text-slate-600 md:text-[15px]">
               {ACTIVE_LANDING_COPY.subtitle}
             </p>
+            <nav aria-label="Draft review guides" className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-indigo-700">
+              <Link href="/essay-rubric-checker" className="underline underline-offset-4">Check an essay against a rubric</Link>
+              <Link href="/assignment-rubric-checker" className="underline underline-offset-4">Check assignment requirements</Link>
+              <Link href="/how-to-use-a-rubric-to-check-an-assignment" className="underline underline-offset-4">How to use a rubric</Link>
+            </nav>
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form id="rubric-checker" className="scroll-mt-6 space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <section
                 className={`rounded-2xl border border-slate-200/90 bg-white p-4 transition md:p-5 ${
@@ -3727,8 +3732,8 @@ export default function Home() {
                           Explore rubric checker use cases
                         </h2>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
-                          These pages target the highest-intent SEO themes we want to rank for first, while keeping every
-                          click close to conversion.
+                          Find a guide for your essay, report, or assignment, and learn how to turn rubric feedback
+                          into your next revision.
                         </p>
                       </div>
                       <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
@@ -3761,8 +3766,7 @@ export default function Home() {
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">FAQ</p>
                         <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">RubriCheck FAQ</h2>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
-                          These answers make the homepage clearer for both users and search engines while staying close to
-                          the actual product workflow.
+                          Learn what to upload, how to interpret your results, and what is included in the free trial.
                         </p>
                       </div>
                       <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">

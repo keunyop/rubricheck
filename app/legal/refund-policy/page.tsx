@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
+import { buildMetadata } from "../../../src/lib/seo";
 import Link from "next/link";
 
 import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Refund Policy",
   description: "Refund terms for RubriCheck Pro subscriptions and top-up credits.",
-  alternates: {
-    canonical: "/legal/refund-policy",
-  },
-  openGraph: {
-    url: "https://rubricheck.com/legal/refund-policy",
-  },
-};
+  path: "/legal/refund-policy",
+});
 
 export default function RefundPolicyPage() {
   return (

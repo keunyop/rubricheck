@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import HomePageClient from "./HomePageClient";
 import { JsonLd } from "./components/JsonLd";
-import { HOME_FAQ_ITEMS } from "../src/config/seoPages";
 import {
   DEFAULT_OG_IMAGE_PATH,
-  buildFaqSchema,
   buildSoftwareApplicationSchema,
   buildWebPageSchema,
   absoluteUrl,
@@ -13,7 +11,7 @@ import {
 const homeSeoTitle = "RubriCheck | AI Rubric Checker";
 const homeStructuredDataTitle = "AI Rubric Checker for Assignments and Essays";
 const homeDescription =
-  "RubriCheck is an AI rubric checker for students. Upload an assignment and rubric to estimate likely scores, get criterion-level feedback, and revise before submission.";
+  "Check your essay or assignment against your own rubric. Get estimated scores and revision priorities before submission. Try RubriCheck for free.";
 
 export const metadata: Metadata = {
   title: {
@@ -70,7 +68,6 @@ export default function HomePage() {
           path: "/",
         })}
       />
-      <JsonLd data={buildFaqSchema(HOME_FAQ_ITEMS)} />
       <HomePageClient />
     </>
   );

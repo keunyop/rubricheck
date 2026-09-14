@@ -6,8 +6,8 @@ import { AccountSummaryProvider } from "./components/AccountSummaryProvider";
 import { JsonLd } from "./components/JsonLd";
 import {
   SITE_URL,
+  DEFAULT_OG_IMAGE_PATH,
   buildOrganizationSchema,
-  buildSoftwareApplicationSchema,
   buildWebSiteSchema,
 } from "../src/lib/seo";
 import "./globals.css";
@@ -57,10 +57,10 @@ export const metadata: Metadata = {
       "Use RubriCheck to check essays and assignments against rubrics with AI-powered feedback, score ranges, and revision guidance.",
     images: [
       {
-        url: "/screenshot/Hero.png",
+        url: DEFAULT_OG_IMAGE_PATH,
         width: 1200,
         height: 630,
-        alt: "RubriCheck app preview",
+        alt: "RubriCheck rubric checker for essays and assignments",
       },
     ],
   },
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     title: "RubriCheck",
     description:
       "Check essays and assignments against rubrics with AI-powered feedback, score ranges, and revision guidance.",
-    images: ["/screenshot/Hero.png"],
+    images: [DEFAULT_OG_IMAGE_PATH],
   },
   robots: {
     index: true,
@@ -127,12 +127,6 @@ export default function RootLayout({
       >
         <JsonLd data={buildWebSiteSchema()} />
         <JsonLd data={buildOrganizationSchema()} />
-        <JsonLd
-          data={buildSoftwareApplicationSchema({
-            description:
-              "RubriCheck helps students and educators evaluate essay and assignment drafts against rubrics with AI-powered feedback.",
-          })}
-        />
         <AccountSummaryProvider>{children}</AccountSummaryProvider>
         <Analytics />
         <SpeedInsights />

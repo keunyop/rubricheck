@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
+import { buildMetadata } from "../../src/lib/seo";
 
 import { PricingClient } from "./PricingClient";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Pricing",
   description: "RubriCheck pricing for Pro plans and one-time evaluation top-ups.",
-  alternates: {
-    canonical: "/pricing",
-  },
-  openGraph: {
-    url: "https://rubricheck.com/pricing",
-  },
-};
+  path: "/pricing",
+});
 
 export default function PricingPage() {
   return <PricingClient />;

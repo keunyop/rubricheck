@@ -31,7 +31,8 @@ export function proxy(request: NextRequest) {
 
   const redirectUrl = request.nextUrl.clone();
   redirectUrl.protocol = "https";
-  redirectUrl.host = CANONICAL_HOST;
+  redirectUrl.hostname = CANONICAL_HOST;
+  redirectUrl.port = "";
 
   return NextResponse.redirect(redirectUrl, 301);
 }

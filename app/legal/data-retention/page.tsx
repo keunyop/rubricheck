@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
+import { buildMetadata } from "../../../src/lib/seo";
 import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Data Retention Policy",
   description: "How long RubriCheck stores evaluation and billing data.",
-  alternates: {
-    canonical: "/legal/data-retention",
-  },
-  openGraph: {
-    url: "https://rubricheck.com/legal/data-retention",
-  },
-};
+  path: "/legal/data-retention",
+});
 
 export default function DataRetentionPolicyPage() {
   return (

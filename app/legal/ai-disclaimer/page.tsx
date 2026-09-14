@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
+import { buildMetadata } from "../../../src/lib/seo";
 import { SubpageBackHomeLink } from "../../components/SubpageBackHomeLink";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "AI Disclaimer",
   description: "Important limitations for RubriCheck AI-generated feedback.",
-  alternates: {
-    canonical: "/legal/ai-disclaimer",
-  },
-  openGraph: {
-    url: "https://rubricheck.com/legal/ai-disclaimer",
-  },
-};
+  path: "/legal/ai-disclaimer",
+});
 
 export default function AIDisclaimerPage() {
   return (
