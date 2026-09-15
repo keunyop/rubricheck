@@ -1,0 +1,103 @@
+{
+  "note": "Deterministic calculation fixture, not an AI evaluation or accuracy test",
+  "rawCombinedRange": [
+    70,
+    80
+  ],
+  "standard": {
+    "title": "Evaluation Summary",
+    "access_tier": "free",
+    "overall_range": [
+      74,
+      84
+    ],
+    "summary": "Synthetic calculation audit.",
+    "top_improvements": [
+      "A",
+      "B",
+      "C"
+    ],
+    "criteria": [
+      {
+        "name": "Argument",
+        "max_score": 50,
+        "score": 38,
+        "rationale": "Synthetic fixture",
+        "estimated_range": [
+          35,
+          40
+        ],
+        "feedback": "Synthetic fixture",
+        "evidence": [
+          "Synthetic fixture"
+        ],
+        "detailed_breakdown_locked": true
+      },
+      {
+        "name": "Evidence",
+        "max_score": 50,
+        "score": 38,
+        "rationale": "Synthetic fixture",
+        "estimated_range": [
+          35,
+          40
+        ],
+        "feedback": "Synthetic fixture",
+        "evidence": [
+          "Synthetic fixture"
+        ],
+        "detailed_breakdown_locked": true
+      }
+    ]
+  },
+  "strict": {
+    "title": "Evaluation Summary",
+    "access_tier": "pro",
+    "overall_range": [
+      67,
+      77
+    ],
+    "summary": "Synthetic calculation audit.",
+    "top_improvements": [
+      "A",
+      "B",
+      "C"
+    ],
+    "criteria": [
+      {
+        "name": "Argument",
+        "max_score": 50,
+        "score": 38,
+        "rationale": "Synthetic fixture",
+        "estimated_range": [
+          35,
+          40
+        ],
+        "feedback": "Synthetic fixture",
+        "evidence": [
+          "Synthetic fixture"
+        ],
+        "example_revisions": [
+          "Revise Argument: Synthetic fixture"
+        ]
+      },
+      {
+        "name": "Evidence",
+        "max_score": 50,
+        "score": 38,
+        "rationale": "Synthetic fixture",
+        "estimated_range": [
+          35,
+          40
+        ],
+        "feedback": "Synthetic fixture",
+        "evidence": [
+          "Synthetic fixture"
+        ],
+        "example_revisions": [
+          "Revise Evidence: Synthetic fixture"
+        ]
+      }
+    ]
+  }
+}

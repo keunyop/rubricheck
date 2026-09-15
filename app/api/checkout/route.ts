@@ -1,3 +1,4 @@
+import { findEvaluationCheckout, createEvaluationCheckout, evaluationCheckoutFields, validateCheckoutEvaluation } from "../../../src/lib/evaluationCheckout";
 import Stripe from "stripe";
 import {
   getLookupKeyForProCheckoutPlan,
@@ -16,6 +17,7 @@ import { getCreditEmailFromCookie } from "../../../src/lib/creditSession";
 export const runtime = "nodejs";
 
 type CheckoutRequestBody = {
+  evaluationId?: unknown;
   plan?: unknown;
   priceId?: unknown;
   email?: unknown;
@@ -155,10 +157,18 @@ export async function POST(request: Request) {
       return respond(errorResponse(context, 409, "SESSION_EMAIL_INVALID", "Signed-in email is invalid."), "error");
     }
     requestEmail = signedInEmail;
+    const evaluationId = await validateCheckoutEvaluation(body.evaluationId, requestEmail);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
     if (!appUrl) return respond(errorResponse(context, 500, "APP_URL_MISSING", "Checkout is not configured."), "error");
 
+    const existingCheckout = await findEvaluationCheckout(getStripeClient(), requestEmail, evaluationId);
+    if (existingCheckout) {
+      const url = existingCheckout.status === "complete"
+        ? appUrl + "/?checkout_session_id=" + existingCheckout.id + "&evaluation_id=" + evaluationId
+        : existingCheckout.url;
+      if (url) return respond(successJson(context, { url }), "success");
+    }
     const alreadyActivePro = await emailHasActiveProSubscription(requestEmail);
     if (alreadyActivePro) {
       return respond(
@@ -177,21 +187,24 @@ export async function POST(request: Request) {
     const stripePriceId = priceResult.data[0]?.id;
     if (!stripePriceId) return respond(errorResponse(context, 500, "STRIPE_PRICE_NOT_FOUND", "Checkout price is unavailable."), "error");
 
-    const session = await getStripeClient().checkout.sessions.create({
+    const session = await createEvaluationCheckout(getStripeClient(), {
       mode: "subscription",
       line_items: [{ price: stripePriceId, quantity: 1 }],
       customer_email: requestEmail,
-      success_url: `${appUrl}/?checkout_session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/billing/cancel`,
-      metadata: { pro_plan: requestedPlan },
-    });
+      ...evaluationCheckoutFields(appUrl, evaluationId),
+      metadata: { pro_plan: requestedPlan, ...(evaluationId ? { evaluation_id: evaluationId } : {}) },
+    }, requestEmail, evaluationId);
 
+    if (session.status === "complete" && evaluationId) {
+      return respond(successJson(context, { url: appUrl + "/?checkout_session_id=" + session.id + "&evaluation_id=" + evaluationId }), "success");
+    }
     if (!session.url) {
       return respond(errorResponse(context, 500, "CHECKOUT_SESSION_URL_MISSING", "Checkout session is unavailable."), "error");
     }
 
     return respond(successJson(context, { url: session.url, plan: requestedPlan }), "success");
   } catch (error) {
+    if (error instanceof Error && error.message === "EVALUATION_EXPIRED") return respond(errorResponse(context, 410, "EVALUATION_EXPIRED", "Your saved result has expired. Return home before purchasing."), "error");
     if (error instanceof SyntaxError) return respond(errorResponse(context, 400, "INVALID_JSON", "Request body must be valid JSON."), "error");
     console.error("CHECKOUT_SESSION_FAILED", { requestId: context.requestId, error, emailHash: hashEmail(requestEmail) });
     return respond(errorResponse(context, 500, "CHECKOUT_SESSION_FAILED", "Unable to start checkout right now."), "error");

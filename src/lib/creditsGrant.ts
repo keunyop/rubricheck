@@ -22,16 +22,13 @@ export async function grantCreditsExactlyOnce(params: {
   markSessionProcessed: MarkSessionProcessedFn;
   grantCredits: GrantCreditsFn;
 }): Promise<{ granted: boolean; amount: number }> {
-  const isFirstProcess = await params.markSessionProcessed(params.sessionId);
-  if (!isFirstProcess) {
-    return { granted: false, amount: 0 };
-  }
-
   const amount = Math.floor(params.amount);
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("INVALID_CREDIT_AMOUNT");
   }
 
+  // The storage operation is idempotent by checkoutSessionId. Mark only after it succeeds.
+  // A webhook/confirmation retry can then recover from an interrupted grant.
   await params.grantCredits({
     amount,
     customerId: params.customerId ?? null,
@@ -43,8 +40,6 @@ export async function grantCreditsExactlyOnce(params: {
     currency: params.currency ?? null,
   });
 
-  return {
-    granted: true,
-    amount,
-  };
+  const isFirstProcess = await params.markSessionProcessed(params.sessionId);
+  return { granted: isFirstProcess, amount: isFirstProcess ? amount : 0 };
 }

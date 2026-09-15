@@ -58,7 +58,7 @@ test("same user + same rubric hits cache and skips structuring model", async () 
     modelCaller: async () => {
       modelCalls += 1;
       return {
-        criteria: [{ name: "Criterion A", max_score: 10, description: "Desc" }],
+        criteria: [{ name: "Criterion A", max_score: 10, description: "Desc" }, { name: "Criterion B", max_score: 10, description: "Second criterion" }],
       };
     },
   });
@@ -69,7 +69,7 @@ test("same user + same rubric hits cache and skips structuring model", async () 
     modelCaller: async () => {
       modelCalls += 1;
       return {
-        criteria: [{ name: "Criterion A", max_score: 10, description: "Desc" }],
+        criteria: [{ name: "Criterion A", max_score: 10, description: "Desc" }, { name: "Criterion B", max_score: 10, description: "Second criterion" }],
       };
     },
   });
@@ -90,7 +90,7 @@ test("different users + same rubric do not share cache", async () => {
   const modelCaller = async () => {
     modelCalls += 1;
     return {
-      criteria: [{ name: "Criterion A", max_score: 10, description: "Desc" }],
+      criteria: [{ name: "Criterion A", max_score: 10, description: "Desc" }, { name: "Criterion B", max_score: 10, description: "Second criterion" }],
     };
   };
 
@@ -121,7 +121,7 @@ test("no user identity skips cache key get/set operations", async () => {
     modelCaller: async () => {
       modelCalls += 1;
       return {
-        criteria: [{ name: "Criterion A", max_score: 1, description: "Desc" }],
+        criteria: [{ name: "Criterion A", max_score: 1, description: "Desc" }, { name: "Criterion B", max_score: 1, description: "Second criterion" }],
       };
     },
   });
@@ -141,7 +141,7 @@ test("email hashing uses normalized email and key never stores raw email", async
     cacheIdentity: { userIdType: "emailhash", userIdValue: emailHash },
     cacheRedisOverride: redis,
     modelCaller: async () => ({
-      criteria: [{ name: "Criterion A", max_score: 1, description: "Desc" }],
+      criteria: [{ name: "Criterion A", max_score: 1, description: "Desc" }, { name: "Criterion B", max_score: 1, description: "Second criterion" }],
     }),
   });
 

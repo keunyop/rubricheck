@@ -1,3 +1,4 @@
+import { saveEvaluation } from "../../../src/lib/evaluationRecovery";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -408,10 +409,14 @@ export async function POST(request: Request) {
       const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
       const headers = new Headers(usageHeaders);
       headers.set("x-request-id", context.requestId);
-      return NextResponse.json(
-        hiddenAiAlert ? { ...finalEvaluation, hidden_ai_alert: hiddenAiAlert } : finalEvaluation,
-        { headers },
-      );
+      const result = hiddenAiAlert ? { ...finalEvaluation, hidden_ai_alert: hiddenAiAlert } : finalEvaluation;
+      // A recovery outage must not invalidate a successful, billed evaluation.
+      try {
+        return NextResponse.json(await saveEvaluation({ email: signedInEmail, rubric: structuredRubric, assignmentText, mode, result }), { headers });
+      } catch {
+        headers.set("x-recovery-unavailable", "1");
+        return NextResponse.json(result, { headers });
+      }
     } catch (error) {
       if (
         shouldRefundReservedEvaluateCredit({

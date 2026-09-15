@@ -28,6 +28,7 @@ import {
   getVisibleTopImprovementsCount,
   type AccountFeatureTier,
 } from "../src/lib/accountFeatureAccess";
+import { DRAFT_KEY, parseDraft, saveDraftFiles, loadDraftFiles, type EvaluationDraft } from "../src/lib/evaluationDraft";
 import { getEvaluateInterstitialDecision } from "../src/lib/evaluateInterstitial";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -57,17 +58,6 @@ type GradeErrorResponse = {
   field?: "rubric" | "assignment";
 };
 
-type EvaluationDraftSnapshot = {
-  rubricMode: InputMode;
-  assignmentMode: InputMode;
-  rubricText: string;
-  assignmentText: string;
-  gradingMode: GradingMode;
-  hadRubricFile: boolean;
-  hadAssignmentFile: boolean;
-  savedAt: number;
-};
-
 type StoredEvaluationResultSnapshot = {
   gradeResult: GradeResult;
   resultMode: GradingMode | null;
@@ -88,6 +78,7 @@ type CriteriaResult = {
 };
 
 type GradeResult = {
+  evaluation_id?: string;
   title: string;
   access_tier: AccountFeatureTier;
   overall_range: [number, number];
@@ -113,6 +104,7 @@ type CheckoutConfirmResponse = {
   plan?: string;
   packId?: string;
   creditsAdded?: number;
+  evaluationId?: string;
   code?: string;
   error?: string;
 };
@@ -201,8 +193,6 @@ const GRADING_MODE_STORAGE_KEY = "rubricheck_grading_mode";
 const LOCKED_DETAILED_FEEDBACK_NOTICE = "Detailed feedback is locked. Buy credits or upgrade to Pro to unlock.";
 const LOCKED_TOP_IMPROVEMENTS_NOTICE = "Buy credits or upgrade to Pro to unlock the remaining improvement priorities.";
 const FREE_TRIAL_EVALUATIONS = 3;
-const EVALUATION_DRAFT_STORAGE_KEY = "rubricheck_evaluation_draft_v1";
-const EVALUATION_DRAFT_TTL_MS = 1000 * 60 * 60 * 24;
 const EVALUATION_RESULT_STORAGE_KEY = "rubricheck_evaluation_result_v1";
 const EVALUATION_RESULT_TTL_MS = 1000 * 60 * 60 * 24;
 const EMAIL_AVATAR_CLASS_NAME = "border-indigo-200 bg-indigo-100 text-indigo-700";
@@ -915,7 +905,11 @@ export default function Home() {
   const comparisonGalleryRef = useRef<HTMLDivElement | null>(null);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const billingMenuRef = useRef<HTMLDivElement | null>(null);
-  const checkoutReturnSessionRef = useRef<string | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
+  const [resultReady, setResultReady] = useState(false);
+  const [isResumingCheckout, setIsResumingCheckout] = useState(false);
+  const draftFileKey = useRef("");
+  const draftFilesSave = useRef<Promise<void>>(Promise.resolve());
 
   const isLoading = loadingStep !== "idle";
   const loadingMessage = useMemo(() => {
@@ -1022,7 +1016,8 @@ export default function Home() {
       return;
     }
 
-    const storedMode = window.localStorage.getItem(GRADING_MODE_STORAGE_KEY);
+    let storedMode: string | null = null;
+    try { storedMode = window.localStorage.getItem(GRADING_MODE_STORAGE_KEY); } catch {}
     if (storedMode === "standard" || storedMode === "strict") {
       setGradingMode(storedMode);
     }
@@ -1033,16 +1028,13 @@ export default function Home() {
       return;
     }
 
-    const rawStoredResult = window.localStorage.getItem(EVALUATION_RESULT_STORAGE_KEY);
-    if (!rawStoredResult) {
-      return;
-    }
-
     try {
+      const rawStoredResult = window.sessionStorage.getItem(EVALUATION_RESULT_STORAGE_KEY) ?? window.localStorage.getItem(EVALUATION_RESULT_STORAGE_KEY);
+      if (!rawStoredResult) return;
       const parsed = JSON.parse(rawStoredResult) as Partial<StoredEvaluationResultSnapshot>;
       const savedAt = typeof parsed.savedAt === "number" ? parsed.savedAt : 0;
       if (!savedAt || Date.now() - savedAt > EVALUATION_RESULT_TTL_MS) {
-        window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+        window.sessionStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
         return;
       }
 
@@ -1061,8 +1053,8 @@ export default function Home() {
       setGradeResult(candidateResult);
       setResultMode(storedMode);
     } catch {
-      window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
-    }
+      // Storage may be unavailable in private browsing.
+    } finally { setResultReady(true); }
   }, []);
 
   useEffect(() => {
@@ -1070,8 +1062,12 @@ export default function Home() {
       return;
     }
 
+    if (!resultReady) return;
     if (!gradeResult) {
-      window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+      try {
+        window.sessionStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+        window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+      } catch {}
       return;
     }
 
@@ -1082,70 +1078,86 @@ export default function Home() {
     };
 
     try {
+      window.sessionStorage.setItem(EVALUATION_RESULT_STORAGE_KEY, JSON.stringify(snapshot));
+      // Preserve existing result recovery after closing and reopening the browser.
       window.localStorage.setItem(EVALUATION_RESULT_STORAGE_KEY, JSON.stringify(snapshot));
     } catch {
       // Ignore quota/private mode storage failures.
     }
-  }, [gradeResult, resultMode]);
+  }, [gradeResult, resultMode, resultReady]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
-    const rawDraft = window.localStorage.getItem(EVALUATION_DRAFT_STORAGE_KEY);
-    if (!rawDraft) {
-      return;
+    let active = true;
+    async function restoreDraft() {
+      try {
+        let key = window.sessionStorage.getItem("rubricheck_draft_files_key");
+        if (!key) {
+          key = crypto.randomUUID();
+          window.sessionStorage.setItem("rubricheck_draft_files_key", key);
+        }
+        draftFileKey.current = key;
+        const draft = parseDraft(window.sessionStorage.getItem(DRAFT_KEY) ?? window.localStorage.getItem(DRAFT_KEY));
+        if (!draft) return;
+        if (!active) return;
+        setRubricText(draft.rubricText);
+        setAssignmentText(draft.assignmentText);
+        setRubricMode(draft.rubricMode);
+        setAssignmentMode(draft.assignmentMode);
+        setGradingMode(draft.gradingMode);
+        const files = await loadDraftFiles(key).catch(() => null);
+        if (!active) return;
+        setRubricFiles(files?.rubric ?? []);
+        setAssignmentFiles(files?.assignment ?? []);
+        const missing = (draft.hadRubricFile && !files?.rubric.length) || (draft.hadAssignmentFile && !files?.assignment.length);
+        setDraftRestoreNotice(missing
+          ? "Your text inputs were restored. Please re-select files that could not be saved."
+          : "Your inputs were restored. You can continue where you left off.");
+      } catch {
+        // Keep the editor usable when browser storage is blocked.
+      } finally {
+        if (active) setDraftReady(true);
+      }
     }
-
-    window.localStorage.removeItem(EVALUATION_DRAFT_STORAGE_KEY);
-
-    try {
-      const parsed = JSON.parse(rawDraft) as Partial<EvaluationDraftSnapshot>;
-      const savedAt = typeof parsed.savedAt === "number" ? parsed.savedAt : 0;
-      if (!savedAt || Date.now() - savedAt > EVALUATION_DRAFT_TTL_MS) {
-        return;
-      }
-
-      const restoredRubricText = typeof parsed.rubricText === "string" ? parsed.rubricText : "";
-      const restoredAssignmentText = typeof parsed.assignmentText === "string" ? parsed.assignmentText : "";
-
-      if (restoredRubricText) {
-        setRubricMode("text");
-        setRubricText(restoredRubricText);
-      }
-
-      if (restoredAssignmentText) {
-        setAssignmentMode("text");
-        setAssignmentText(restoredAssignmentText);
-      }
-
-      if (parsed.gradingMode === "standard" || parsed.gradingMode === "strict") {
-        setGradingMode(parsed.gradingMode);
-      }
-
-      const hadRubricFile = parsed.hadRubricFile === true;
-      const hadAssignmentFile = parsed.hadAssignmentFile === true;
-      if (hadRubricFile || hadAssignmentFile) {
-        setDraftRestoreNotice(
-          restoredRubricText || restoredAssignmentText
-            ? "Text inputs were restored. Re-select files before running evaluate again."
-            : "Previous file selections cannot be restored. Please re-select files before running evaluate again.",
-        );
-      } else if (restoredRubricText || restoredAssignmentText) {
-        setDraftRestoreNotice("Your text inputs were restored so you can run evaluate again.");
-      }
-    } catch {
-      // Ignore invalid cached drafts.
-    }
+    void restoreDraft();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
+    if (!draftReady) return;
+    const snapshot: EvaluationDraft = {
+      rubricMode, assignmentMode, rubricText, assignmentText, gradingMode,
+      hadRubricFile: rubricFiles.length > 0, hadAssignmentFile: assignmentFiles.length > 0,
+      savedAt: Date.now(),
+    };
+    const save = () => {
+      try { window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(snapshot)); }
+      catch { setDraftRestoreNotice("Browser storage is unavailable. Keep this page open to preserve your inputs."); }
+    };
+    save();
+    window.addEventListener("pagehide", save);
+    return () => window.removeEventListener("pagehide", save);
+  }, [draftReady, rubricMode, assignmentMode, rubricText, assignmentText, gradingMode, rubricFiles.length, assignmentFiles.length]);
+
+  useEffect(() => {
+    if (!draftReady || !draftFileKey.current) return;
+    draftFilesSave.current = draftFilesSave.current.catch(() => {}).then(() =>
+      saveDraftFiles(draftFileKey.current, rubricFiles, assignmentFiles),
+    );
+    void draftFilesSave.current.catch(() => {
+      setDraftRestoreNotice("Files could not be saved in this browser. Re-select them after returning.");
+    });
+  }, [draftReady, rubricFiles, assignmentFiles]);
+
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
-    window.localStorage.setItem(GRADING_MODE_STORAGE_KEY, gradingMode);
+    try { window.localStorage.setItem(GRADING_MODE_STORAGE_KEY, gradingMode); } catch {}
   }, [gradingMode]);
 
   useEffect(() => {
@@ -1171,14 +1183,14 @@ export default function Home() {
 
     const searchParams = new URLSearchParams(window.location.search);
     const sessionId = searchParams.get("checkout_session_id")?.trim() ?? "";
-    if (!sessionId || checkoutReturnSessionRef.current === sessionId) {
+    if (!sessionId || !draftReady || !resultReady) {
       return;
     }
 
-    checkoutReturnSessionRef.current = sessionId;
     let cancelled = false;
 
     async function finalizeCheckoutReturn() {
+      setIsResumingCheckout(true);
       setDraftRestoreNotice("Finalizing your purchase...");
 
       try {
@@ -1203,6 +1215,30 @@ export default function Home() {
               return;
             }
 
+            if (data.evaluationId) {
+              setDraftRestoreNotice("Purchase confirmed. Preparing detailed feedback for your original assignment...");
+              const upgrade = await fetch("/api/evaluations/upgrade", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sessionId }),
+              });
+              const detail = await upgrade.json();
+              if (cancelled) return;
+              if (upgrade.status === 410) {
+                setDraftRestoreNotice("Purchase confirmed. The saved result has expired. Your restored inputs are available for a new evaluation.");
+                removeCheckoutSessionIdFromUrl();
+                return;
+              }
+              if (!upgrade.ok || !isGradeResult(detail.result, detail.mode ?? "standard")) {
+                setDraftRestoreNotice("Purchase confirmed. Detailed feedback is still pending. Refresh to retry without another purchase or credit charge.");
+                return;
+              }
+              setGradeResult(detail.result);
+              setResultMode(detail.mode);
+              setShouldFocusEvaluationHeading(true);
+              setDraftRestoreNotice("Upgrade complete. Detailed feedback for your original assignment is ready.");
+              removeCheckoutSessionIdFromUrl();
+              return;
+            }
             setDraftRestoreNotice(
               data.mode === "credits"
                 ? data.creditsAdded && data.creditsAdded > 0
@@ -1229,19 +1265,17 @@ export default function Home() {
 
         setDraftRestoreNotice(
           lastData.mode === "pro"
-            ? "Payment received. Pro activation is still processing. Refresh in a moment if it does not update."
-            : "Payment received. Your top-up is still processing. Refresh in a moment if it does not update.",
+            ? "Your payment confirmation is still processing. Refresh in a moment to check Pro activation."
+            : "Your payment confirmation is still processing. Refresh in a moment to check your top-up.",
         );
       } catch {
         if (cancelled) {
           return;
         }
 
-        setDraftRestoreNotice("Payment was successful, but final confirmation is still pending. Refresh in a moment.");
+        setDraftRestoreNotice("We could not confirm the purchase yet. Refresh to retry confirmation without starting another checkout.");
       } finally {
-        if (!cancelled) {
-          removeCheckoutSessionIdFromUrl();
-        }
+        if (!cancelled) setIsResumingCheckout(false);
       }
     }
 
@@ -1250,7 +1284,25 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [refreshAccountSummary, refreshEntitlementStatus]);
+  }, [refreshAccountSummary, refreshEntitlementStatus, draftReady, resultReady]);
+
+  useEffect(() => {
+    if (!resultReady || !hasLoadedAccountSummary || !signedInEmail) return;
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("evaluation_id");
+    if (!id || params.has("checkout_session_id")) return;
+    let active = true;
+    void fetch("/api/evaluations/" + encodeURIComponent(id), { cache: "no-store" })
+      .then(async response => {
+        const data = await response.json();
+        if (!active) return;
+        if (response.ok && isGradeResult(data.result, data.mode ?? "standard")) {
+          setGradeResult(data.result);
+          setResultMode(data.mode);
+        }
+      }).catch(() => { /* The browser snapshot remains available during an outage. */ });
+    return () => { active = false; };
+  }, [resultReady, hasLoadedAccountSummary, signedInEmail]);
 
   useEffect(() => {
     if (loadingStep !== "evaluatingAssignment") {
@@ -1392,12 +1444,26 @@ export default function Home() {
     void refreshEntitlementStatus();
   }, [refreshEntitlementStatus]);
 
-  function goToPricingPage() {
+  async function goToPricingPage() {
+    if (!draftReady) return;
+    try {
+      const snapshot: EvaluationDraft = {
+        rubricMode, assignmentMode, rubricText, assignmentText, gradingMode,
+        hadRubricFile: rubricFiles.length > 0, hadAssignmentFile: assignmentFiles.length > 0, savedAt: Date.now(),
+      };
+      window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(snapshot));
+      await draftFilesSave.current.catch(() => {});
+      if (rubricFiles.length || assignmentFiles.length) await saveDraftFiles(draftFileKey.current, rubricFiles, assignmentFiles);
+    } catch {
+      setDraftRestoreNotice("Your browser could not save these inputs. Keep this page open and open Pricing in a new tab.");
+      return;
+    }
     setShowLoginModal(false);
     setShowStrictModeUpgradeModal(false);
     setShowAccountMenu(false);
     setShowBillingMenu(false);
-    window.location.assign("/pricing");
+    const id = gradeResult?.evaluation_id;
+    window.location.assign(id ? "/pricing?evaluation_id=" + encodeURIComponent(id) : "/pricing");
   }
 
   function toggleRewriteSection(criteriaKey: string) {
@@ -1969,7 +2035,7 @@ export default function Home() {
   }
 
   async function submitGrade(selectedMode: GradingMode) {
-    if (isLoading) {
+    if (isLoading || !draftReady || isResumingCheckout) {
       return;
     }
 
@@ -2167,6 +2233,9 @@ export default function Home() {
       setShouldFocusEvaluationHeading(true);
       setGradeResult(data);
       setResultMode(selectedMode);
+      if (response.headers.get("x-recovery-unavailable") === "1") {
+        setDraftRestoreNotice("Your result is ready, but server recovery is temporarily unavailable. Keep your inputs for a later evaluation.");
+      }
       const elapsedMs = performance.now() - startedAt;
       const requestId = response.headers.get("x-request-id") ?? "unknown";
       requestAnimationFrame(() => {
@@ -2231,7 +2300,7 @@ export default function Home() {
     setIsAdminCombining(false);
 
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+      window.sessionStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
     }
   }
 
@@ -2395,7 +2464,8 @@ export default function Home() {
                 {canShowAccountActions() ? (
                   <>
                     <Link
-                      href="/pricing"
+                      href={gradeResult?.evaluation_id ? "/pricing?evaluation_id=" + encodeURIComponent(gradeResult.evaluation_id) : "/pricing"}
+                      onClick={(event: import("react").MouseEvent<HTMLAnchorElement>) => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); void goToPricingPage(); } }}
                       className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
                     >
                       Pricing
@@ -2501,6 +2571,7 @@ export default function Home() {
           </div>
 
           <form id="rubric-checker" className="scroll-mt-6 space-y-6" onSubmit={handleSubmit}>
+            <fieldset disabled={!draftReady} className="space-y-6">
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <section
                 className={`rounded-2xl border border-slate-200/90 bg-white p-4 transition md:p-5 ${
@@ -2823,7 +2894,7 @@ export default function Home() {
             <div className="flex items-stretch gap-2">
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !draftReady || isResumingCheckout}
                 className="min-w-0 flex-1 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-400 active:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Grade my assignment
@@ -2831,7 +2902,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={handleStrictSubmit}
-                disabled={isLoading}
+                disabled={isLoading || !draftReady || isResumingCheckout}
                 className="shrink-0 min-w-[9.25rem] rounded-xl border border-rose-300 bg-rose-50 px-5 py-2 text-xs font-semibold text-rose-700 transition-colors duration-150 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span>{"\u{1F525}"} Strict Mode</span>
@@ -2843,6 +2914,7 @@ export default function Home() {
                 <span className="leading-5">{loadingMessage}</span>
               </div>
             ) : null}
+            </fieldset>
           </form>
         </section>
 
@@ -2884,7 +2956,8 @@ export default function Home() {
                 </button>
                 {shouldShowPricingCta() ? (
                   <Link
-                    href="/pricing"
+                    href={gradeResult?.evaluation_id ? "/pricing?evaluation_id=" + encodeURIComponent(gradeResult.evaluation_id) : "/pricing"}
+                      onClick={(event: import("react").MouseEvent<HTMLAnchorElement>) => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); void goToPricingPage(); } }}
                     className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
                   >
                     Go to Pricing

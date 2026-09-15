@@ -1,0 +1,30 @@
+[
+  {
+    "name": "text survives Pricing, home, reload and browser back",
+    "passed": true
+  },
+  {
+    "name": "files survive full navigation and remain usable for evaluation",
+    "passed": true
+  },
+  {
+    "name": "checkout resumes the same result, preserves scores, and reload does not repeat checkout",
+    "passed": true
+  },
+  {
+    "name": "failed detail and pending payment retain confirmation for a safe refresh retry",
+    "passed": true
+  },
+  {
+    "name": "checkout cancellation and independent tabs preserve the correct work",
+    "passed": true
+  },
+  {
+    "name": "blocked browser storage keeps inputs on the page instead of silently losing them",
+    "passed": true
+  },
+  {
+    "name": "expired and corrupted drafts do not crash or restore stale input",
+    "passed": true
+  }
+]

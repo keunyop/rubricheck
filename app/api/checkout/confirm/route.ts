@@ -1,3 +1,4 @@
+import { normalizeEvaluationId } from "../../../../src/lib/evaluationRecovery";
 import Stripe from "stripe";
 
 import {
@@ -247,6 +248,7 @@ export async function POST(request: Request) {
         mode: "credits",
         packId,
         creditsAdded: result.granted ? result.amount : 0,
+        evaluationId: normalizeEvaluationId(session.metadata?.evaluation_id),
       });
       response.cookies.set({
         name: CREDIT_SESSION_COOKIE_NAME,
@@ -291,7 +293,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const response = successJson(context, { ok: true, status: "active", mode: "pro", plan: "pro" });
+    const response = successJson(context, { ok: true, status: "active", mode: "pro", plan: "pro", evaluationId: normalizeEvaluationId(session.metadata?.evaluation_id) });
     response.cookies.set({
       name: ENTITLEMENT_SESSION_COOKIE_NAME,
       value: createEntitlementSessionToken({ email: sessionEmail, plan: "pro" }),

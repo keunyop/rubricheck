@@ -435,13 +435,11 @@ async function ensureEmailCreditsMigratedToCustomer(email: string, customerId: s
   }
 
   const emailKey = getCreditsByEmailKey(normalizedEmail);
-  const emailBalance = await readCreditsByKey(emailKey);
-  if (emailBalance <= 0) {
-    return;
-  }
-
-  await incrementCreditsByKey(getCreditsByCustomerKey(normalizedCustomerId), emailBalance);
-  await getRedisClient().del(emailKey);
+  // Webhook and browser confirmation may resolve the customer at the same time.
+  await getRedisClient().eval(
+    "local balance = tonumber(redis.call('get',KEYS[1]) or '0') if balance > 0 then redis.call('incrby',KEYS[2],balance) redis.call('del',KEYS[1]) end return balance",
+    [emailKey, getCreditsByCustomerKey(normalizedCustomerId)], [],
+  );
 }
 
 export async function resolveCreditStorageTarget(params: {
@@ -680,6 +678,16 @@ export async function grantCredits(params: {
     throw new Error("UPSTASH_REDIS_CONFIG_MISSING");
   }
 
+  const sessionId = params.checkoutSessionId?.trim();
+  if (sessionId) {
+    // Atomically apply a purchase and record it. Honor legacy processed markers too.
+    const balance = await getRedisClient().eval(
+      "if redis.call('exists',KEYS[2]) == 1 or redis.call('exists',KEYS[3]) == 1 then return tonumber(redis.call('get',KEYS[1]) or '0') end local balance = redis.call('incrby',KEYS[1],ARGV[1]) redis.call('set',KEYS[2],'1','EX',ARGV[2]) return balance",
+      [creditTargetToKey(target), "rubricheck:credits:appliedSession:" + sessionId, getCreditsProcessedSessionKey(sessionId)],
+      [amount, CREDIT_SESSION_PROCESSED_TTL_SECONDS],
+    );
+    return parseCredits(balance);
+  }
   return incrementCreditsByKey(creditTargetToKey(target), amount);
 }
 

@@ -106,6 +106,8 @@ export function PricingClient() {
   const [loginModalPurpose, setLoginModalPurpose] = useState<AuthVerificationPurpose>("login");
 
   const selectedCheckoutPlanDisplay = PRO_CHECKOUT_DISPLAY[checkoutPlan];
+  const checkoutBusy = useRef(false);
+  function checkoutEvaluationId() { return new URLSearchParams(window.location.search).get("evaluation_id") ?? undefined; }
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const billingMenuRef = useRef<HTMLDivElement | null>(null);
   const isTopUpsLocked = accountPlan === "pro";
@@ -190,6 +192,8 @@ export function PricingClient() {
       return;
     }
 
+    if (checkoutBusy.current) return;
+    checkoutBusy.current = true;
     setIsCreatingCheckout(true);
     try {
       const response = await fetch("/api/checkout", {
@@ -197,7 +201,7 @@ export function PricingClient() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ plan: checkoutPlan }),
+        body: JSON.stringify({ plan: checkoutPlan, evaluationId: checkoutEvaluationId() }),
       });
 
       const data: CheckoutResponse = await response.json().catch(() => ({}));
@@ -207,12 +211,15 @@ export function PricingClient() {
 
       window.location.assign(data.url);
     } catch (error) {
+      checkoutBusy.current = false;
       const code = error instanceof Error ? error.message : "CHECKOUT_SESSION_FAILED";
       if (code === "AUTH_REQUIRED") {
         openLoginModal("Log in before starting Pro checkout.");
         return;
       }
-      if (code === "ALREADY_PRO_ACTIVE") {
+      if (code === "EVALUATION_EXPIRED") {
+        setCheckoutError("Your saved result has expired. Return home to continue before purchasing.");
+      } else if (code === "ALREADY_PRO_ACTIVE") {
         setCheckoutError("This account already has an active Pro subscription.");
       } else {
         setCheckoutError("Unable to start checkout right now. Please try again.");
@@ -234,6 +241,8 @@ export function PricingClient() {
       return;
     }
 
+    if (checkoutBusy.current) return;
+    checkoutBusy.current = true;
     setIsCreatingCreditCheckout(true);
 
     try {
@@ -242,7 +251,7 @@ export function PricingClient() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ packId }),
+        body: JSON.stringify({ packId, evaluationId: checkoutEvaluationId() }),
       });
 
       const data: CheckoutResponse = await response.json().catch(() => ({}));
@@ -252,12 +261,13 @@ export function PricingClient() {
 
       window.location.assign(data.url);
     } catch (error) {
+      checkoutBusy.current = false;
       const code = error instanceof Error ? error.message : "CREDIT_CHECKOUT_SESSION_FAILED";
       if (code === "AUTH_REQUIRED") {
         openLoginModal("Log in before purchasing top-ups.");
         return;
       }
-      setCreditCheckoutError("Unable to start credit checkout right now. Please try again.");
+      setCreditCheckoutError(code === "EVALUATION_EXPIRED" ? "Your saved result has expired. Return home to continue before purchasing." : "Unable to start credit checkout right now. Please try again.");
     } finally {
       setIsCreatingCreditCheckout(false);
     }

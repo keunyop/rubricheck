@@ -16,7 +16,10 @@ test("webhook grants credits exactly once per checkout session", async () => {
     return true;
   };
 
-  const grantCredits = async (params: { amount: number }): Promise<number> => {
+  const applied = new Set<string>();
+  const grantCredits = async (params: { amount: number; checkoutSessionId?: string | null }): Promise<number> => {
+    if (applied.has(params.checkoutSessionId!)) return grantedAmount;
+    applied.add(params.checkoutSessionId!);
     grantedAmount += params.amount;
     return grantedAmount;
   };
@@ -43,3 +46,24 @@ test("webhook grants credits exactly once per checkout session", async () => {
   assert.equal(second.amount, 0);
   assert.equal(grantedAmount, 25);
 });
+
+for (const failAfterApply of [false, true]) {
+  test("purchase grant retries after failure (applied=" + failAfterApply + ") without loss or duplication", async () => {
+    const applied = new Set<string>(); const marked = new Set<string>(); let balance = 0; let attempts = 0;
+    const params = {
+      sessionId: "cs_retry", amount: 25, email: "student@example.com",
+      markSessionProcessed: async (id: string) => { const first = !marked.has(id); marked.add(id); return first; },
+      grantCredits: async (input: { amount: number; checkoutSessionId?: string | null }) => {
+        attempts++;
+        if (attempts === 1 && !failAfterApply) throw new Error("network");
+        if (!applied.has(input.checkoutSessionId!)) { applied.add(input.checkoutSessionId!); balance += input.amount; }
+        if (attempts === 1) throw new Error("response lost");
+        return balance;
+      },
+    };
+    await assert.rejects(grantCreditsExactlyOnce(params));
+    assert.equal(marked.size, 0);
+    await Promise.all([grantCreditsExactlyOnce(params), grantCreditsExactlyOnce(params)]);
+    assert.equal(balance, 25); assert.equal(marked.size, 1);
+  });
+}

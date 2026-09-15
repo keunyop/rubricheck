@@ -1,3 +1,4 @@
+import { createEvaluationCheckout, evaluationCheckoutFields, validateCheckoutEvaluation } from "../../../../src/lib/evaluationCheckout";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
@@ -24,6 +25,7 @@ import { getCustomerIdByEmail } from "../../../../src/lib/entitlement";
 export const runtime = "nodejs";
 
 type CreditCheckoutRequestBody = {
+  evaluationId?: unknown;
   packId?: unknown;
   email?: unknown;
 };
@@ -170,6 +172,7 @@ export async function POST(request: Request) {
       return respond(errorResponse(context, 409, "SESSION_EMAIL_INVALID", "Signed-in email is invalid."), "error");
     }
     requestEmail = signedInEmail;
+    const evaluationId = await validateCheckoutEvaluation(body.evaluationId, requestEmail);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
     if (!appUrl) return respond(errorResponse(context, 500, "APP_URL_MISSING", "Checkout is not configured."), "error");
@@ -190,10 +193,14 @@ export async function POST(request: Request) {
       customerId: existingCustomerId,
     });
 
+    Object.assign(sessionParams, evaluationCheckoutFields(appUrl, evaluationId));
+    if (evaluationId) sessionParams.metadata = { ...sessionParams.metadata, evaluation_id: evaluationId };
     let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.create(sessionParams);
+      session = await createEvaluationCheckout(stripe, sessionParams, requestEmail, evaluationId);
     } catch (sessionError) {
+      // Preserve the original idempotency key and parameters on uncertain failures.
+      if (evaluationId) throw sessionError;
       if (sessionParams.customer && shouldRetryWithoutPinnedCustomer(sessionError)) {
         console.warn("CREDIT_CHECKOUT_CUSTOMER_REUSE_FAILED", {
           requestId: context.requestId,
@@ -229,6 +236,9 @@ export async function POST(request: Request) {
       }
     }
 
+    if (session.status === "complete" && evaluationId) {
+      return respond(NextResponse.json({ url: appUrl + "/?checkout_session_id=" + session.id + "&evaluation_id=" + evaluationId }), "success");
+    }
     if (!session.url) return respond(errorResponse(context, 500, "CHECKOUT_SESSION_URL_MISSING", "Checkout session is unavailable."), "error");
 
     const response = NextResponse.json({ url: session.url, packId }, { headers: { "x-request-id": context.requestId } });
@@ -243,6 +253,7 @@ export async function POST(request: Request) {
     });
     return respond(response, "success");
   } catch (error) {
+    if (error instanceof Error && error.message === "EVALUATION_EXPIRED") return respond(errorResponse(context, 410, "EVALUATION_EXPIRED", "Your saved result has expired. Return home before purchasing."), "error");
     if (error instanceof SyntaxError) return respond(errorResponse(context, 400, "INVALID_JSON", "Request body must be valid JSON."), "error");
     const stripeError = asStripeLikeError(error);
     console.error("CREDIT_CHECKOUT_SESSION_FAILED", {
