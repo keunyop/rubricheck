@@ -7,33 +7,7 @@
 
 ## 4. 기능 개발 전 먼저 해결할 항목
 
-### P0-2. 무료 평가 실패를 체험 소진으로 만들지 않는다
 
-무료 카운터는 루브릭 구조화와 AI 평가 전에 증가한다. 이후 모델 오류 경로에는 구매 크레딧 복구가 있으나 무료 카운터 복구는 보이지 않는다. 파일 파싱 실패는 이보다 앞 단계라 구분해야 한다.
-
-무료 평가도 예약→성공 확정→실패 반환으로 처리하고, 재시도에 중복 소모가 없도록 한다. 첫 체험에서 실패한 사용자가 이용권까지 잃는 문제를 줄이는 조치다. 실제 발생 빈도는 오류 기록으로 확인해야 한다.
-
-근거: `src/lib/usageLimit.ts:251`, `app/api/grade/route.ts:373`, `:386`, `:424`.
-
-### P0-3. 전환과 원가를 함께 측정한다
-
-현재 소스에는 GA4 기본 설정과 Vercel 분석이 있지만 평가·결제 관련 명시적 제품 이벤트는 검색되지 않았다. 관리자 화면도 known/pro/topup/free 사용자 수와 잔여 횟수 중심이다. 외부 GA4에서 별도로 설정한 이벤트 유무는 확인하지 않았다.
-
-최소 이벤트:
-
-| 단계 | 이벤트 | 필요한 속성 |
-|---|---|---|
-| 유입·체험 | `landing_view`, `sample_opened` | 방문 경로, 국가/기기 집계, 익명 세션 |
-| 준비·인증 | `input_ready`, `auth_started`, `auth_completed` | 입력 방식, 과제 유형, 성공/실패 사유 |
-| 평가 | `evaluation_started`, `evaluation_succeeded`, `evaluation_failed` | 과제/버전 ID, mode, tier, 소요 시간, 모델·프롬프트 버전 |
-| 수정·재사용 | `revision_started`, `reevaluation_succeeded`, `second_assignment_created` | 이전 평가 ID, 같은 과제 여부 |
-| 유료 전환 | `paywall_viewed`, `checkout_started`, `purchase_completed` | 노출 위치, 상품, 익명/계정 연결 ID |
-| 유지 | `subscription_renewed`, `subscription_canceled` | 상품, 가입 코호트, 선택적 취소 이유 |
-| 추천 | `rubric_link_opened`, `referred_evaluation_succeeded` | 공유 링크/추천 ID |
-
-결제 성공과 갱신은 서버의 결제 이벤트로 중복 없이 기록한다. 브라우저 복귀만으로 결제 성공을 집계하면 누락·중복이 발생할 수 있다. 과제 본문이나 이메일 주소를 분석 이벤트에 직접 넣을 필요는 없다.
-
-처음 볼 숫자: 첫 평가 완료율, 첫 평가까지 시간, 같은 과제 7일 내 재평가율, 30일 내 두 번째 과제 비율, 첫 평가 후 14일 내 구독 전환율, 유료 2개월차 유지율, 계정별 AI/OCR 비용, 방문자당 기여이익.
 
 ### P0-4. 점수 신뢰성과 유료 경계를 정리한다
 

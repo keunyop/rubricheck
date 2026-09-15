@@ -13,7 +13,7 @@ test("result API requires a valid account and never returns another account's sa
   process.env.UPSTASH_REDIS_REST_TOKEN = "test-only";
   const id = "ae7f951b-1810-4f55-90c2-029899442ff1";
   let calls = 0;
-  const record = { owner: ownerHash("owner@example.com"), assignmentText: "private input", rubric: {}, expiresAt: Date.now() + 10000, mode: "standard", result: { evaluation_id: id, title: "Saved result" } };
+  const record = { owner: ownerHash("owner@example.com"), assignmentText: "private input", rubric: {}, expiresAt: Date.now() + 10000, mode: "standard", result: { evaluation_id: id, title: "Saved result", access_tier: "free", top_improvements: ["Public", "Paid two", "Paid three"], criteria: [{ name: "Evidence", detailed_breakdown: "Paid detail", example_revisions: ["Paid rewrite"] }] } };
   globalThis.fetch = async (_url, init) => {
     calls++;
     const body = JSON.parse(String(init?.body));
@@ -36,6 +36,9 @@ test("result API requires a valid account and never returns another account's sa
     assert.equal(response.headers.get("cache-control"), "no-store");
     const data = await response.json();
     assert.equal(data.result.evaluation_id, id);
+    assert.deepEqual(data.result.top_improvements, ["Public"]);
+    assert.equal(data.result.criteria[0].detailed_breakdown, undefined);
+    assert.equal(data.result.criteria[0].example_revisions, undefined);
     assert.equal(data.assignmentText, undefined);
     assert.equal(data.owner, undefined);
     record.expiresAt = Date.now() - 1;

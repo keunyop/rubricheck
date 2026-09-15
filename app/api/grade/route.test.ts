@@ -78,7 +78,11 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(response.headers.get("x-recovery-unavailable"), "1");
       assert.equal(settlements().length, 1);
       assert.equal(settlements()[0].body.p_succeeded, true);
-      assert.equal((await response.json()).access_tier, "free");
+      const payload = await response.json();
+      assert.equal(payload.access_tier, "free");
+      assert.deepEqual(payload.top_improvements, ["Add evidence"]);
+      assert.deepEqual(payload.overall_range, [70, 90]);
+      assert.equal(payload.score_calculation.mode_adjustment, 0);
     });
     await t.test("confirmation response loss retries the same reservation and preserves result", async () => {
       calls.length = 0; confirmationFailures = 1;
@@ -110,7 +114,11 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
     });
     await t.test("purchased credit success is not refunded", async () => {
       calls.length = 0; failure = null;
-      assert.equal((await POST(request())).status, 200);
+      const response = await POST(request());
+      assert.equal(response.status, 200);
+      const payload = await response.json();
+      assert.equal(payload.access_tier, "topup");
+      assert.deepEqual(payload.top_improvements, evaluation.top_improvements);
       assert.ok(!calls.some(c => c.name === "rubricheck_refund_credit_reservation"));
     });
     await t.test("strict mode rejection reserves nothing", async () => {

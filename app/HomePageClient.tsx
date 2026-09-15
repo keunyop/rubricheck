@@ -17,6 +17,8 @@ import Link from "next/link";
 import { useAccountSummary } from "./components/AccountSummaryProvider";
 import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ProBadge } from "./components/ProBadge";
+import type { FinalEvaluation } from "../lib/gradeFinalization";
+import { formatOverallScoreDisplay, explainScoreCalculation, SCORE_RANGE_NOTICE, SCORE_COMPARISON_NOTICE } from "../src/lib/scorePresentation";
 import type { HiddenAiAlertSource } from "../lib/hiddenAiAlert";
 import { isKnownAdminEmail } from "../src/config/admin";
 import { ACTIVE_LANDING_COPY } from "../src/config/copy";
@@ -82,6 +84,7 @@ type GradeResult = {
   title: string;
   access_tier: AccountFeatureTier;
   overall_range: [number, number];
+  score_calculation?: FinalEvaluation["score_calculation"];
   summary: string;
   top_improvements: string[];
   criteria: CriteriaResult[];
@@ -241,15 +244,6 @@ function formatHiddenAiAlertSources(sources: HiddenAiAlertSource[]): string {
   }
 
   return sources[0] === "rubric" ? "Rubric" : "Assignment";
-}
-
-function formatOverallScoreDisplay(range: [number, number]): string {
-  const [low, high] = range;
-  if (high - low <= 5) {
-    return String(Math.round((low + high) / 2));
-  }
-
-  return `${low}~${high}`;
 }
 
 function formatEstimatedRangeDisplay(range: [number, number], separator: "~" | "-"): string {
@@ -640,7 +634,7 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
   leftCursorY += 96;
   ctx.fillStyle = "rgba(224,242,254,0.78)";
   ctx.font = "600 18px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("AI-estimated score range", leftTextX, leftCursorY);
+  ctx.fillText("AI estimate - not a calibrated confidence interval", leftTextX, leftCursorY);
 
   leftCursorY += 46;
   ctx.fillStyle = "rgba(255,255,255,0.72)";
@@ -1971,7 +1965,8 @@ export default function Home() {
       candidate.overall_range.every((item) => typeof item === "number");
     const hasTopImprovements =
       Array.isArray(candidate.top_improvements) &&
-      candidate.top_improvements.length === 3 &&
+      (candidate.top_improvements.length === 3 ||
+        (candidate.access_tier === "free" && candidate.top_improvements.length === 1)) &&
       candidate.top_improvements.every((item) => typeof item === "string");
     const hasCriteria =
       Array.isArray(candidate.criteria) &&
@@ -3290,8 +3285,13 @@ export default function Home() {
                     </p>
                   ) : null}
                   <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
-                    This is an AI-estimated range based on your rubric. Use it as guidance before
-                    submission.
+                    {SCORE_RANGE_NOTICE}
+                  </p>
+                  <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
+                    {explainScoreCalculation(gradeResult)}
+                  </p>
+                  <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
+                    {SCORE_COMPARISON_NOTICE}
                   </p>
                 </div>
                 <p className="mt-4 text-sm leading-6 text-slate-700 md:text-[15px]">{gradeResult.summary}</p>

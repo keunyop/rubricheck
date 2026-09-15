@@ -9,13 +9,13 @@ const id = "ae7f951b-1810-4f55-90c2-029899442ff1";
 const free = {
   evaluation_id: id, title: "Recovery test assignment", access_tier: "free",
   overall_range: [60, 70], summary: "Original assignment summary.",
-  top_improvements: ["Improve evidence", "Explain the argument", "Review the conclusion"],
+  top_improvements: ["Improve evidence"],
   criteria: [{ name: "Evidence", max_score: 100, score: 65, rationale: "Add supporting evidence.",
     estimated_range: [60, 70], feedback: "Add supporting evidence.", detailed_breakdown_locked: true }],
 };
-const paid = { ...free, access_tier: "topup", criteria: [{ ...free.criteria[0],
+const paid = { ...free, access_tier: "topup", top_improvements: ["Improve evidence", "Explain the argument", "Review the conclusion"], criteria: [{ ...free.criteria[0],
   detailed_breakdown: "Use a cited source in paragraph two.\nExplain how it supports the argument.",
-  detailed_breakdown_locked: false, example_revisions: ["Add a source and explain its relevance."] }] };
+  detailed_breakdown_locked: false }] };
 const browser = await chromium.launch({ headless: true });
 const report = [];
 async function scenario(name, run) {
@@ -74,6 +74,23 @@ async function seedResult(page) {
   await page.evaluate(result => sessionStorage.setItem("rubricheck_evaluation_result_v1", JSON.stringify({ gradeResult: result, resultMode: "standard", savedAt: Date.now() })), free);
 }
 try {
+  await scenario("narrow ranges retain endpoints and free priorities stay locked", async page => {
+    await page.goto(base);
+    const result = { ...free, overall_range: [70, 75], score_calculation: {
+      version: "rubric-sum-v2", range_kind: "uncalibrated_estimate", grading_mode: "standard",
+      rubric_total: 100, criteria_range_sum: [70, 75], mode_adjustment: 0,
+    }, criteria: [{ ...free.criteria[0], estimated_range: [70, 75] }] };
+    await page.evaluate(result => sessionStorage.setItem("rubricheck_evaluation_result_v1", JSON.stringify({ gradeResult: result, resultMode: "standard", savedAt: Date.now() })), result);
+    await page.reload();
+    await page.getByRole("heading", { name: "Evaluation Summary", exact: true }).waitFor();
+    await page.getByText("70~75", { exact: false }).first().waitFor();
+    await page.getByText("AI-estimated output range, not a statistically calibrated confidence interval.", { exact: true }).waitFor();
+    assert.equal(await page.getByText("Explain the argument", { exact: true }).count(), 0);
+    await page.getByText(/Criterion range totals 70-75/).waitFor();
+    await page.getByText(/Mode changes are not revision gains/).waitFor();
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+  });
   await scenario("text survives Pricing, home, reload and browser back", async page => {
     await fillText(page);
     await page.getByRole("link", { name: "Pricing", exact: true }).click();

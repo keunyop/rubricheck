@@ -87,7 +87,7 @@ function buildRules(mode: GradingMode, detailLevel: EvaluationDetailLevel): stri
     "- Keep criteria_scores in the same order as rubric criteria.",
     "- score and estimated_range must be integers and align with each other.",
     "- estimated_range must be [low, high] integers with low <= high.",
-    "- Keep each range width modest; target width <= 20% of that criterion max_score.",
+    "- estimated_range is an uncalibrated estimate, not a statistical confidence interval. Do not narrow it to a target width.",
     ...sharedRules,
     "- summary must be 1-2 sentences, <= 280 chars, and neutral in tone.",
     "- top_improvements must contain exactly 3 items, each <= 120 chars.",

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Redis } from "@upstash/redis";
 import type { Rubric, GradingMode } from "../../lib/schema";
-import type { FinalEvaluation } from "../../lib/gradeFinalization";
+import { restrictEvaluationFeedback, type FinalEvaluation } from "../../lib/gradeFinalization";
 import type { HiddenAiDocumentAlert } from "../../lib/hiddenAiAlert";
 
 export type RecoverableResult = FinalEvaluation & { evaluation_id: string; hidden_ai_alert?: HiddenAiDocumentAlert };
@@ -39,7 +39,8 @@ export async function saveEvaluation(input: {
 export async function getEvaluation(id: string, email: string): Promise<EvaluationRecord | null> {
   if (!normalizeEvaluationId(id)) return null;
   const record = await recoveryRedis().get<EvaluationRecord>(recoveryKey(id));
-  return record && record.owner === ownerHash(email) && record.expiresAt > Date.now() ? record : null;
+  return record && record.owner === ownerHash(email) && record.expiresAt > Date.now()
+    ? { ...record, result: restrictEvaluationFeedback(record.result) } : null;
 }
 export async function upgradeEvaluation(id: string, email: string, generate: (record: EvaluationRecord) => Promise<RecoverableResult>) {
   const redis = recoveryRedis();

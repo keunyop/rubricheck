@@ -3,12 +3,9 @@ import type { HiddenAiDocumentAlert } from "./hiddenAiAlert.ts";
 import {
   canAccessDetailedFeedback,
   canAccessRewriteSuggestions,
+  getVisibleTopImprovementsCount,
   type AccountFeatureTier,
 } from "../src/lib/accountFeatureAccess.ts";
-
-const STRICT_OVERALL_PENALTY = 3;
-const STANDARD_OVERALL_BONUS = 4;
-const MAX_OVERALL_RANGE_WIDTH = 15;
 
 export type FeedbackAccessTier = AccountFeatureTier;
 
@@ -29,6 +26,14 @@ export type FinalEvaluation = {
   title: string;
   access_tier: FeedbackAccessTier;
   overall_range: [number, number];
+  score_calculation?: {
+    version: "rubric-sum-v2";
+    range_kind: "uncalibrated_estimate";
+    grading_mode: GradingMode;
+    rubric_total: number;
+    criteria_range_sum: [number, number];
+    mode_adjustment: 0;
+  };
   summary: string;
   top_improvements: string[];
   criteria: FinalCriterion[];
@@ -96,39 +101,7 @@ function clampCriterionRange(
     low = high;
   }
 
-  const widthLimit = Math.max(2, Math.round(maxScore * 0.25));
-
-  if (high - low > widthLimit) {
-    const center = Math.round((low + high) / 2);
-    low = Math.max(0, center - Math.round(widthLimit / 2));
-    high = Math.min(maxAllowed, low + widthLimit);
-    high = Math.max(0, high);
-
-    if (low > high) {
-      low = high;
-    }
-  }
-
   return [low, high];
-}
-
-function applyOverallRangeWidthCap(range: [number, number]): [number, number] {
-  let [scaledLow, scaledHigh] = range;
-
-  if (scaledLow > scaledHigh) {
-    [scaledLow, scaledHigh] = [scaledHigh, scaledLow];
-  }
-
-  if (scaledHigh - scaledLow > MAX_OVERALL_RANGE_WIDTH) {
-    const center = Math.round((scaledLow + scaledHigh) / 2);
-    scaledLow = Math.max(0, center - Math.floor(MAX_OVERALL_RANGE_WIDTH / 2));
-    scaledHigh = Math.min(100, scaledLow + MAX_OVERALL_RANGE_WIDTH);
-    if (scaledLow > scaledHigh) {
-      scaledLow = scaledHigh;
-    }
-  }
-
-  return [scaledLow, scaledHigh];
 }
 
 function scaleOverallRawRange(
@@ -142,26 +115,6 @@ function scaleOverallRawRange(
   const scaledHigh = clamp(Math.round((overallRawHigh / rubricTotal) * 100), 0, 100);
 
   return [scaledLow, scaledHigh];
-}
-
-function normalizeOverallRangeForStandard(
-  criteria: Array<{ estimated_range: [number, number] }>,
-  rubricTotal: number,
-): [number, number] {
-  const [scaledLow, scaledHigh] = scaleOverallRawRange(criteria, rubricTotal);
-  const upliftedLow = clamp(scaledLow + STANDARD_OVERALL_BONUS, 0, 100);
-  const upliftedHigh = clamp(scaledHigh + STANDARD_OVERALL_BONUS, 0, 100);
-  return applyOverallRangeWidthCap([upliftedLow, upliftedHigh]);
-}
-
-function normalizeOverallRangeForStrict(
-  criteria: Array<{ estimated_range: [number, number] }>,
-  rubricTotal: number,
-): [number, number] {
-  const [scaledLow, scaledHigh] = scaleOverallRawRange(criteria, rubricTotal);
-  const penalizedLow = clamp(scaledLow - STRICT_OVERALL_PENALTY, 0, 100);
-  const penalizedHigh = clamp(scaledHigh - STRICT_OVERALL_PENALTY, 0, 100);
-  return applyOverallRangeWidthCap([penalizedLow, penalizedHigh]);
 }
 
 function buildScoreByName(evaluation: Evaluation): Map<string, EvaluationCriterionScore> {
@@ -335,16 +288,14 @@ export function buildFinalEvaluation(
     throw new Error("EVALUATION_FAILED");
   }
 
-  const overallRange =
-    mode === "strict"
-      ? normalizeOverallRangeForStrict(criteria, rubricTotal)
-      : normalizeOverallRangeForStandard(criteria, rubricTotal);
+  // Model output ranges are not empirically calibrated confidence intervals.
+  const overallRange = scaleOverallRawRange(criteria, rubricTotal);
 
   if (evaluation.top_improvements.length < 3) {
     throw new Error("EVALUATION_FAILED");
   }
 
-  const topImprovements = evaluation.top_improvements.slice(0, 3);
+  const topImprovements = evaluation.top_improvements.slice(0, getVisibleTopImprovementsCount(tier));
 
   if (tier === "free") {
     assertFreeCriteriaSafety(criteria);
@@ -354,8 +305,37 @@ export function buildFinalEvaluation(
     title: "Evaluation Summary",
     access_tier: tier,
     overall_range: overallRange,
+    score_calculation: {
+      version: "rubric-sum-v2",
+      range_kind: "uncalibrated_estimate",
+      grading_mode: mode,
+      rubric_total: rubricTotal,
+      criteria_range_sum: [
+        criteria.reduce((sum, criterion) => sum + criterion.estimated_range[0], 0),
+        criteria.reduce((sum, criterion) => sum + criterion.estimated_range[1], 0),
+      ],
+      mode_adjustment: 0,
+    },
     summary: evaluation.summary,
     top_improvements: topImprovements,
     criteria,
+  };
+}
+
+// Apply the same policy to legacy saved responses as to newly generated results.
+export function restrictEvaluationFeedback<T extends FinalEvaluation>(result: T): T {
+  return {
+    ...result,
+    top_improvements: result.top_improvements.slice(0, getVisibleTopImprovementsCount(result.access_tier)),
+    criteria: result.criteria.map((criterion) => {
+      const { detailed_breakdown, example_revisions, ...base } = criterion;
+      return {
+        ...base,
+        ...(canAccessDetailedFeedback(result.access_tier)
+          ? { detailed_breakdown }
+          : { detailed_breakdown_locked: true }),
+        ...(canAccessRewriteSuggestions(result.access_tier) ? { example_revisions } : {}),
+      };
+    }),
   };
 }

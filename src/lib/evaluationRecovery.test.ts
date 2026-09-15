@@ -8,10 +8,10 @@ import type { FinalEvaluation } from "../../lib/gradeFinalization";
 
 const original: FinalEvaluation = {
   title: "Original", access_tier: "free", overall_range: [60, 70], summary: "Original summary",
-  top_improvements: ["One", "Two", "Three"],
+  top_improvements: ["One"],
   criteria: [{ name: "Evidence", max_score: 100, score: 65, rationale: "Reason", feedback: "Feedback", estimated_range: [60, 70], detailed_breakdown_locked: true }],
 };
-const detailed: FinalEvaluation = { ...original, access_tier: "topup", overall_range: [70, 80], criteria: [{ ...original.criteria[0], score: 75, detailed_breakdown: "Use evidence from paragraph 2.", example_revisions: ["Add a citation."] }] };
+const detailed: FinalEvaluation = { ...original, top_improvements: ["One", "Two", "Three"], access_tier: "topup", overall_range: [70, 80], criteria: [{ ...original.criteria[0], score: 75, detailed_breakdown: "Use evidence from paragraph 2." }] };
 
 test("recovery binds ownership, rejects expired IDs, serializes upgrades and reuses checkout", async () => {
   const oldFetch = globalThis.fetch;
@@ -77,6 +77,7 @@ test("recovery binds ownership, rejects expired IDs, serializes upgrades and reu
     const upgraded = await pending;
     assert.equal(upgraded.evaluation_id, saved.evaluation_id);
     assert.equal(upgraded.access_tier, "topup");
+    assert.deepEqual(upgraded.top_improvements, ["One", "Two", "Three"]);
     assert.equal(upgraded.criteria[0].score, 65);
     assert.deepEqual(upgraded.overall_range, [60, 70]);
     assert.equal(upgraded.criteria[0].detailed_breakdown_locked, false);

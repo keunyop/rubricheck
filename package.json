@@ -10,6 +10,7 @@
     "harness:simulate": "node scripts/simulate_harness.mjs",
     "test:unit": "node --test --test-concurrency=1 --experimental-strip-types --experimental-specifier-resolution=node lib/evaluation.test.ts src/lib/entitlementSession.test.ts src/lib/entitlementRestore.test.ts src/config/proCheckout.test.ts src/config/creditPacks.test.ts src/lib/evaluationCreditsPolicy.test.ts src/lib/evaluateLimitPayload.test.ts src/lib/evaluateInterstitial.test.ts src/lib/evaluationFeatureBilling.test.ts src/lib/evaluationCreditSettlement.test.ts src/lib/creditsGrant.test.ts src/lib/freeUsageActor.test.ts src/lib/evaluationDraft.test.ts src/lib/evaluationRecovery.test.ts",
     "test:seo": "node scripts/check_seo.mjs",
+    "validate:scoring": "node --import ./scripts/register-test-resolver.mjs --experimental-strip-types scripts/validate_scoring.ts",
     "test:all": "node scripts/run_all_tests.mjs",
     "test:recovery:browser": "node scripts/check_evaluation_recovery.mjs"
   },

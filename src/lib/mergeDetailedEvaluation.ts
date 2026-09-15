@@ -6,6 +6,7 @@ export function mergeDetailedEvaluation<T extends FinalEvaluation>(original: T, 
   return {
     ...original,
     access_tier: detailed.access_tier,
+    top_improvements: detailed.top_improvements,
     criteria: original.criteria.map((criterion, index) => {
       const detail = detailed.criteria[index];
       if (detail.name !== criterion.name || !detail.detailed_breakdown?.trim()) throw new Error("DETAILED_EVALUATION_INVALID");
