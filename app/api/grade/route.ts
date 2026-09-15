@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from "node:crypto";
 import { saveEvaluation } from "../../../src/lib/evaluationRecovery";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -12,12 +13,12 @@ import { createRequestContext, errorResponse } from "../../../src/lib/apiError";
 import { canUseStrictMode, resolveAccountFeatureTier } from "../../../src/lib/accountFeatureAccess";
 import { getCreditEmailFromCookie } from "../../../src/lib/creditSession";
 import { getCreditBalanceForRequest, resolveCreditStorageTarget } from "../../../src/lib/credits";
-import { shouldRefundReservedEvaluateCredit } from "../../../src/lib/evaluationCreditSettlement";
 import { buildFreeLimitReachedPayload } from "../../../src/lib/evaluateLimitPayload";
 import {
   buildUsageLimitHeaders,
   checkUsageLimit,
-  refundUsageCreditReservation,
+  settleUsageReservation,
+  type UsageCheckResult,
 } from "../../../src/lib/usageLimit";
 import {
   getAccountEntitlementByEmail,
@@ -199,6 +200,22 @@ async function resolveCurrentFeedbackTier(
 
 export async function POST(request: Request) {
   const context = createRequestContext(request);
+  let usage: UsageCheckResult | undefined;
+  let evaluationSucceeded = false;
+  let reservationReleased = false;
+  let stage = "validation";
+  const usageHeaders: Record<string, string> = {};
+  const releaseReservation = async () => {
+    if (!usage?.allowed || evaluationSucceeded || reservationReleased || (!usage.freeReservation && !usage.creditReservation)) return;
+    try {
+      await settleUsageReservation(usage, false);
+      reservationReleased = true;
+      Object.assign(usageHeaders, buildUsageLimitHeaders(usage));
+      console.info("EVALUATION_RESERVATION_RELEASED", { requestId: context.requestId, stage, billingSource: usage.billingSource });
+    } catch (error) {
+      console.error("EVALUATION_RESERVATION_RELEASE_FAILED", { requestId: context.requestId, stage, billingSource: usage.billingSource, error });
+    }
+  };
 
   try {
     const signedInEmail = getCreditEmailFromCookie(request);
@@ -305,7 +322,7 @@ export async function POST(request: Request) {
       return errorResponse(context, 400, "MISSING_INPUT", "Please provide both a rubric and an assignment.");
     }
 
-    const currentFeedbackTierPromise = resolveCurrentFeedbackTier(request, signedInEmail);
+    stage = "file_parsing";
     const cacheIdentityPromise = resolveRubricCacheIdentity(request).catch((error) => {
       console.warn("RUBRIC_CACHE_IDENTITY_RESOLUTION_FAILED", {
         requestId: context.requestId,
@@ -319,8 +336,7 @@ export async function POST(request: Request) {
     ]);
     const hiddenAiAlert = detectHiddenAiAlert({ rubricText, assignmentText });
 
-    const usagePromise = mode === "strict" ? null : checkUsageLimit(request, "evaluate");
-    const currentFeedbackTier = await currentFeedbackTierPromise;
+    const currentFeedbackTier = await resolveCurrentFeedbackTier(request, signedInEmail);
     if (mode === "strict" && !canUseStrictMode(currentFeedbackTier)) {
       return errorResponse(
         context,
@@ -330,8 +346,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const usage = usagePromise ? await usagePromise : await checkUsageLimit(request, "evaluate");
-    const usageHeaders = buildUsageLimitHeaders(usage);
+    stage = "reservation";
+    // Scope retry keys to the parsed inputs and mode, never trust a caller's key alone.
+    const requestKey = createHash("sha256").update(JSON.stringify([
+      request.headers.get("idempotency-key") || randomUUID(), mode, rubricText, assignmentText,
+    ])).digest("hex");
+    usage = await checkUsageLimit(request, "evaluate", undefined, requestKey);
+    Object.assign(usageHeaders, buildUsageLimitHeaders(usage));
     if (usage.degradedCode === "REDIS_UNAVAILABLE") {
       usageHeaders["x-rubricheck-warning"] = "REDIS_UNAVAILABLE";
     }
@@ -344,6 +365,9 @@ export async function POST(request: Request) {
           : "free";
 
     if (!usage.allowed) {
+      if (usage.errorCode === "EVALUATION_PENDING" || usage.errorCode === "EVALUATION_ALREADY_COMPLETED") {
+        return errorResponse(context, 409, usage.errorCode, usage.errorMessage ?? "Please retry shortly.", undefined, usageHeaders);
+      }
       if (usage.errorCode === "FREE_LIMIT_REACHED" && usage.action === "SHOW_INTERSTITIAL") {
         return NextResponse.json(buildFreeLimitReachedPayload(usage.limit), {
           status: 429,
@@ -369,6 +393,7 @@ export async function POST(request: Request) {
       return errorResponse(context, 429, usage.errorCode ?? "RATE_LIMITED", usage.errorMessage ?? `Free trial limit reached (${usage.limit}). Upgrade to continue.`, undefined, usageHeaders);
     }
     const cacheIdentity = await cacheIdentityPromise;
+    stage = "rubric_structuring";
     let structuredRubric;
     try {
       structuredRubric = await structureRubric(rubricText, {
@@ -376,19 +401,7 @@ export async function POST(request: Request) {
         requestId: context.requestId,
       });
     } catch (error) {
-      if (
-        shouldRefundReservedEvaluateCredit({
-          billingSource: usage.billingSource,
-          hasReservation: Boolean(usage.creditReservation),
-          evaluationSucceeded: false,
-        })
-      ) {
-        try {
-          await refundUsageCreditReservation(usage);
-        } catch (refundError) {
-          console.error("CREDIT_RESERVATION_REFUND_FAILED", { requestId: context.requestId, refundError });
-        }
-      }
+      await releaseReservation();
 
       if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
         return errorResponse(
@@ -396,17 +409,32 @@ export async function POST(request: Request) {
           504,
           "OPENAI_TIMEOUT",
           "Our AI reviewer is taking longer than usual. Please retry in a moment.",
+          undefined, usageHeaders,
         );
       }
       console.error("RUBRIC_STRUCTURE_FAILED", { requestId: context.requestId, error });
-      return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.");
+      return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.", undefined, usageHeaders);
     }
 
     try {
+      stage = "ai_evaluation";
       const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode, {
         detailLevel: feedbackTier === "free" ? "diagnostic" : "detailed",
       });
       const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
+      // The user receives a valid result even if confirmation storage is temporarily down.
+      // Idempotent retries handle a lost confirmation response without double charging.
+      evaluationSucceeded = true;
+      stage = "confirmation";
+      try {
+        await settleUsageReservation(usage, true);
+      } catch {
+        try { await settleUsageReservation(usage, true); }
+        catch (error) {
+          console.error("EVALUATION_RESERVATION_CONFIRM_FAILED", { requestId: context.requestId, billingSource: usage.billingSource, error });
+        }
+      }
+      Object.assign(usageHeaders, buildUsageLimitHeaders(usage));
       const headers = new Headers(usageHeaders);
       headers.set("x-request-id", context.requestId);
       const result = hiddenAiAlert ? { ...finalEvaluation, hidden_ai_alert: hiddenAiAlert } : finalEvaluation;
@@ -418,19 +446,7 @@ export async function POST(request: Request) {
         return NextResponse.json(result, { headers });
       }
     } catch (error) {
-      if (
-        shouldRefundReservedEvaluateCredit({
-          billingSource: usage.billingSource,
-          hasReservation: Boolean(usage.creditReservation),
-          evaluationSucceeded: false,
-        })
-      ) {
-        try {
-          await refundUsageCreditReservation(usage);
-        } catch (refundError) {
-          console.error("CREDIT_RESERVATION_REFUND_FAILED", { requestId: context.requestId, refundError });
-        }
-      }
+      await releaseReservation();
 
       if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
         return errorResponse(
@@ -447,6 +463,8 @@ export async function POST(request: Request) {
       return errorResponse(context, 500, "EVALUATION_FAILED", "We hit an unexpected error while grading. Please retry.", undefined, usageHeaders);
     }
   } catch (error) {
+    await releaseReservation();
+    console.error("GRADE_REQUEST_FAILED", { requestId: context.requestId, stage, billingSource: usage?.billingSource, error });
     if (error instanceof Error && error.message === "UPSTASH_REDIS_CONFIG_MISSING") {
       return errorResponse(context, 503, "REDIS_UNAVAILABLE", "Usage verification is temporarily unavailable. Please retry shortly.");
     }

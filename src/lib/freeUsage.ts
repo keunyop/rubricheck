@@ -1,12 +1,13 @@
+import { randomUUID } from "node:crypto";
 import { callSupabaseRpc, hasSupabaseConfig } from "./supabaseRest.ts";
 
-type ConsumeFreeEvaluateUsageRow = {
+type FreeEvaluateUsageRow = {
   allowed?: unknown;
   count?: unknown;
   remaining?: unknown;
 };
 
-export type ConsumeFreeEvaluateUsageResult = {
+export type FreeEvaluateUsageResult = {
   allowed: boolean;
   count: number;
   remaining: number;
@@ -63,27 +64,49 @@ export async function getFreeEvaluateUsageCount(email: string): Promise<number |
   return parseCount(raw);
 }
 
-export async function consumeFreeEvaluateUsage(
+export type FreeUsageReservation = { email: string; id: string; limit: number };
+export type FreeUsageReservationResult = FreeEvaluateUsageResult & {
+  status: "reserved" | "pending" | "succeeded" | "exhausted";
+  reservation?: FreeUsageReservation;
+};
+
+export async function reserveFreeEvaluateUsage(
   email: string,
   limit: number,
-): Promise<ConsumeFreeEvaluateUsageResult> {
-  if (!hasSupabaseConfig()) {
-    throw new Error("FREE_USAGE_STORE_UNAVAILABLE");
-  }
-
+  requestKey: string = randomUUID(),
+): Promise<FreeUsageReservationResult> {
+  if (!hasSupabaseConfig()) throw new Error("FREE_USAGE_STORE_UNAVAILABLE");
   const normalizedEmail = normalizeEmail(email);
-  if (!normalizedEmail) {
-    throw new Error("INVALID_EMAIL");
+  if (!normalizedEmail) throw new Error("INVALID_EMAIL");
+  const reservation = { email: normalizedEmail, id: randomUUID(), limit };
+  try {
+    const raw = await callSupabaseRpc<FreeEvaluateUsageRow & { status?: unknown }>("rubricheck_reserve_free_evaluate", {
+      p_email: normalizedEmail, p_limit: limit, p_request_key: requestKey, p_reservation_id: reservation.id,
+    });
+    if (!["reserved", "pending", "succeeded", "exhausted"].includes(String(raw?.status))) {
+      throw new Error("INVALID_FREE_USAGE_RESERVATION");
+    }
+    const status = raw.status as FreeUsageReservationResult["status"];
+    return {
+      allowed: status === "reserved", status,
+      count: parseCount(raw.count), remaining: parseCount(raw.remaining),
+      reservation: status === "reserved" ? reservation : undefined,
+    };
+  } catch (error) {
+    // A lost response can follow a committed reservation. Release only our attempt.
+    try { await settleFreeEvaluateUsage(reservation, false); } catch { /* The lease also expires. */ }
+    throw error;
   }
+}
 
-  const raw = await callSupabaseRpc<ConsumeFreeEvaluateUsageRow>("rubricheck_consume_free_evaluate", {
-    p_email: normalizedEmail,
-    p_limit: Math.max(0, Math.floor(limit)),
+export async function settleFreeEvaluateUsage(
+  reservation: FreeUsageReservation,
+  succeeded: boolean,
+): Promise<number> {
+  const raw = await callSupabaseRpc<FreeEvaluateUsageRow>("rubricheck_settle_free_evaluate", {
+    p_email: reservation.email, p_reservation_id: reservation.id,
+    p_succeeded: succeeded, p_limit: reservation.limit,
   });
-
-  return {
-    allowed: parseBoolean(raw?.allowed),
-    count: parseCount(raw?.count),
-    remaining: parseCount(raw?.remaining),
-  };
+  if (!parseBoolean(raw?.allowed)) throw new Error("FREE_USAGE_SETTLEMENT_FAILED");
+  return parseCount(raw.remaining);
 }

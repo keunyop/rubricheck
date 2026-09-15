@@ -122,3 +122,7 @@ As a portfolio project, RubriCheck shows experience across both product thinking
 ## Live Product
 
 - Website: https://rubricheck.com
+
+## Free evaluation usage
+
+Before deploying the reservation-based evaluation flow, apply `supabase/free_evaluate_reservations.sql` after the existing billing schema. See [deployment, behavior and verification](doc/free-evaluation-reservations.md).

@@ -9,6 +9,6 @@ function collect(dir) {
 }
 const result = spawnSync(process.execPath, [
   "--import", "./scripts/register-test-resolver.mjs", "--test", "--test-concurrency=1",
-  "--experimental-strip-types", ...["lib", "src", "app"].flatMap(collect),
+  "--experimental-strip-types", "--experimental-test-module-mocks", ...["lib", "src", "app"].flatMap(collect),
 ], { stdio: "inherit", env: { ...process.env, OPENAI_API_KEY: "test-only-no-network" } });
 process.exitCode = result.status ?? 1;

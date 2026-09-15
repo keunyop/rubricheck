@@ -1,0 +1,64 @@
+﻿-- Run only against a disposable test database after both schema files.
+-- Assertions roll back all test data.
+begin;
+do $$
+declare
+  a uuid := gen_random_uuid();
+  b uuid := gen_random_uuid();
+  c uuid := gen_random_uuid();
+  d uuid := gen_random_uuid();
+  r jsonb;
+  n integer;
+begin
+  r := rubricheck_reserve_free_evaluate(' Trial@Test.invalid ', 3, 'retry', a);
+  assert r->>'status' = 'reserved';
+  select evaluate_count into n from free_usage_counters where email = 'trial@test.invalid';
+  assert n = 0, 'reservation is not a successful use';
+  assert rubricheck_get_free_evaluate_usage_count('trial@test.invalid') = 1;
+  r := rubricheck_reserve_free_evaluate('trial@test.invalid', 3, 'retry', a);
+  assert r->>'status' = 'reserved' and (r->>'count')::int = 1, 'RPC retry reserves once';
+  r := rubricheck_reserve_free_evaluate('trial@test.invalid', 3, 'retry', b);
+  assert r->>'status' = 'pending', 'simultaneous duplicate cannot run';
+  r := rubricheck_settle_free_evaluate('other@test.invalid', a, true, 3);
+  assert r->>'allowed' = 'false', 'another account cannot confirm';
+  r := rubricheck_settle_free_evaluate('trial@test.invalid', a, false, 3);
+  assert r->>'allowed' = 'true' and (r->>'remaining')::int = 3;
+  r := rubricheck_settle_free_evaluate('trial@test.invalid', a, false, 3);
+  assert (r->>'remaining')::int = 3, 'duplicate refunds cannot add uses';
+  r := rubricheck_reserve_free_evaluate('trial@test.invalid', 3, 'retry', b);
+  assert r->>'status' = 'reserved', 'failed attempt is retryable';
+  r := rubricheck_settle_free_evaluate('trial@test.invalid', a, false, 3);
+  assert (r->>'remaining')::int = 2, 'late refund cannot release the newer attempt';
+  r := rubricheck_settle_free_evaluate('trial@test.invalid', b, true, 3);
+  assert r->>'allowed' = 'true';
+  r := rubricheck_settle_free_evaluate('trial@test.invalid', b, true, 3);
+  assert r->>'allowed' = 'true';
+  assert rubricheck_get_free_evaluate_usage_count('trial@test.invalid') = 1, 'confirmation is idempotent';
+  r := rubricheck_settle_free_evaluate('trial@test.invalid', b, false, 3);
+  assert r->>'allowed' = 'false', 'confirmed use cannot be refunded by a stale failure';
+  r := rubricheck_reserve_free_evaluate('trial@test.invalid', 3, 'retry', c);
+  assert r->>'status' = 'succeeded', 'completed retry cannot consume again';
+  r := rubricheck_reserve_free_evaluate('trial@test.invalid', 3, 'second', c);
+  assert r->>'status' = 'reserved';
+  r := rubricheck_reserve_free_evaluate('trial@test.invalid', 3, 'third', d);
+  assert r->>'status' = 'reserved';
+  r := rubricheck_reserve_free_evaluate('trial@test.invalid', 3, 'fourth', gen_random_uuid());
+  assert r->>'status' = 'pending', 'active holds cannot trigger a paid fallback';
+  update free_evaluate_reservations set expires_at = now() - interval '1 second' where id = c;
+  assert rubricheck_get_free_evaluate_usage_count('trial@test.invalid') = 2, 'abandoned holds expire without a cron';
+  r := rubricheck_settle_free_evaluate('trial@test.invalid', c, true, 3);
+  assert r->>'allowed' = 'false', 'late success cannot exceed quota';
+  r := rubricheck_reserve_free_evaluate('trial@test.invalid', 3, 'second', gen_random_uuid());
+  assert r->>'status' = 'reserved';
+  r := rubricheck_settle_free_evaluate('trial@test.invalid', d, true, 3);
+  select id into c from free_evaluate_reservations where email = 'trial@test.invalid' and status = 'pending';
+  r := rubricheck_settle_free_evaluate('trial@test.invalid', c, true, 3);
+  assert rubricheck_get_free_evaluate_usage_count('trial@test.invalid') = 3;
+  r := rubricheck_reserve_free_evaluate('trial@test.invalid', 3, 'exhausted', gen_random_uuid());
+  assert r->>'status' = 'exhausted', 'only successful uses exhaust a trial';
+  assert not has_function_privilege('anon', 'rubricheck_reserve_free_evaluate(text,integer,text,uuid)', 'execute');
+  assert not has_function_privilege('authenticated', 'rubricheck_settle_free_evaluate(text,uuid,boolean,integer)', 'execute');
+  assert has_function_privilege('service_role', 'rubricheck_reserve_free_evaluate(text,integer,text,uuid)', 'execute');
+end;
+$$;
+rollback;

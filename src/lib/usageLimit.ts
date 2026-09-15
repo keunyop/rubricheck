@@ -14,7 +14,7 @@ import {
 } from "./credits.ts";
 import { getCreditEmailFromCookie } from "./creditSession.ts";
 import { getRequestIp } from "./freeUsageActor.ts";
-import { consumeFreeEvaluateUsage } from "./freeUsage.ts";
+import { reserveFreeEvaluateUsage, settleFreeEvaluateUsage, type FreeUsageReservation } from "./freeUsage.ts";
 import {
   getAccountEntitlementByEmail,
   hasAccountEntitlementStore,
@@ -34,7 +34,9 @@ type FeatureLimitMap = Record<UsageFeature, PlanFeatureLimit>;
 export type UsageErrorCode =
   | typeof FREE_LIMIT_REACHED_CODE
   | "REDIS_UNAVAILABLE"
-  | "FREE_USAGE_STORE_UNAVAILABLE";
+  | "FREE_USAGE_STORE_UNAVAILABLE"
+  | "EVALUATION_PENDING"
+  | "EVALUATION_ALREADY_COMPLETED";
 
 export type UsageCheckResult = {
   allowed: boolean;
@@ -47,6 +49,7 @@ export type UsageCheckResult = {
   plan?: PlanName;
   billingSource?: "free" | "pro" | "credit";
   creditReservation?: CreditReservation;
+  freeReservation?: FreeUsageReservation;
   degradedCode?: "REDIS_UNAVAILABLE" | "FREE_USAGE_STORE_UNAVAILABLE";
 };
 
@@ -233,7 +236,7 @@ async function checkPlanLimitedFeature(
   }
 }
 
-async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageCheckResult> {
+async function checkFreeEvaluateWithCredits(request: Request, requestKey?: string): Promise<UsageCheckResult> {
   const signedInEmail = getCreditEmailFromCookie(request);
   if (!signedInEmail) {
     return {
@@ -248,16 +251,28 @@ async function checkFreeEvaluateWithCredits(request: Request): Promise<UsageChec
 
   try {
     const currentCreditBalance = Math.max(0, (await getCreditBalanceForRequest(request)) ?? 0);
-    const freeUsage = await consumeFreeEvaluateUsage(signedInEmail, FREE_TRIAL_LIMIT);
+    const freeUsage = await reserveFreeEvaluateUsage(signedInEmail, FREE_TRIAL_LIMIT, requestKey);
 
     if (freeUsage.allowed) {
       return {
         allowed: true,
         limit: FREE_TRIAL_LIMIT,
         remaining: freeUsage.remaining,
+        freeReservation: freeUsage.reservation,
         plan: "free",
         billingSource: "free",
         creditsBalance: currentCreditBalance,
+      };
+    }
+
+    if (freeUsage.status === "pending" || freeUsage.status === "succeeded") {
+      return {
+        allowed: false, limit: FREE_TRIAL_LIMIT, remaining: freeUsage.remaining,
+        plan: "free", billingSource: "free", creditsBalance: currentCreditBalance,
+        errorCode: freeUsage.status === "pending" ? "EVALUATION_PENDING" : "EVALUATION_ALREADY_COMPLETED",
+        errorMessage: freeUsage.status === "pending"
+          ? "This evaluation is still running. Please retry shortly."
+          : "This evaluation has already completed. Restore your saved result or start a new evaluation.",
       };
     }
 
@@ -344,6 +359,7 @@ export async function checkUsageLimit(
   request: Request,
   feature: UsageFeature,
   user?: UserPlanPayload,
+  requestKey?: string,
 ): Promise<UsageCheckResult> {
   const effectivePlan = await resolveEffectivePlan(request, user);
 
@@ -352,8 +368,16 @@ export async function checkUsageLimit(
   }
 
   if (effectivePlan === "free") {
-    return checkFreeEvaluateWithCredits(request);
+    return checkFreeEvaluateWithCredits(request, requestKey);
   }
 
   return checkPlanLimitedFeature(request, feature, effectivePlan);
+}
+
+export async function settleUsageReservation(result: UsageCheckResult, succeeded: boolean): Promise<void> {
+  if (result.freeReservation) {
+    result.remaining = await settleFreeEvaluateUsage(result.freeReservation, succeeded);
+  } else if (!succeeded && result.creditReservation) {
+    result.creditsBalance = await refundUsageCreditReservation(result);
+  }
 }

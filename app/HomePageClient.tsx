@@ -829,6 +829,7 @@ function drawImageContained(
 }
 
 export default function Home() {
+  const evaluationAttemptRef = useRef<{ inputs: unknown[]; key: string } | null>(null);
   const rubricInputRef = useRef<HTMLInputElement | null>(null);
   const rubricCameraInputRef = useRef<HTMLInputElement | null>(null);
   const assignmentInputRef = useRef<HTMLInputElement | null>(null);
@@ -1891,6 +1892,12 @@ export default function Home() {
   function mapApiError(data: GradeErrorResponse): string {
     const message = data.code ?? data.error;
 
+    if (message === "EVALUATION_PENDING") {
+      return "Your evaluation is still running. Please wait a moment and retry.";
+    }
+    if (message === "EVALUATION_ALREADY_COMPLETED") {
+      return "This evaluation already completed and was only counted once. Check your saved result, or submit again to start a new evaluation.";
+    }
     if (message === "OPENAI_TIMEOUT") {
       return "The AI review is taking longer than expected. Please retry.";
     }
@@ -2100,6 +2107,13 @@ export default function Home() {
 
     try {
       setLoadingStep("uploading");
+      // Preserve the key after failures; changed inputs or a completed result start a new attempt.
+      const inputs = [selectedMode, rubricMode, assignmentMode, rubricText.trim(), assignmentText.trim(), ...rubricFiles, ...assignmentFiles];
+      const previous = evaluationAttemptRef.current;
+      if (!previous || previous.inputs.length !== inputs.length || inputs.some((value, index) => value !== previous.inputs[index])) {
+        evaluationAttemptRef.current = { inputs, key: crypto.randomUUID() };
+      }
+      const attemptKey = evaluationAttemptRef.current!.key;
       let requestPromise: Promise<Response>;
 
       if (rubricMode === "text" && assignmentMode === "text") {
@@ -2107,6 +2121,7 @@ export default function Home() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Idempotency-Key": attemptKey,
           },
           body: JSON.stringify({
             rubricText: rubricText.trim(),
@@ -2146,6 +2161,7 @@ export default function Home() {
         requestPromise = fetch("/api/evaluate", {
           method: "POST",
           body: formData,
+          headers: { "Idempotency-Key": attemptKey },
         });
       }
 
@@ -2213,6 +2229,7 @@ export default function Home() {
       }
 
       if (!response.ok) {
+        if ((apiCode || apiError) === "EVALUATION_ALREADY_COMPLETED") evaluationAttemptRef.current = null;
         setError(mapApiError((data ?? {}) as GradeErrorResponse));
         setErrorCode(apiCode || apiError);
         if ((apiCode || apiError) === "OPENAI_TIMEOUT") {
@@ -2230,6 +2247,7 @@ export default function Home() {
         return;
       }
 
+      evaluationAttemptRef.current = null;
       setShouldFocusEvaluationHeading(true);
       setGradeResult(data);
       setResultMode(selectedMode);
@@ -2272,6 +2290,7 @@ export default function Home() {
   }
 
   async function handleLogout() {
+    evaluationAttemptRef.current = null;
     setShowAccountMenu(false);
     setShowBillingMenu(false);
 
