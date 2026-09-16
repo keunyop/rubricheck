@@ -17,6 +17,11 @@ import Link from "next/link";
 import { useAccountSummary } from "./components/AccountSummaryProvider";
 import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ProBadge } from "./components/ProBadge";
+import { AssignmentSidebar, WorkspaceIcon } from "./components/AssignmentSidebar";
+import { AssignmentProjectView } from "./components/AssignmentProjectView";
+import { useAssignmentWorkspace } from "./components/useAssignmentWorkspace";
+import { projectVersions, type AssignmentHistoryItem, type AssignmentProject } from "../src/lib/assignmentWorkspaceTypes";
+import workspaceStyles from "./components/assignmentWorkspace.module.css";
 import type { FinalEvaluation } from "../lib/gradeFinalization";
 import { formatOverallScoreDisplay, explainScoreCalculation, SCORE_RANGE_NOTICE, SCORE_COMPARISON_NOTICE } from "../src/lib/scorePresentation";
 import type { HiddenAiAlertSource } from "../lib/hiddenAiAlert";
@@ -61,6 +66,7 @@ type GradeErrorResponse = {
 };
 
 type StoredEvaluationResultSnapshot = {
+  ownerEmail?: string;
   gradeResult: GradeResult;
   resultMode: GradingMode | null;
   savedAt: number;
@@ -854,6 +860,20 @@ export default function Home() {
 
   const [loadingStep, setLoadingStep] = useState<LoadingStep>("idle");
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
+  const [resultOwnerEmail, setResultOwnerEmail] = useState<string | null>(null);
+  const [draftOwnerEmail, setDraftOwnerEmail] = useState<string | null>(null);
+  const [workspaceView, setWorkspaceView] = useState<"compose" | "project" | "result">("compose");
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [draftProjectId, setDraftProjectId] = useState<string | null>(null);
+  const [openingAssignment, setOpeningAssignment] = useState(false);
+  const [workspaceNotice, setWorkspaceNotice] = useState("");
+  const openRequestRef = useRef(0);
+  const currentAccountRef = useRef(signedInEmail);
+  currentAccountRef.current = signedInEmail;
+  const workspace = useAssignmentWorkspace(signedInEmail, resultOwnerEmail === signedInEmail ? gradeResult?.evaluation_id : undefined);
+  const activeProject = workspace.data.projects.find(project => project.id === activeProjectId);
+  const activeAssignment = workspace.data.assignments.find(item => item.id === gradeResult?.evaluation_id);
+  const workspaceBusy = loadingStep !== "idle" || openingAssignment;
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState("");
   const [openAiTimeoutCount, setOpenAiTimeoutCount] = useState(0);
@@ -1019,45 +1039,54 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    try {
-      const rawStoredResult = window.sessionStorage.getItem(EVALUATION_RESULT_STORAGE_KEY) ?? window.localStorage.getItem(EVALUATION_RESULT_STORAGE_KEY);
-      if (!rawStoredResult) return;
-      const parsed = JSON.parse(rawStoredResult) as Partial<StoredEvaluationResultSnapshot>;
-      const savedAt = typeof parsed.savedAt === "number" ? parsed.savedAt : 0;
-      if (!savedAt || Date.now() - savedAt > EVALUATION_RESULT_TTL_MS) {
-        window.sessionStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
-        return;
-      }
-
-      const storedMode =
-        parsed.resultMode === "standard" || parsed.resultMode === "strict" ? parsed.resultMode : null;
-      const candidateResult = parsed.gradeResult;
-      if (!candidateResult || typeof candidateResult !== "object") {
-        return;
-      }
-
-      const modeForValidation = storedMode ?? "standard";
-      if (!isGradeResult(candidateResult, modeForValidation)) {
-        return;
-      }
-
-      setGradeResult(candidateResult);
-      setResultMode(storedMode);
-    } catch {
-      // Storage may be unavailable in private browsing.
-    } finally { setResultReady(true); }
-  }, []);
+    if (!hasLoadedAccountSummary) return;
+    let active = true;
+    setResultReady(false);
+    setGradeResult(null);
+    setResultMode(null);
+    setActiveProjectId(null);
+    setWorkspaceView("compose");
+    setWorkspaceNotice("");
+    openRequestRef.current++;
+    setOpeningAssignment(false);
+    setResultOwnerEmail(null);
+    const restore = async () => {
+      if (!signedInEmail) return;
+      try {
+        const raw = window.sessionStorage.getItem(EVALUATION_RESULT_STORAGE_KEY) ?? window.localStorage.getItem(EVALUATION_RESULT_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as Partial<StoredEvaluationResultSnapshot>;
+        if (!parsed.savedAt || Date.now() - parsed.savedAt > EVALUATION_RESULT_TTL_MS) return;
+        if (parsed.ownerEmail && parsed.ownerEmail !== signedInEmail) return;
+        let candidate = parsed.gradeResult;
+        let mode = parsed.resultMode ?? "standard";
+        // Legacy browser snapshots must be verified by the account-bound server.
+        if (!parsed.ownerEmail) {
+          if (!candidate?.evaluation_id) return;
+          const response = await fetch("/api/evaluations/" + encodeURIComponent(candidate.evaluation_id), { cache: "no-store" });
+          if (!response.ok) return;
+          const data = await response.json();
+          candidate = data.result; mode = data.mode;
+        }
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("evaluation_id") && params.get("evaluation_id") !== candidate?.evaluation_id) return;
+        if (active && isGradeResult(candidate, mode)) {
+          setGradeResult(candidate);
+          setResultMode(mode);
+          if (params.get("evaluation_id") === candidate.evaluation_id && !params.has("checkout_session_id") && !params.has("checkout_canceled")) setWorkspaceView("result");
+        }
+      } catch { /* Storage may be unavailable in private browsing. */ }
+    };
+    void restore().finally(() => { if (active) { setResultOwnerEmail(signedInEmail); setResultReady(true); } });
+    return () => { active = false; };
+  }, [hasLoadedAccountSummary, signedInEmail]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
-    if (!resultReady) return;
+    if (!resultReady || !signedInEmail || resultOwnerEmail !== signedInEmail) return;
     if (!gradeResult) {
       try {
         window.sessionStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
@@ -1067,6 +1096,7 @@ export default function Home() {
     }
 
     const snapshot: StoredEvaluationResultSnapshot = {
+      ownerEmail: signedInEmail,
       gradeResult,
       resultMode,
       savedAt: Date.now(),
@@ -1079,13 +1109,11 @@ export default function Home() {
     } catch {
       // Ignore quota/private mode storage failures.
     }
-  }, [gradeResult, resultMode, resultReady]);
+  }, [gradeResult, resultMode, resultReady, signedInEmail, resultOwnerEmail]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
+    if (!hasLoadedAccountSummary) return;
+    setDraftReady(false);
     let active = true;
     async function restoreDraft() {
       try {
@@ -1098,6 +1126,13 @@ export default function Home() {
         const draft = parseDraft(window.sessionStorage.getItem(DRAFT_KEY) ?? window.localStorage.getItem(DRAFT_KEY));
         if (!draft) return;
         if (!active) return;
+        if (draft.ownerEmail && draft.ownerEmail !== signedInEmail) {
+          setRubricText(""); setAssignmentText(""); setRubricFiles([]); setAssignmentFiles([]);
+          setDraftProjectId(null); setDraftRestoreNotice("");
+          return;
+        }
+        setDraftProjectId(draft.projectId ?? null);
+        if (!new URLSearchParams(window.location.search).has("evaluation_id")) setActiveProjectId(draft.projectId ?? null);
         setRubricText(draft.rubricText);
         setAssignmentText(draft.assignmentText);
         setRubricMode(draft.rubricMode);
@@ -1114,16 +1149,17 @@ export default function Home() {
       } catch {
         // Keep the editor usable when browser storage is blocked.
       } finally {
-        if (active) setDraftReady(true);
+        if (active) { setDraftOwnerEmail(signedInEmail); setDraftReady(true); }
       }
     }
     void restoreDraft();
     return () => { active = false; };
-  }, []);
+  }, [hasLoadedAccountSummary, signedInEmail]);
 
   useEffect(() => {
-    if (!draftReady) return;
+    if (!draftReady || draftOwnerEmail !== signedInEmail) return;
     const snapshot: EvaluationDraft = {
+      ownerEmail: signedInEmail, projectId: draftProjectId,
       rubricMode, assignmentMode, rubricText, assignmentText, gradingMode,
       hadRubricFile: rubricFiles.length > 0, hadAssignmentFile: assignmentFiles.length > 0,
       savedAt: Date.now(),
@@ -1135,7 +1171,7 @@ export default function Home() {
     save();
     window.addEventListener("pagehide", save);
     return () => window.removeEventListener("pagehide", save);
-  }, [draftReady, rubricMode, assignmentMode, rubricText, assignmentText, gradingMode, rubricFiles.length, assignmentFiles.length]);
+  }, [draftReady, signedInEmail, draftOwnerEmail, draftProjectId, rubricMode, assignmentMode, rubricText, assignmentText, gradingMode, rubricFiles.length, assignmentFiles.length]);
 
   useEffect(() => {
     if (!draftReady || !draftFileKey.current) return;
@@ -1287,13 +1323,19 @@ export default function Home() {
     const id = params.get("evaluation_id");
     if (!id || params.has("checkout_session_id")) return;
     let active = true;
-    void fetch("/api/evaluations/" + encodeURIComponent(id), { cache: "no-store" })
+    const navigation = openRequestRef.current;
+    void fetch("/api/workspace/assignments/" + encodeURIComponent(id), { cache: "no-store" })
+      .then(response => response.status === 404 ? fetch("/api/evaluations/" + encodeURIComponent(id), { cache: "no-store" }) : response)
       .then(async response => {
         const data = await response.json();
-        if (!active) return;
+        if (!active || navigation !== openRequestRef.current) return;
         if (response.ok && isGradeResult(data.result, data.mode ?? "standard")) {
+          setResultOwnerEmail(signedInEmail);
           setGradeResult(data.result);
           setResultMode(data.mode);
+          if (!params.has("checkout_canceled")) setWorkspaceView("result");
+        } else {
+          setWorkspaceNotice(data.message || "Could not open this assignment.");
         }
       }).catch(() => { /* The browser snapshot remains available during an outage. */ });
     return () => { active = false; };
@@ -1443,6 +1485,7 @@ export default function Home() {
     if (!draftReady) return;
     try {
       const snapshot: EvaluationDraft = {
+        ownerEmail: signedInEmail, projectId: draftProjectId,
         rubricMode, assignmentMode, rubricText, assignmentText, gradingMode,
         hadRubricFile: rubricFiles.length > 0, hadAssignmentFile: assignmentFiles.length > 0, savedAt: Date.now(),
       };
@@ -2103,7 +2146,7 @@ export default function Home() {
     try {
       setLoadingStep("uploading");
       // Preserve the key after failures; changed inputs or a completed result start a new attempt.
-      const inputs = [selectedMode, rubricMode, assignmentMode, rubricText.trim(), assignmentText.trim(), ...rubricFiles, ...assignmentFiles];
+      const inputs = [draftProjectId, selectedMode, rubricMode, assignmentMode, rubricText.trim(), assignmentText.trim(), ...rubricFiles, ...assignmentFiles];
       const previous = evaluationAttemptRef.current;
       if (!previous || previous.inputs.length !== inputs.length || inputs.some((value, index) => value !== previous.inputs[index])) {
         evaluationAttemptRef.current = { inputs, key: crypto.randomUUID() };
@@ -2117,6 +2160,7 @@ export default function Home() {
           headers: {
             "Content-Type": "application/json",
             "Idempotency-Key": attemptKey,
+            ...(draftProjectId ? { "x-project-id": draftProjectId } : {}),
           },
           body: JSON.stringify({
             rubricText: rubricText.trim(),
@@ -2156,7 +2200,7 @@ export default function Home() {
         requestPromise = fetch("/api/evaluate", {
           method: "POST",
           body: formData,
-          headers: { "Idempotency-Key": attemptKey },
+          headers: { "Idempotency-Key": attemptKey, ...(draftProjectId ? { "x-project-id": draftProjectId } : {}) },
         });
       }
 
@@ -2244,8 +2288,12 @@ export default function Home() {
 
       evaluationAttemptRef.current = null;
       setShouldFocusEvaluationHeading(true);
+      setResultOwnerEmail(signedInEmail);
       setGradeResult(data);
       setResultMode(selectedMode);
+      if (response.headers.get("x-history-unavailable") === "1") {
+        setWorkspaceNotice("Your result is ready, but could not be added to Recents. Keep this page open and try again.");
+      }
       if (response.headers.get("x-recovery-unavailable") === "1") {
         setDraftRestoreNotice("Your result is ready, but server recovery is temporarily unavailable. Keep your inputs for a later evaluation.");
       }
@@ -2306,6 +2354,10 @@ export default function Home() {
     setRestoreInfo("");
     setGradeResult(null);
     setResultMode(null);
+    setActiveProjectId(null);
+    setWorkspaceView("compose");
+    setWorkspaceNotice("");
+    openRequestRef.current++;
     setSelectedComparisonImage(null);
     setShowAdminCombineModal(false);
     setAdminRealScoreInput("");
@@ -2314,7 +2366,11 @@ export default function Home() {
     setIsAdminCombining(false);
 
     if (typeof window !== "undefined") {
-      window.sessionStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+      try {
+        window.sessionStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+        window.localStorage.removeItem(EVALUATION_RESULT_STORAGE_KEY);
+      } catch {}
+      updateWorkspaceUrl(null);
     }
   }
 
@@ -2461,16 +2517,85 @@ export default function Home() {
     }
   }
 
+  function updateWorkspaceUrl(id: string | null) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("evaluation_id");
+    url.searchParams.delete("checkout_canceled");
+    if (id) url.searchParams.set("evaluation_id", id);
+    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+  }
+
+  function startAssignment(projectId: string | null = null) {
+    if (workspaceBusy || isResumingCheckout) return;
+    openRequestRef.current++;
+    evaluationAttemptRef.current = null;
+    setActiveProjectId(projectId);
+    setDraftProjectId(projectId);
+    setWorkspaceView("compose");
+    setGradeResult(null);
+    setResultMode(null);
+    setRubricText(""); setAssignmentText("");
+    clearFile("rubric"); clearFile("assignment");
+    setRubricMode("file"); setAssignmentMode("file");
+    setError(""); setErrorCode(""); setWorkspaceNotice(""); setDraftRestoreNotice("");
+    setExpandedRewriteSections({}); setShareFeedback("idle");
+    updateWorkspaceUrl(null);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  function openProject(project: AssignmentProject) {
+    if (workspaceBusy || isResumingCheckout) return;
+    openRequestRef.current++;
+    setActiveProjectId(project.id);
+    setWorkspaceView("project");
+    setGradeResult(null); setResultMode(null); setWorkspaceNotice("");
+    updateWorkspaceUrl(null);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  async function openAssignment(item: AssignmentHistoryItem) {
+    if (workspaceBusy || isResumingCheckout) return;
+    const request = ++openRequestRef.current;
+    const account = signedInEmail;
+    setOpeningAssignment(true); setWorkspaceNotice("");
+    try {
+      const response = await fetch("/api/workspace/assignments/" + encodeURIComponent(item.id), { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !isGradeResult(data.result, data.mode)) throw new Error(data.message || "Could not open this assignment.");
+      if (request !== openRequestRef.current || currentAccountRef.current !== account) return;
+      setResultOwnerEmail(account);
+      setGradeResult(data.result); setResultMode(data.mode);
+      setActiveProjectId(item.projectId); setWorkspaceView("result");
+      setExpandedRewriteSections({}); setShareFeedback("idle");
+      setError(""); setErrorCode("");
+      updateWorkspaceUrl(item.id);
+      window.scrollTo({ top: 0, behavior: "instant" });
+    } catch (error) {
+      if (request === openRequestRef.current && currentAccountRef.current === account) setWorkspaceNotice(error instanceof Error ? error.message : "Could not open this assignment.");
+    } finally { if (request === openRequestRef.current) setOpeningAssignment(false); }
+  }
+
   return (
-    <main className="min-h-screen bg-[linear-gradient(160deg,#f8fafc_0%,#eef2ff_45%,#f8fafc_100%)] px-4 py-10 md:py-14">
-      <div className="mx-auto w-full max-w-6xl space-y-8">
-        <section className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
+    <AssignmentSidebar
+      email={signedInEmail} data={workspace.data} loading={workspace.loading} error={workspace.error}
+      busy={workspaceBusy || isResumingCheckout || !draftReady || !resultReady}
+      selectedId={gradeResult?.evaluation_id} projectId={activeAssignment?.projectId ?? activeProjectId}
+      onNew={() => startAssignment()} onOpen={item => void openAssignment(item)} onProject={openProject}
+      onLogin={() => maybeOpenLoginModal()} onRetry={() => void workspace.refresh()}
+      onCreate={async name => { const project = await workspace.mutate({ action: "createProject", name }); if (project) openProject(project); }}
+    >
+    <main className="min-h-screen bg-slate-50 px-4 pb-10 pt-14 md:px-8 md:pt-14">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        {workspaceNotice && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{workspaceNotice}</p>}
+        {openingAssignment && <p role="status" className="text-sm text-slate-500">Opening assignment?</p>}
+        {workspaceView === "compose" && activeProject ? <div className={workspaceStyles.contextBar}><div className={workspaceStyles.contextTitle}><WorkspaceIcon name="folder" /><button onClick={() => openProject(activeProject)}>{activeProject.name}</button><span>/ New version</span></div></div> : null}
+        <section className={workspaceView === "compose" ? "relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 md:p-8" : "relative overflow-hidden rounded-xl border border-slate-200 bg-white px-5 py-3"}>
           <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-indigo-200/40 blur-3xl" />
-          <div className="relative mb-6 border-b border-slate-100 pb-5">
+          <div className={workspaceView === "compose" ? "relative mb-6 border-b border-slate-100 pb-5" : "relative"}>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex min-w-0 flex-col items-start gap-3">
                 <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="h-9 w-auto" />
-                <h1 className="max-w-2xl text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
+                <h1 hidden={workspaceView !== "compose"} className="max-w-2xl text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
                   {ACTIVE_LANDING_COPY.headline}
                 </h1>
               </div>
@@ -2574,17 +2699,17 @@ export default function Home() {
                 ) : null}
               </div>
             </div>
-            <p className="mt-2 text-sm text-slate-600 md:text-[15px]">
+            <p hidden={workspaceView !== "compose"} className="mt-2 text-sm text-slate-600 md:text-[15px]">
               {ACTIVE_LANDING_COPY.subtitle}
             </p>
-            <nav aria-label="Draft review guides" className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-indigo-700">
+            <nav hidden={workspaceView !== "compose"} aria-label="Draft review guides" className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-indigo-700">
               <Link href="/essay-rubric-checker" className="underline underline-offset-4">Check an essay against a rubric</Link>
               <Link href="/assignment-rubric-checker" className="underline underline-offset-4">Check assignment requirements</Link>
               <Link href="/how-to-use-a-rubric-to-check-an-assignment" className="underline underline-offset-4">How to use a rubric</Link>
             </nav>
           </div>
 
-          <form id="rubric-checker" className="scroll-mt-6 space-y-6" onSubmit={handleSubmit}>
+          <form hidden={workspaceView !== "compose"} id="rubric-checker" className="scroll-mt-6 space-y-6" onSubmit={handleSubmit}>
             <fieldset disabled={!draftReady} className="space-y-6">
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <section
@@ -2932,6 +3057,14 @@ export default function Home() {
           </form>
         </section>
 
+        {workspaceView === "project" && activeProject ? (
+          <AssignmentProjectView key={activeProject.id} project={activeProject} assignments={workspace.data.assignments} busy={workspaceBusy}
+            onOpen={item => void openAssignment(item)} onNewVersion={() => startAssignment(activeProject.id)}
+            onRename={async name => { await workspace.mutate({ action: "renameProject", id: activeProject.id, name }); }}
+            onDelete={async () => { await workspace.mutate({ action: "deleteProject", id: activeProject.id }); startAssignment(); }}
+          />
+        ) : null}
+
         {showDailyLimitAlert ? (
           <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
             <button
@@ -3028,7 +3161,7 @@ export default function Home() {
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-[linear-gradient(160deg,#ffffff_0%,#f8fafc_58%,#eef2ff_100%)] p-4 shadow-sm md:p-5">
+        <section hidden={workspaceView !== "compose" || (!comparisonImages.length && !canAccessAdmin)} className="overflow-hidden rounded-2xl border border-slate-200 bg-[linear-gradient(160deg,#ffffff_0%,#f8fafc_58%,#eef2ff_100%)] p-4 shadow-sm md:p-5">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-slate-900">RubriCheck vs Real Gallery</h2>
             <div className="flex items-center gap-2">
@@ -3210,8 +3343,23 @@ export default function Home() {
           </div>
         ) : null}
 
-        {gradeResult ? (
+        {gradeResult && resultOwnerEmail === signedInEmail && workspaceView !== "project" ? (
           <section ref={evaluationCaptureRef} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+            <div className={workspaceStyles.contextBar}>
+              <div className={workspaceStyles.contextTitle}>
+                <WorkspaceIcon name={activeAssignment?.projectId ? "folder" : "file"} />
+                {activeAssignment?.projectId ? <button onClick={() => { const project = workspace.data.projects.find(project => project.id === activeAssignment.projectId); if (project) openProject(project); }}>{workspace.data.projects.find(project => project.id === activeAssignment.projectId)?.name}</button> : <span>Assignment</span>}
+                {activeAssignment?.projectId && <span> / V{projectVersions(workspace.data.assignments, activeAssignment.projectId).findIndex(item => item.id === activeAssignment.id) + 1}</span>}
+              </div>
+              <div className={workspaceStyles.contextActions}>
+                {activeAssignment && <select aria-label="Move assignment to project" value={activeAssignment.projectId ?? ""} disabled={workspaceBusy} onChange={async event => {
+                  const projectId = event.target.value || null;
+                  try { await workspace.mutate({ action: "moveAssignment", id: activeAssignment.id, projectId }); setActiveProjectId(projectId); }
+                  catch (error) { setWorkspaceNotice(error instanceof Error ? error.message : "Could not move assignment."); }
+                }}><option value="">No project</option>{workspace.data.projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select>}
+                {activeAssignment?.projectId && <button className={workspaceStyles.secondaryButton} disabled={workspaceBusy} onClick={() => startAssignment(activeAssignment.projectId)}>New version</button>}
+              </div>
+            </div>
             <div className="border-b border-slate-100 pb-4">
               <div className="flex flex-wrap items-center gap-2">
                 <h2
@@ -3743,7 +3891,7 @@ export default function Home() {
           </div>
         ) : null}
 
-        {!gradeResult ? (
+        {!gradeResult && workspaceView === "compose" ? (
           <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-[linear-gradient(180deg,#fcfdff_0%,#f3f6fb_100%)] p-5 shadow-[0_28px_70px_-52px_rgba(15,23,42,0.5)] md:p-7">
             <div
               aria-hidden="true"
@@ -3919,6 +4067,7 @@ export default function Home() {
         ) : null}
       </div>
     </main>
+    </AssignmentSidebar>
   );
 }
 

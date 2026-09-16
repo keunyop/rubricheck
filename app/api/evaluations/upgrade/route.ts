@@ -6,6 +6,8 @@ import { evaluateAssignment } from "../../../../lib/evaluation";
 import { buildFinalEvaluation } from "../../../../lib/gradeFinalization";
 import { createRequestContext, errorResponse, successJson } from "../../../../src/lib/apiError";
 
+import { archiveAssignment } from "../../../../src/lib/assignmentWorkspace";
+
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
@@ -29,6 +31,8 @@ export async function POST(request: Request) {
       const detailed = buildFinalEvaluation(original.rubric, evaluation, original.mode, purchase.mode === "pro" ? "pro" : "topup");
       return mergeDetailedEvaluation(original.result, detailed);
     });
+    try { await archiveAssignment(email, result, record.mode); }
+    catch { return successJson(context, { result, mode: record.mode }, { "x-history-unavailable": "1" }); }
     return successJson(context, { result, mode: record.mode });
   } catch (error) {
     const code = error instanceof Error ? error.message : "UPGRADE_FAILED";

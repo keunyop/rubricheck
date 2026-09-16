@@ -126,3 +126,26 @@ As a portfolio project, RubriCheck shows experience across both product thinking
 ## Free evaluation usage
 
 Before deploying the reservation-based evaluation flow, apply `supabase/free_evaluate_reservations.sql` after the existing billing schema. See [deployment, behavior and verification](doc/free-evaluation-reservations.md).
+
+
+## Assignment sidebar and projects
+
+The home sidebar lists account-specific projects and recent evaluations. Search (Ctrl/Cmd+K)
+finds assignments by title or project name. Projects group successive evaluated drafts; results
+can be moved between projects, and deleting a project keeps its assignments in Recents.
+
+History uses the existing Upstash Redis configuration (no SQL migration). Account namespaces
+are derived from verified session emails. Results and project metadata have no automatic expiry;
+raw rubric/assignment inputs retain the existing 24-hour recovery TTL (extended for checkout).
+Only server-generated feedback is archived, with the original feedback access tier enforced.
+The metadata hash is separate from result snapshots so listing history does not load full feedback.
+
+New evaluations are archived automatically. A previously saved browser result is imported only
+while its account-owned server recovery record is still available. Already expired evaluations
+cannot be reconstructed. A history storage failure leaves the successful grading result usable
+and displays a notice. Account data deletion must remove the account workspace hash and its
+associated result keys in addition to other account data.
+
+Validation: `npm run test:all` and `node scripts/check_assignment_workspace.mjs`.
+The browser check uses mocked API responses; set `TEST_BASE_URL` for a local Next server and
+`PLAYWRIGHT_MODULE` if Playwright is installed outside this repository.

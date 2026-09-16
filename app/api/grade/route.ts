@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { saveEvaluation } from "../../../src/lib/evaluationRecovery";
+import { archiveAssignment, getProject } from "../../../src/lib/assignmentWorkspace";
+import { assignmentTitle } from "../../../src/lib/assignmentWorkspaceTypes";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -223,6 +225,15 @@ export async function POST(request: Request) {
       return errorResponse(context, 401, "AUTH_REQUIRED", "Log in before requesting an evaluation.");
     }
 
+    const projectId = request.headers.get("x-project-id")?.trim() || null;
+    if (projectId) {
+      try {
+        if (!await getProject(signedInEmail, projectId)) return errorResponse(context, 404, "PROJECT_NOT_FOUND", "This project is no longer available. Choose another project.");
+      } catch {
+        return errorResponse(context, 503, "WORKSPACE_UNAVAILABLE", "Could not open this project. Try again.");
+      }
+    }
+
     const contentType = request.headers.get("content-type") ?? "";
     let mode: GradingMode = "standard";
     let rubricFiles: File[] = [];
@@ -421,7 +432,10 @@ export async function POST(request: Request) {
       const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode, {
         detailLevel: feedbackTier === "free" ? "diagnostic" : "detailed",
       });
-      const finalEvaluation = buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier);
+      const finalEvaluation = {
+        ...buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier),
+        title: assignmentTitle(assignmentText, assignmentFiles.map(file => file.name)),
+      };
       // The user receives a valid result even if confirmation storage is temporarily down.
       // Idempotent retries handle a lost confirmation response without double charging.
       evaluationSucceeded = true;
@@ -440,7 +454,10 @@ export async function POST(request: Request) {
       const result = hiddenAiAlert ? { ...finalEvaluation, hidden_ai_alert: hiddenAiAlert } : finalEvaluation;
       // A recovery outage must not invalidate a successful, billed evaluation.
       try {
-        return NextResponse.json(await saveEvaluation({ email: signedInEmail, rubric: structuredRubric, assignmentText, mode, result }), { headers });
+        const saved = await saveEvaluation({ email: signedInEmail, rubric: structuredRubric, assignmentText, mode, result });
+        try { await archiveAssignment(signedInEmail, saved, mode, projectId); }
+        catch { headers.set("x-history-unavailable", "1"); }
+        return NextResponse.json(saved, { headers });
       } catch {
         headers.set("x-recovery-unavailable", "1");
         return NextResponse.json(result, { headers });

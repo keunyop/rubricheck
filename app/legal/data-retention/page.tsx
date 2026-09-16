@@ -15,7 +15,7 @@ export default function DataRetentionPolicyPage() {
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">Data Retention Policy</h1>
         <p className="mt-3 text-sm leading-6 text-slate-700">
-          Last updated: February 26, 2026. This policy summarizes default retention windows for
+          Last updated: September 15, 2026. This policy summarizes default retention windows for
           RubriCheck data categories.
         </p>
         <p className="mt-3 text-sm leading-6 text-slate-700">
@@ -25,9 +25,14 @@ export default function DataRetentionPolicyPage() {
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">Evaluation Data</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700">
-          Rubric inputs, assignment inputs, and generated outputs are generally retained for up to
-          30 days for abuse monitoring, troubleshooting, and quality review, unless a shorter or
-          longer period is required for security or legal reasons.
+          Saved evaluation results, assignment titles, and projects remain linked to your account
+          so you can revisit feedback and track versions. They are retained until account data
+          deletion is requested. Deleting a project moves its assignments to Recents.
+        </p>
+        <p className="mt-2 text-sm leading-6 text-slate-700">
+          Raw rubric and assignment inputs used for result recovery are stored for 24 hours.
+          A linked checkout may extend recovery to seven days. Uploaded files and raw inputs are
+          not included in the persistent assignment history. Browser drafts expire after 24 hours.
         </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">Usage and Security Logs</h2>

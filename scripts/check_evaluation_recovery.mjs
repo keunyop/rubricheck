@@ -30,6 +30,8 @@ async function scenario(name, run) {
     let json = {};
     let status = 200;
     if (pathname === "/api/account/summary") json = { signedIn: true, email: "test@example.com", plan: "free", remainingEvaluations: 3, creditsBalance: 0 };
+    else if (pathname === "/api/workspace") json = { projects: [], assignments: [] };
+    else if (pathname.startsWith("/api/workspace/assignments/")) { status = 404; json = {}; }
     else if (pathname === "/api/entitlement") json = { plan: "free", status: "needs_restore" };
     else if (pathname === "/api/comparison-images") json = { images: [] };
     else if (pathname === "/api/evaluate") { state.evaluations++; json = free; }
@@ -71,7 +73,7 @@ async function assertText(page) {
   assert.equal(await page.getByPlaceholder("Paste assignment text here").inputValue(), "This is the original draft.\nDo not lose this.");
 }
 async function seedResult(page) {
-  await page.evaluate(result => sessionStorage.setItem("rubricheck_evaluation_result_v1", JSON.stringify({ gradeResult: result, resultMode: "standard", savedAt: Date.now() })), free);
+  await page.evaluate(result => sessionStorage.setItem("rubricheck_evaluation_result_v1", JSON.stringify({ ownerEmail: "test@example.com", gradeResult: result, resultMode: "standard", savedAt: Date.now() })), free);
 }
 try {
   await scenario("narrow ranges retain endpoints and free priorities stay locked", async page => {
@@ -80,7 +82,7 @@ try {
       version: "rubric-sum-v2", range_kind: "uncalibrated_estimate", grading_mode: "standard",
       rubric_total: 100, criteria_range_sum: [70, 75], mode_adjustment: 0,
     }, criteria: [{ ...free.criteria[0], estimated_range: [70, 75] }] };
-    await page.evaluate(result => sessionStorage.setItem("rubricheck_evaluation_result_v1", JSON.stringify({ gradeResult: result, resultMode: "standard", savedAt: Date.now() })), result);
+    await page.evaluate(result => sessionStorage.setItem("rubricheck_evaluation_result_v1", JSON.stringify({ ownerEmail: "test@example.com", gradeResult: result, resultMode: "standard", savedAt: Date.now() })), result);
     await page.reload();
     await page.getByRole("heading", { name: "Evaluation Summary", exact: true }).waitFor();
     await page.getByText("70~75", { exact: false }).first().waitFor();

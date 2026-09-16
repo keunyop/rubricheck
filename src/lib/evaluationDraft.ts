@@ -1,6 +1,8 @@
 ﻿export const DRAFT_KEY = "rubricheck_evaluation_draft_v1";
 export const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 export type EvaluationDraft = {
+  ownerEmail?: string;
+  projectId?: string | null;
   rubricMode: "file" | "text";
   assignmentMode: "file" | "text";
   rubricText: string;
