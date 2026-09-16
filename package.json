@@ -13,10 +13,7 @@
     "validate:scoring": "node --import ./scripts/register-test-resolver.mjs --experimental-strip-types scripts/validate_scoring.ts",
     "test:all": "node scripts/run_all_tests.mjs",
     "test:recovery:browser": "node scripts/check_evaluation_recovery.mjs",
-    "test:workspace:browser": "node scripts/check_assignment_workspace.mjs",
-    "test:lab:db": "node scripts/test_assignment_lab_db.mjs",
-    "test:lab:browser": "node scripts/check_assignment_lab.mjs",
-    "test:lab:live": "node --import ./scripts/register-test-resolver.mjs --experimental-strip-types scripts/smoke_assignment_lab.mjs"
+    "test:workspace:browser": "node scripts/check_assignment_workspace.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.36.2",
