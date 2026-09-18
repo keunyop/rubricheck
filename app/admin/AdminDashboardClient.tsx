@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FeedbackInbox } from "./FeedbackInbox";
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type AdminSubscriberRow = {
@@ -287,6 +288,8 @@ export function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
           ) : null}
           {error ? <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
         </header>
+
+        <FeedbackInbox />
 
         {dashboard ? (
           <>

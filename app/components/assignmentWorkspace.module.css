@@ -21,6 +21,18 @@
 .sidebarFooter { display: flex; align-items: center; gap: 10px; padding: 14px 8px 4px; margin-top: 12px; border-top: 1px solid #e3e5e9; min-height: 54px; }
 .avatar { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #e1e5ef; font-size: 12px; font-weight: 600; flex-shrink: 0; }
 .email { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; color: #63666f; }
+.accountTrigger { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 8px; margin: -8px; box-sizing: content-box; border-radius: 10px; text-align: left; cursor: pointer; }
+.accountTrigger:hover { background: #e7e8eb; }
+.accountMore { margin-left: auto; flex-shrink: 0; color: #777982; }
+.accountDialog { position: fixed; inset: auto auto max(16px, env(safe-area-inset-bottom)) 12px; margin: 0; padding: 0; width: 248px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 32px); border: 1px solid #e5e7eb; border-radius: 16px; color: #27272a; background: white; box-shadow: 0 12px 48px #0003; }
+.accountDialog::backdrop { background: #11182726; }
+.accountBody { padding: 8px; }
+.accountHeading { display: flex; align-items: center; gap: 8px; padding: 0 4px 6px 10px; border-bottom: 1px solid #eceef2; margin-bottom: 6px; }
+.accountHeading .email { flex: 1; }
+.accountItem { display: block; width: 100%; padding: 12px; border-radius: 9px; text-align: left; font-size: 14px; cursor: pointer; }
+.accountItem:hover { background: #f3f4f6; }
+.accountItem:focus-visible { outline: 2px solid #8695b7; outline-offset: -2px; }
+.logoutItem { margin-top: 6px; border-top: 1px solid #eceef2; color: #b91c1c; }
 .login { width: 100%; padding: 8px; border-radius: 8px; background: #fff; border: 1px solid #dddfe4; font-size: 13px; cursor: pointer; }
 .openBar { position: absolute; top: 12px; left: 16px; z-index: 20; }
 .shell[data-expanded="true"] .desktopOpen { display: none; }
@@ -86,8 +98,10 @@
   .desktopSidebar { display: none; }
   .shell[data-expanded="true"] .content { margin-left: 0; }
   .desktopOpen { display: none; }
-  .mobileOpen { display: inline-flex; }
-  .openBar { top: 10px; left: 12px; }
+  .mobileOpen { display: inline-flex; width: 48px; height: 48px; border-radius: 50%; border: 1px solid #e2e5eb; background: #ffffffed; color: #27272a; box-shadow: 0 4px 20px #0f172a1f; backdrop-filter: blur(12px); }
+  .mobileOpen svg { width: 23px; height: 23px; stroke-width: 1.8; }
+  .openBar { position: fixed; top: auto; bottom: calc(20px + env(safe-area-inset-bottom)); left: max(16px, env(safe-area-inset-left)); }
+  .mobilePanel { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
   .projectView { padding: 22px 18px; }
   .projectTitle h1 { font-size: 22px; }
   .projectHeading { gap: 8px; }

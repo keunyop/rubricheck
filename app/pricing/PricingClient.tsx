@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { FeedbackButton } from "../components/FeedbackButton";
 import { useAccountSummary } from "../components/AccountSummaryProvider";
 import { AccountStatusPill } from "../components/AccountStatusPill";
 import { SubpageBackHomeLink } from "../components/SubpageBackHomeLink";
@@ -47,7 +48,6 @@ const FOOTER_LEGAL_LINKS = [
   { label: "AI Disclaimer", href: "/legal/ai-disclaimer" },
   { label: "Data Retention", href: "/legal/data-retention" },
 ] as const;
-const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
 
 function isValidEmail(email: string): boolean {
   if (!email || email.length > 320) {
@@ -813,16 +813,7 @@ export function PricingClient() {
                 {link.label}
               </a>
             ))}
-            {feedbackUrl ? (
-              <a
-                href={feedbackUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="font-medium text-slate-600 transition hover:text-slate-900"
-              >
-                Feedback
-              </a>
-            ) : null}
+            <FeedbackButton email={signedInEmail} />
           </div>
         </div>
       </footer>

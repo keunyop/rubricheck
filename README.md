@@ -149,3 +149,18 @@ associated result keys in addition to other account data.
 Validation: `npm run test:all` and `node scripts/check_assignment_workspace.mjs`.
 The browser check uses mocked API responses; set `TEST_BASE_URL` for a local Next server and
 `PLAYWRIGHT_MODULE` if Playwright is installed outside this repository.
+
+## Product feedback
+
+The home and pricing Feedback buttons open an in-app form for guests and signed-in users.
+Messages are stored in the existing Upstash Redis instance (no migration or new environment variables).
+The admin dashboard has a Feedback inbox with newest-first pages of 25, refresh, and retry.
+Only existing admin sessions or the configured admin secret can read `/api/admin/feedback`.
+Submission accepts up to 5,000 characters and an optional reply email; verified account identity
+comes from the server session. Limits allow five messages per hour per account, or IP for guests.
+The inbox key is `rubricheck:{feedback}:inbox`; messages have no automatic expiry. Account data
+deletion must also remove matching feedback records. Query strings and raw IPs are not stored.
+`NEXT_PUBLIC_FEEDBACK_URL` is no longer used.
+
+Validation: `npm run test:all` and `node scripts/check_feedback_navigation.mjs` against a local
+Next server (supports `TEST_BASE_URL` and `PLAYWRIGHT_MODULE`). Browser checks mock API responses.

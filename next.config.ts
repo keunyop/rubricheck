@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  devIndicators: { position: "bottom-right" },
   async headers() {
     return ["/admin/:path*", "/billing/:path*", "/api/:path*"].map((source) => ({
       source,

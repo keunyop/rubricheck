@@ -18,6 +18,7 @@ import { useAccountSummary } from "./components/AccountSummaryProvider";
 import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ProBadge } from "./components/ProBadge";
 import { AssignmentSidebar, WorkspaceIcon } from "./components/AssignmentSidebar";
+import { FeedbackButton } from "./components/FeedbackButton";
 import { AssignmentProjectView } from "./components/AssignmentProjectView";
 import { useAssignmentWorkspace } from "./components/useAssignmentWorkspace";
 import { projectVersions, type AssignmentHistoryItem, type AssignmentProject } from "../src/lib/assignmentWorkspaceTypes";
@@ -193,7 +194,6 @@ const evaluationRotatingMessages = [
   "Identifying strengths and improvement areas...",
   "Estimating a score range...",
 ];
-const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL?.trim();
 const rubricFileInputId = "rubric-file-input";
 const rubricCameraInputId = "rubric-camera-input";
 const assignmentFileInputId = "assignment-file-input";
@@ -2577,6 +2577,7 @@ export default function Home() {
 
   return (
     <AssignmentSidebar
+      canAccessAdmin={canAccessAdmin} onPricing={() => void goToPricingPage()} onLogout={() => void handleLogout()}
       email={signedInEmail} data={workspace.data} loading={workspace.loading} error={workspace.error}
       busy={workspaceBusy || isResumingCheckout || !draftReady || !resultReady}
       selectedId={gradeResult?.evaluation_id} projectId={activeAssignment?.projectId ?? activeProjectId}
@@ -2584,7 +2585,7 @@ export default function Home() {
       onLogin={() => maybeOpenLoginModal()} onRetry={() => void workspace.refresh()}
       onCreate={async name => { const project = await workspace.mutate({ action: "createProject", name }); if (project) openProject(project); }}
     >
-    <main className="min-h-screen bg-slate-50 px-4 pb-10 pt-14 md:px-8 md:pt-14">
+    <main className="min-h-screen bg-slate-50 px-4 pb-24 pt-6 md:px-8 md:pb-10 md:pt-14">
       <div className="mx-auto w-full max-w-6xl space-y-6">
         {workspaceNotice && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{workspaceNotice}</p>}
         {openingAssignment && <p role="status" className="text-sm text-slate-500">Opening assignment?</p>}
@@ -4045,16 +4046,7 @@ export default function Home() {
                   {link.label}
                 </a>
               ))}
-              {feedbackUrl ? (
-                <a
-                  href={feedbackUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="font-medium text-slate-600 transition hover:text-slate-900"
-                >
-                  Feedback
-                </a>
-              ) : null}
+              <FeedbackButton email={signedInEmail} />
             </div>
           </div>
         </footer>

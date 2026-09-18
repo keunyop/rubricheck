@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import type { AssignmentHistoryItem, AssignmentProject, AssignmentWorkspace } from "../../src/lib/assignmentWorkspaceTypes";
 import styles from "./assignmentWorkspace.module.css";
 
-export function WorkspaceIcon({ name }: { name: "search" | "panel" | "new" | "folder" | "plus" | "close" | "file" }) {
+export function WorkspaceIcon({ name }: { name: "search" | "panel" | "menu" | "new" | "folder" | "plus" | "close" | "file" }) {
   const paths = {
     search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" /></>,
     panel: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></>,
+    menu: <path d="M4 8h16M4 16h11" />,
     new: <><path d="M12 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-7" /><path d="m16 3 5 5-9 9-5 1 1-5Z" /></>,
     folder: <path d="M3 7V5a2 2 0 0 1 2-2h4l3 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />,
     plus: <path d="M12 5v14M5 12h14" />,
@@ -32,6 +34,9 @@ type Props = {
   onCreate: (name: string) => Promise<void>;
   onLogin: () => void;
   onRetry: () => void;
+  canAccessAdmin: boolean;
+  onPricing: () => void;
+  onLogout: () => void;
 };
 
 export function AssignmentSidebar(props: Props) {
@@ -43,6 +48,7 @@ export function AssignmentSidebar(props: Props) {
   const mobile = useRef<HTMLDialogElement>(null);
   const search = useRef<HTMLDialogElement>(null);
   const create = useRef<HTMLDialogElement>(null);
+  const account = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     try { setExpanded(localStorage.getItem("rubricheck_sidebar") !== "closed"); } catch {}
@@ -60,7 +66,9 @@ export function AssignmentSidebar(props: Props) {
     window.addEventListener("keydown", openSearch);
     return () => window.removeEventListener("keydown", openSearch);
   }, []);
-  useEffect(() => { search.current?.close(); create.current?.close(); mobile.current?.close(); setQuery(""); }, [props.email]);
+  useEffect(() => { search.current?.close(); create.current?.close(); mobile.current?.close(); account.current?.close(); setQuery(""); }, [props.email]);
+
+  function closeAccount() { account.current?.close(); mobile.current?.close(); }
 
   function toggle() {
     setExpanded(value => { try { localStorage.setItem("rubricheck_sidebar", value ? "closed" : "open"); } catch {} return !value; });
@@ -97,7 +105,9 @@ export function AssignmentSidebar(props: Props) {
       {props.data.assignments.map(item => <button key={item.id} className={styles.navItem} data-active={props.selectedId === item.id} onClick={() => navigate(() => props.onOpen(item))} disabled={props.busy} title={item.title}><span>{item.title}</span></button>)}
     </nav>
     <div className={styles.sidebarFooter}>
-      {props.email ? <><span className={styles.avatar}>{props.email[0].toUpperCase()}</span><span className={styles.email} title={props.email}>{props.email}</span></> : <button className={styles.login} onClick={() => { mobile.current?.close(); props.onLogin(); }}>Log in</button>}
+      {props.email ? <button className={styles.accountTrigger} aria-label="Open account menu" aria-haspopup="dialog" onClick={() => account.current?.showModal()}>
+        <span className={styles.avatar} aria-hidden="true">{props.email[0].toUpperCase()}</span><span className={styles.email} title={props.email}>{props.email}</span><svg className={styles.accountMore} viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></svg>
+      </button> : <button className={styles.login} onClick={() => { mobile.current?.close(); props.onLogin(); }}>Log in</button>}
     </div>
   </>;
 
@@ -106,11 +116,22 @@ export function AssignmentSidebar(props: Props) {
     <div className={styles.content}>
       <div className={styles.openBar}>
         <button className={styles.desktopOpen} aria-label="Open sidebar" title="Open sidebar" onClick={toggle}><WorkspaceIcon name="panel" /></button>
-        <button className={styles.mobileOpen} aria-label="Open sidebar" onClick={() => mobile.current?.showModal()}><WorkspaceIcon name="panel" /></button>
+        <button className={styles.mobileOpen} aria-label="Open sidebar" aria-haspopup="dialog" onClick={() => mobile.current?.showModal()}><WorkspaceIcon name="menu" /></button>
       </div>
       {props.children}
     </div>
     <dialog ref={mobile} className={styles.mobileDialog} aria-label="Sidebar" onClick={event => { if (event.target === event.currentTarget) mobile.current?.close(); }}><div className={styles.mobilePanel}>{content(true)}</div></dialog>
+    <dialog ref={account} className={styles.accountDialog} aria-label="Account menu" onClick={event => { if (event.target === event.currentTarget) account.current?.close(); }}>
+      <div className={styles.accountBody}>
+        <div className={styles.accountHeading}><span className={styles.email} title={props.email}>{props.email}</span><button className={styles.iconButton} aria-label="Close account menu" onClick={() => account.current?.close()}><WorkspaceIcon name="close" /></button></div>
+        <nav aria-label="Account">
+          {props.canAccessAdmin && <Link href="/admin" className={styles.accountItem} onClick={closeAccount}>Admin</Link>}
+          <button className={styles.accountItem} onClick={() => { closeAccount(); props.onPricing(); }}>Pricing</button>
+          <Link href="/billing/manage" className={styles.accountItem} onClick={closeAccount}>Billing and refunds</Link>
+          <button className={`${styles.accountItem} ${styles.logoutItem}`} onClick={() => { closeAccount(); props.onLogout(); }}>Log out</button>
+        </nav>
+      </div>
+    </dialog>
     <dialog ref={search} className={styles.dialog} aria-labelledby="assignment-search-title" onClick={event => { if (event.target === event.currentTarget) search.current?.close(); }}>
       <div className={styles.dialogBody}>
         <div className={styles.dialogHeading}><h2 id="assignment-search-title">Search assignments</h2><button className={styles.iconButton} aria-label="Close search" onClick={() => search.current?.close()}><WorkspaceIcon name="close" /></button></div>
