@@ -1,0 +1,65 @@
+﻿.criteriaTable,
+.lockedCriteria {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: white;
+}
+.tableHeader { display: none; }
+.criterionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  padding: 22px 20px;
+}
+.criterionRow + .criterionRow { border-top: 1px solid #e2e8f0; }
+.criterionName { display: flex; align-items: center; gap: 12px; min-width: 0; color: #0f172a; font-size: 14px; font-weight: 600; }
+.criterionNumber { display: grid; flex: 0 0 32px; height: 32px; place-items: center; border: 1px solid #e0e7ff; border-radius: 9px; background: #eef2ff; color: #6366f1; font-size: 11px; font-weight: 600; }
+.mobileMax { display: block; margin-top: 4px; color: #64748b; font-size: 11px; font-weight: 400; }
+.maxScore { display: none; color: #64748b; font-size: 14px; }
+.estimate { width: 90px; }
+.scoreBadge { display: inline-flex; border-radius: 7px; background: #eef2ff; padding: 5px 10px; color: #4338ca; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rangeTrack { position: relative; height: 5px; overflow: hidden; margin-top: 10px; border-radius: 99px; background: #f1f5f9; }
+.rangeFill { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: #c7d2fe; }
+.rangeInterval { position: absolute; top: 0; bottom: 0; border-radius: inherit; background: #6366f1; }
+.criterionFeedback { grid-column: 1 / -1; min-width: 0; color: #475569; font-size: 14px; line-height: 1.75; }
+.lockedCriteria { display: grid; position: relative; isolation: isolate; }
+.lockedBackdrop { grid-area: 1 / 1; min-width: 0; user-select: none; pointer-events: none; filter: blur(5px); opacity: .65; }
+.lockedBackdrop .criterionRow { min-height: 140px; }
+.unlockOverlay { grid-area: 1 / 1; z-index: 1; display: grid; place-items: center; padding: 24px 16px; background: rgb(248 250 252 / .25); }
+.unlockCard { width: 100%; max-width: 430px; min-width: 0; border: 1px solid #e0e7ff; border-radius: 18px; padding: 28px; background: rgb(255 255 255 / .97); text-align: center; box-shadow: 0 10px 36px rgb(15 23 42 / .08), 0 2px 8px rgb(15 23 42 / .03); }
+.lockIcon { display: grid; width: 44px; height: 44px; place-items: center; margin: auto; border: 1px solid #e0e7ff; border-radius: 13px; background: #eef2ff; color: #4f46e5; }
+.lockIcon svg { width: 23px; height: 23px; }
+.placeholderTitle,
+.placeholderMax,
+.placeholderScore,
+.placeholderLine,
+.placeholderShortLine { display: block; max-width: 100%; border-radius: 5px; background: #cbd5e1; }
+.placeholderTitle { width: 92px; height: 13px; }
+.placeholderMax { width: 22px; height: 14px; }
+.placeholderScore { width: 66px; height: 28px; background: #c7d2fe; }
+.placeholderLine { width: 100%; height: 9px; margin: 6px 0 10px; }
+.placeholderShortLine { width: 70%; height: 9px; }
+
+@media (min-width: 1024px) {
+  .tableHeader,
+  .criterionRow { grid-template-columns: minmax(0, 1.1fr) 48px 100px minmax(0, 2fr); gap: 20px; }
+  .tableHeader { display: grid; padding: 14px 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 600; }
+  .criterionRow { padding: 24px 20px; }
+  .maxScore { display: block; padding-top: 5px; }
+  .mobileMax { display: none; }
+  .criterionFeedback { grid-column: auto; }
+  .lockedBackdrop .criterionRow { min-height: 120px; }
+  .unlockOverlay { padding: 32px; }
+}
+
+@media (max-width: 400px) {
+  .criterionRow { padding: 18px 14px; gap: 12px; }
+  .criterionName { gap: 8px; }
+  .criterionNumber { flex-basis: 26px; height: 28px; }
+  .estimate { width: 68px; }
+  .unlockOverlay { padding: 20px 10px; }
+  .unlockCard { padding: 22px 16px; }
+}
+

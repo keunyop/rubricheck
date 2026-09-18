@@ -2783,7 +2783,6 @@ export default function Home() {
                 ) : null}
               </div>
             </div>
-            {!signedInEmail ? <p className="mt-3 text-sm font-semibold text-indigo-700">3 free checks · No card required</p> : null}
             <p hidden={workspaceView !== "compose"} className="mt-2 text-sm text-slate-600 md:text-[15px]">
               {ACTIVE_LANDING_COPY.subtitle}
             </p>
