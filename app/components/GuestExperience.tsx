@@ -1,21 +1,43 @@
 ﻿"use client";
 
+import { useId } from "react";
+
 import { SAMPLE_EVALUATION as sample } from "../../src/config/sampleEvaluation";
 import type { TrialPreview } from "../../src/lib/trialPreview";
 import { formatOverallScoreDisplay, SCORE_RANGE_NOTICE, SCORE_COMPARISON_NOTICE } from "../../src/lib/scorePresentation";
 import { WorkspaceIcon } from "./AssignmentSidebar";
 import workspaceStyles from "./assignmentWorkspace.module.css";
 import styles from "./evaluationPreview.module.css";
+import guestStyles from "./guestExperience.module.css";
 
 const button = "rounded-xl border px-5 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-wait disabled:opacity-60";
 
 export function GuestChoices({ sampleSelected, disabled, onSelect }: { sampleSelected: boolean; disabled: boolean; onSelect: (sample: boolean) => void }) {
-  return <section aria-label="Try RubriCheck">
-    <div className="flex flex-wrap gap-3">
-      <button type="button" disabled={disabled} aria-pressed={sampleSelected} onClick={() => onSelect(true)}
-        className={button + (sampleSelected ? " border-indigo-600 bg-indigo-600 text-white" : " border-slate-300 bg-white text-slate-700")}>Try a sample</button>
-      <button type="button" disabled={disabled} aria-pressed={!sampleSelected} onClick={() => onSelect(false)}
-        className={button + (!sampleSelected ? " border-indigo-600 bg-indigo-600 text-white" : " border-slate-300 bg-white text-slate-700")}>Try your own assignment</button>
+  const id = useId();
+  const choices = [
+    { sample: true, title: "Try a sample", description: "Explore a sample essay, rubric, and feedback.", icon: "file" as const },
+    { sample: false, title: "Try your own assignment", description: "Add your rubric and draft to get feedback.", icon: "new" as const },
+  ];
+
+  return <section aria-label="Try RubriCheck" className={guestStyles.choices}>
+    <p className={guestStyles.choicesHeading}>Choose how to start</p>
+    <div className={guestStyles.choicesGrid}>
+      {choices.map(choice => {
+        const selected = sampleSelected === choice.sample;
+        const choiceId = id + (choice.sample ? "-sample" : "-own");
+        return <button key={choiceId} type="button" disabled={disabled} aria-pressed={selected}
+          aria-labelledby={choiceId + "-title"} aria-describedby={choiceId + "-description"}
+          onClick={() => onSelect(choice.sample)} className={guestStyles.choice}>
+          <span className={guestStyles.choiceIcon}><WorkspaceIcon name={choice.icon} /></span>
+          <span className={guestStyles.choiceCopy}>
+            <span id={choiceId + "-title"} className={guestStyles.choiceTitle}>{choice.title}</span>
+            <span id={choiceId + "-description"} className={guestStyles.choiceDescription}>{choice.description}</span>
+          </span>
+          <span className={guestStyles.choiceIndicator} aria-hidden="true">
+            {selected ? <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m4 8 2.5 2.5L12 5" /></svg> : null}
+          </span>
+        </button>;
+      })}
     </div>
   </section>;
 }
@@ -121,7 +143,16 @@ export function SampleExperience({ onTryOwn }: { onTryOwn: () => void }) {
       <SummaryCard score={sample.overallRange} summary={sample.summary} />
       <SampleCriteria />
     </section>
-    <button type="button" onClick={onTryOwn} className={button + " border-indigo-600 bg-indigo-600 text-white"}>Try your own assignment</button>
+    <div className={guestStyles.sampleNextStep}>
+      <div>
+        <h3 className={guestStyles.nextStepTitle}>Ready to check your own work?</h3>
+        <p className={guestStyles.nextStepDescription}>Start with your rubric and assignment draft.</p>
+      </div>
+      <button type="button" onClick={onTryOwn} className={guestStyles.nextStepButton}>
+        Try your own assignment
+        <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10h12m-5-5 5 5-5 5" /></svg>
+      </button>
+    </div>
   </section>;
 }
 

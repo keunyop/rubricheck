@@ -10,6 +10,8 @@ page.setDefaultTimeout(20000);
 const errors = [];
 page.on("pageerror", error => errors.push(error.message));
 let signedIn = false, used = false, evaluations = 0, claims = 0, failNext = true, failClaim = true;
+let releaseEvaluation;
+const evaluationGate = new Promise(resolve => { releaseEvaluation = resolve; });
 const preview = { guest_preview: true, title: "My essay", overall_range: [70, 80], summary: "Your argument is clear, but it needs better evidence." };
 const result = { ...preview, guest_preview: undefined, evaluation_id: "33f33715-5c6a-4f84-bb24-79cff24e3171", access_tier: "free", top_improvements: ["Use a credible source"],
   criteria: [{ name: "Evidence", max_score: 100, score: 75, estimated_range: [70, 80], feedback: "Only signed-in users see this criterion.", detailed_breakdown_locked: true }] };
@@ -27,6 +29,7 @@ await context.route("**/api/**", async route => {
   }
   else if (path === "/api/evaluate") {
     evaluations++;
+    if (failNext) await evaluationGate;
     if (failNext) { failNext = false; status = 504; json = { code: "OPENAI_TIMEOUT", message: "Please retry." }; }
     else { assert.equal(used, false); used = true; json = preview; }
   }
@@ -43,6 +46,45 @@ try {
   await page.getByRole("button", { name: "Get my free summary", exact: true }).waitFor();
   assert.equal(await page.getByText("3 free checks · No card required", { exact: true }).count(), 0);
   assert.equal(await page.getByText("Get one free Evaluation Summary before signing up.", { exact: false }).count(), 0);
+  const choices = page.getByRole("region", { name: "Try RubriCheck", exact: true });
+  const sampleChoice = choices.getByRole("button", { name: "Try a sample", exact: true });
+  const ownChoice = choices.getByRole("button", { name: "Try your own assignment", exact: true });
+  assert.equal(await ownChoice.getAttribute("aria-pressed"), "true");
+  assert.equal(await sampleChoice.getAttribute("aria-pressed"), "false");
+  for (const width of [1440, 1024, 768, 390, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await choices.scrollIntoViewIfNeeded();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+    const sampleBox = await sampleChoice.boundingBox(), ownBox = await ownChoice.boundingBox();
+    assert.ok(sampleBox.height >= 44 && ownBox.height >= 44);
+    assert.ok(sampleBox.x >= 0 && ownBox.x + ownBox.width <= width);
+    const choicesBox = await choices.boundingBox();
+    if (choicesBox.width > 600) {
+      assert.equal(sampleBox.y, ownBox.y);
+      assert.ok(sampleBox.x + sampleBox.width < ownBox.x);
+    } else {
+      assert.ok(sampleBox.y + sampleBox.height < ownBox.y);
+    }
+    if (width === 1440) await page.screenshot({ path: ".next/guest-choices-desktop.png", animations: "disabled" });
+    if (width === 390 || width === 320) {
+      await choices.screenshot({ path: ".next/guest-choices-" + width + ".png", animations: "disabled" });
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await sampleChoice.focus();
+  await page.keyboard.press("Space");
+  await page.getByRole("region", { name: "Sample evaluation", exact: true }).waitFor();
+  assert.equal(await sampleChoice.getAttribute("aria-pressed"), "true");
+  assert.equal(await ownChoice.getAttribute("aria-pressed"), "false");
+  assert.equal(await sampleChoice.evaluate(element => element === document.activeElement), true);
+  assert.equal(await sampleChoice.evaluate(element => getComputedStyle(element).outlineStyle), "solid");
+  await page.keyboard.press("Tab");
+  assert.equal(await ownChoice.evaluate(element => element === document.activeElement), true);
+  await page.keyboard.press("Enter");
+  await page.locator("#rubric-checker").waitFor({ state: "visible" });
+  assert.equal(await ownChoice.getAttribute("aria-pressed"), "true");
+  assert.equal(evaluations, 0);
+  pass("choice cards fit desktop, tablet and mobile, and switch with keyboard focus and selection state");
   await page.getByRole("button", { name: "Try a sample", exact: true }).click();
   const sample = page.getByRole("region", { name: "Sample evaluation", exact: true });
   await sample.waitFor();
@@ -62,7 +104,29 @@ try {
   await criteria.screenshot({ path: ".next/guest-sample-mobile.png", animations: "disabled" });
   await page.setViewportSize({ width: 1440, height: 1000 });
   pass("sample opens essay, rubric and prepared result without an evaluation");
+  const nextStep = sample.getByRole("button", { name: "Try your own assignment", exact: true });
+  for (const width of [768, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    await nextStep.scrollIntoViewIfNeeded();
+    const box = await nextStep.boundingBox();
+    assert.ok(box.height >= 44 && box.x >= 0 && box.x + box.width <= width);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  }
+  await nextStep.locator("..").screenshot({ path: ".next/guest-next-step-mobile.png", animations: "disabled" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  pass("sample next step stays readable and reachable on narrow screens");
   await sample.getByRole("button", { name: "Try your own assignment", exact: true }).click();
+  const fileInputs = page.locator('#rubric-checker input[type="file"][multiple]');
+  await fileInputs.nth(0).setInputFiles({ name: "rubric.txt", mimeType: "text/plain", buffer: Buffer.from("Evidence: 100 points.") });
+  await fileInputs.nth(1).setInputFiles({ name: "draft.txt", mimeType: "text/plain", buffer: Buffer.from("My uploaded draft.") });
+  await sampleChoice.click();
+  await ownChoice.click();
+  assert.deepEqual(await fileInputs.evaluateAll(inputs => inputs.map(input => Array.from(input.files, file => file.name))), [["rubric.txt"], ["draft.txt"]]);
+  assert.equal(await page.getByText("rubric.txt", { exact: true }).count(), 1);
+  assert.equal(await page.getByText("draft.txt", { exact: true }).count(), 1);
+  await page.getByRole("button", { name: "Remove", exact: true }).first().click();
+  await page.getByRole("button", { name: "Remove", exact: true }).click();
+  pass("switching choices preserves both uploaded files without starting an evaluation");
   await page.getByRole("button", { name: "Text", exact: true }).first().click();
   await page.getByRole("button", { name: "Text", exact: true }).nth(1).click();
   await page.getByPlaceholder("Paste rubric text here").fill("Evidence: 100 points.");
@@ -70,9 +134,17 @@ try {
   await page.getByRole("button", { name: "Try a sample", exact: true }).click();
   await sample.getByRole("button", { name: "Try your own assignment", exact: true }).click();
   assert.equal(await page.getByPlaceholder("Paste assignment text here").inputValue(), "My own assignment draft.");
-  pass("switching to sample preserves the user's draft");
+  assert.equal(await page.getByPlaceholder("Paste rubric text here").inputValue(), "Evidence: 100 points.");
+  pass("switching to sample preserves the user's draft and rubric");
   await page.getByRole("button", { name: "Get my free summary", exact: true }).click();
+  await choices.locator("button:disabled").first().waitFor();
+  assert.equal(await sampleChoice.isDisabled(), true);
+  assert.equal(await ownChoice.isDisabled(), true);
+  releaseEvaluation();
   await page.getByRole("button", { name: "Retry", exact: true }).waitFor();
+  assert.equal(await sampleChoice.isEnabled(), true);
+  assert.equal(await ownChoice.isEnabled(), true);
+  pass("choices are disabled during evaluation and re-enabled after failure");
   assert.equal(await page.getByRole("dialog").count(), 0);
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   const summary = page.getByRole("region", { name: "Your evaluation preview" });
