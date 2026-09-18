@@ -164,3 +164,30 @@ deletion must also remove matching feedback records. Query strings and raw IPs a
 
 Validation: `npm run test:all` and `node scripts/check_feedback_navigation.mjs` against a local
 Next server (supports `TEST_BASE_URL` and `PLAYWRIGHT_MODULE`). Browser checks mock API responses.
+
+## Guest samples and assignment previews
+
+The home page offers a prepared sample (no AI request or quota use) and one guest
+assignment preview. Guests can upload the existing supported file formats or paste
+text, with a 20,000-character limit for each parsed input and Standard mode only.
+The response includes only the Evaluation Summary; criterion feedback stays on the server.
+
+Guest access requires the existing Upstash Redis configuration. No migration or new
+environment variable is needed. Atomic reservations prevent concurrent checks,
+release on failures, and fail closed when storage is unavailable. A random HttpOnly
+cookie enforces one successful preview per browser for up to one year; a hashed IP
+marker also limits the same network to one preview per 24 hours. Deploy behind a
+trusted proxy that sets the client IP headers, as with the existing usage limits.
+Shared-network visitors who reach this limit can sign up for their account checks.
+
+Inputs and results expire after 24 hours. After email verification, the same browser
+can claim the saved evaluation and view the existing Free-tier criterion feedback
+without another model call or consuming account checks. The original Free/Top-up/Pro
+detail restrictions still apply. Claiming is bound to one verified account and
+supports retries. Account free usage, paid credits, and project evaluations keep
+their existing billing paths.
+
+Validation: `npm run test:all`, `npm run test:trial:browser`, and the existing
+workspace, recovery, and feedback browser scripts. Browser tests use mocked API
+responses; set `TEST_BASE_URL` for a local Next server and `PLAYWRIGHT_MODULE`
+if Playwright is installed outside this repository.

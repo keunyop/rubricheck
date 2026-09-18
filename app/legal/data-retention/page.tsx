@@ -15,7 +15,7 @@ export default function DataRetentionPolicyPage() {
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">Data Retention Policy</h1>
         <p className="mt-3 text-sm leading-6 text-slate-700">
-          Last updated: September 15, 2026. This policy summarizes default retention windows for
+          Last updated: September 17, 2026. This policy summarizes default retention windows for
           RubriCheck data categories.
         </p>
         <p className="mt-3 text-sm leading-6 text-slate-700">
@@ -33,6 +33,15 @@ export default function DataRetentionPolicyPage() {
           Raw rubric and assignment inputs used for result recovery are stored for 24 hours.
           A linked checkout may extend recovery to seven days. Uploaded files and raw inputs are
           not included in the persistent assignment history. Browser drafts expire after 24 hours.
+        </p>
+
+        <h2 className="mt-6 text-lg font-semibold text-slate-900">Guest Previews</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-700">
+          Guest preview inputs and results are stored for 24 hours so you can recover the summary
+          and link the feedback to your account after email verification. Linked results follow
+          the account history retention described above. A browser cookie and hashed browser usage
+          marker last up to one year to enforce the one-preview limit. A hashed IP usage marker
+          lasts 24 hours to limit repeat previews from the same network.
         </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">Usage and Security Logs</h2>

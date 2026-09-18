@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { trialIdentity, reserveTrial, releaseTrial, completeTrial, setTrialCookie, TRIAL_TEXT_LIMIT, type TrialReservation } from "../../../src/lib/guestTrial";
 import { saveEvaluation } from "../../../src/lib/evaluationRecovery";
 import { archiveAssignment, getProject } from "../../../src/lib/assignmentWorkspace";
 import { assignmentTitle } from "../../../src/lib/assignmentWorkspaceTypes";
@@ -203,6 +204,7 @@ async function resolveCurrentFeedbackTier(
 export async function POST(request: Request) {
   const context = createRequestContext(request);
   let usage: UsageCheckResult | undefined;
+  let trialReservation: TrialReservation | undefined;
   let evaluationSucceeded = false;
   let reservationReleased = false;
   let stage = "validation";
@@ -221,12 +223,10 @@ export async function POST(request: Request) {
 
   try {
     const signedInEmail = getCreditEmailFromCookie(request);
-    if (!signedInEmail) {
-      return errorResponse(context, 401, "AUTH_REQUIRED", "Log in before requesting an evaluation.");
-    }
 
     const projectId = request.headers.get("x-project-id")?.trim() || null;
-    if (projectId) {
+    if (projectId && !signedInEmail) return errorResponse(context, 401, "AUTH_REQUIRED", "Log in to use projects.");
+    if (projectId && signedInEmail) {
       try {
         if (!await getProject(signedInEmail, projectId)) return errorResponse(context, 404, "PROJECT_NOT_FOUND", "This project is no longer available. Choose another project.");
       } catch {
@@ -333,8 +333,20 @@ export async function POST(request: Request) {
       return errorResponse(context, 400, "MISSING_INPUT", "Please provide both a rubric and an assignment.");
     }
 
+    if (!signedInEmail) {
+      if (mode !== "standard") return errorResponse(context, 403, "STRICT_MODE_LOCKED", "The guest preview uses Standard mode. Sign up for more options.");
+      try {
+        trialReservation = await reserveTrial(trialIdentity(request));
+      } catch (error) {
+        const code = error instanceof Error ? error.message : "";
+        if (code === "TRIAL_LIMIT_REACHED") return errorResponse(context, 429, code, "Your free preview has been used. Sign up for 3 free checks · No card required.");
+        if (code === "TRIAL_PENDING") return errorResponse(context, 409, code, "Your preview is already running. Please wait before trying again.");
+        return errorResponse(context, 503, "TRIAL_UNAVAILABLE", "The preview is temporarily unavailable. Please retry shortly.");
+      }
+    }
+
     stage = "file_parsing";
-    const cacheIdentityPromise = resolveRubricCacheIdentity(request).catch((error) => {
+    const cacheIdentityPromise = (signedInEmail ? resolveRubricCacheIdentity(request) : Promise.resolve(null)).catch((error) => {
       console.warn("RUBRIC_CACHE_IDENTITY_RESOLUTION_FAILED", {
         requestId: context.requestId,
         reason: error instanceof Error ? error.message : "unknown",
@@ -345,9 +357,12 @@ export async function POST(request: Request) {
       resolveFieldText("rubric", rubricTextInput, rubricFiles),
       resolveFieldText("assignment", assignmentTextInput, assignmentFiles),
     ]);
+    if (!signedInEmail && (rubricText.length > TRIAL_TEXT_LIMIT || assignmentText.length > TRIAL_TEXT_LIMIT)) {
+      return errorResponse(context, 400, "TRIAL_INPUT_TOO_LONG", "Keep each preview input under 20,000 characters, or sign up to evaluate a longer assignment.");
+    }
     const hiddenAiAlert = detectHiddenAiAlert({ rubricText, assignmentText });
 
-    const currentFeedbackTier = await resolveCurrentFeedbackTier(request, signedInEmail);
+    const currentFeedbackTier = signedInEmail ? await resolveCurrentFeedbackTier(request, signedInEmail) : "free";
     if (mode === "strict" && !canUseStrictMode(currentFeedbackTier)) {
       return errorResponse(
         context,
@@ -357,51 +372,54 @@ export async function POST(request: Request) {
       );
     }
 
-    stage = "reservation";
-    // Scope retry keys to the parsed inputs and mode, never trust a caller's key alone.
-    const requestKey = createHash("sha256").update(JSON.stringify([
-      request.headers.get("idempotency-key") || randomUUID(), mode, rubricText, assignmentText,
-    ])).digest("hex");
-    usage = await checkUsageLimit(request, "evaluate", undefined, requestKey);
-    Object.assign(usageHeaders, buildUsageLimitHeaders(usage));
-    if (usage.degradedCode === "REDIS_UNAVAILABLE") {
-      usageHeaders["x-rubricheck-warning"] = "REDIS_UNAVAILABLE";
-    }
-
-    const feedbackTier: FeedbackAccessTier =
-      currentFeedbackTier === "pro"
-        ? "pro"
-        : currentFeedbackTier === "topup" || usage.billingSource === "credit"
-          ? "topup"
-          : "free";
-
-    if (!usage.allowed) {
-      if (usage.errorCode === "EVALUATION_PENDING" || usage.errorCode === "EVALUATION_ALREADY_COMPLETED") {
-        return errorResponse(context, 409, usage.errorCode, usage.errorMessage ?? "Please retry shortly.", undefined, usageHeaders);
-      }
-      if (usage.errorCode === "FREE_LIMIT_REACHED" && usage.action === "SHOW_INTERSTITIAL") {
-        return NextResponse.json(buildFreeLimitReachedPayload(usage.limit), {
-          status: 429,
-          headers: usageHeaders,
-        });
+    let feedbackTier: FeedbackAccessTier = "free";
+    if (signedInEmail) {
+      stage = "reservation";
+      // Scope retry keys to the parsed inputs and mode, never trust a caller's key alone.
+      const requestKey = createHash("sha256").update(JSON.stringify([
+        request.headers.get("idempotency-key") || randomUUID(), mode, rubricText, assignmentText,
+      ])).digest("hex");
+      usage = await checkUsageLimit(request, "evaluate", undefined, requestKey);
+      Object.assign(usageHeaders, buildUsageLimitHeaders(usage));
+      if (usage.degradedCode === "REDIS_UNAVAILABLE") {
+        usageHeaders["x-rubricheck-warning"] = "REDIS_UNAVAILABLE";
       }
 
-      if (usage.errorCode === "REDIS_UNAVAILABLE") {
-        return errorResponse(context, 503, "REDIS_UNAVAILABLE", usage.errorMessage ?? "Usage checks are temporarily unavailable. Please retry shortly.", undefined, usageHeaders);
-      }
+      feedbackTier =
+        currentFeedbackTier === "pro"
+          ? "pro"
+          : currentFeedbackTier === "topup" || usage.billingSource === "credit"
+            ? "topup"
+            : "free";
 
-      if (usage.errorCode === "FREE_USAGE_STORE_UNAVAILABLE") {
-        return errorResponse(
-          context,
-          503,
-          "SERVICE_UNAVAILABLE",
-          usage.errorMessage ?? "Free evaluation tracking is temporarily unavailable. Please retry shortly.",
-          undefined,
-          usageHeaders,
-        );
-      }
+      if (!usage.allowed) {
+        if (usage.errorCode === "EVALUATION_PENDING" || usage.errorCode === "EVALUATION_ALREADY_COMPLETED") {
+          return errorResponse(context, 409, usage.errorCode, usage.errorMessage ?? "Please retry shortly.", undefined, usageHeaders);
+        }
+        if (usage.errorCode === "FREE_LIMIT_REACHED" && usage.action === "SHOW_INTERSTITIAL") {
+          return NextResponse.json(buildFreeLimitReachedPayload(usage.limit), {
+            status: 429,
+            headers: usageHeaders,
+          });
+        }
 
-      return errorResponse(context, 429, usage.errorCode ?? "RATE_LIMITED", usage.errorMessage ?? `Free trial limit reached (${usage.limit}). Upgrade to continue.`, undefined, usageHeaders);
+        if (usage.errorCode === "REDIS_UNAVAILABLE") {
+          return errorResponse(context, 503, "REDIS_UNAVAILABLE", usage.errorMessage ?? "Usage checks are temporarily unavailable. Please retry shortly.", undefined, usageHeaders);
+        }
+
+        if (usage.errorCode === "FREE_USAGE_STORE_UNAVAILABLE") {
+          return errorResponse(
+            context,
+            503,
+            "SERVICE_UNAVAILABLE",
+            usage.errorMessage ?? "Free evaluation tracking is temporarily unavailable. Please retry shortly.",
+            undefined,
+            usageHeaders,
+          );
+        }
+
+        return errorResponse(context, 429, usage.errorCode ?? "RATE_LIMITED", usage.errorMessage ?? `Free trial limit reached (${usage.limit}). Upgrade to continue.`, undefined, usageHeaders);
+      }
     }
     const cacheIdentity = await cacheIdentityPromise;
     stage = "rubric_structuring";
@@ -436,6 +454,12 @@ export async function POST(request: Request) {
         ...buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier),
         title: assignmentTitle(assignmentText, assignmentFiles.map(file => file.name)),
       };
+      if (!signedInEmail && trialReservation) {
+        const preview = await completeTrial(trialReservation, { rubric: structuredRubric, assignmentText, result: hiddenAiAlert ? { ...finalEvaluation, hidden_ai_alert: hiddenAiAlert } : finalEvaluation });
+        evaluationSucceeded = true;
+        return setTrialCookie(NextResponse.json(preview, { headers: { "x-request-id": context.requestId } }), trialReservation);
+      }
+      if (!signedInEmail || !usage) throw new Error("EVALUATION_FAILED");
       // The user receives a valid result even if confirmation storage is temporarily down.
       // Idempotent retries handle a lost confirmation response without double charging.
       evaluationSucceeded = true;
@@ -532,5 +556,10 @@ export async function POST(request: Request) {
     }
 
     return errorResponse(context, 500, "INTERNAL_SERVER_ERROR", "Failed to process uploaded files.");
+  } finally {
+    if (trialReservation && !evaluationSucceeded) {
+      try { await releaseTrial(trialReservation); }
+      catch { console.error("TRIAL_RELEASE_FAILED", { requestId: context.requestId }); }
+    }
   }
 }

@@ -42,7 +42,7 @@ export const HOME_FAQ_ITEMS: FaqItem[] = [
   },
   {
     "question": "Is RubriCheck free to try?",
-    "answer": `Start with ${FREE_TRIAL_LIMIT} free trial evaluations, including estimated scores and the leading improvement priority. Detailed criterion feedback and Strict mode require credits or Pro; rewrite suggestions require Pro.`
+    "answer": `Explore a prepared sample or get one summary-only preview of your own assignment without signing up. Sign up for ${FREE_TRIAL_LIMIT} free checks with no card required, including estimated scores and the leading improvement priority. Detailed criterion feedback and Strict mode require credits or Pro; rewrite suggestions require Pro.`
   },
   {
     "question": "Does RubriCheck give an official grade?",

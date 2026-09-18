@@ -19,6 +19,8 @@ import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ProBadge } from "./components/ProBadge";
 import { AssignmentSidebar, WorkspaceIcon } from "./components/AssignmentSidebar";
 import { FeedbackButton } from "./components/FeedbackButton";
+import { GuestChoices, SampleExperience, GuestSummary } from "./components/GuestExperience";
+import { isTrialPreview, type TrialPreview } from "../src/lib/trialPreview";
 import { AssignmentProjectView } from "./components/AssignmentProjectView";
 import { useAssignmentWorkspace } from "./components/useAssignmentWorkspace";
 import { projectVersions, type AssignmentHistoryItem, type AssignmentProject } from "../src/lib/assignmentWorkspaceTypes";
@@ -860,6 +862,12 @@ export default function Home() {
 
   const [loadingStep, setLoadingStep] = useState<LoadingStep>("idle");
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
+  const [sampleSelected, setSampleSelected] = useState(false);
+  const [trialPreview, setTrialPreview] = useState<TrialPreview | null>(null);
+  const [trialUsed, setTrialUsed] = useState(false);
+  const [trialRestoreAttempt, setTrialRestoreAttempt] = useState(0);
+  const trialPreviewRef = useRef<TrialPreview | null>(null);
+  const evaluationInFlightRef = useRef(false);
   const [resultOwnerEmail, setResultOwnerEmail] = useState<string | null>(null);
   const [draftOwnerEmail, setDraftOwnerEmail] = useState<string | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"compose" | "project" | "result">("compose");
@@ -973,14 +981,22 @@ export default function Home() {
     setShowLoginModal(true);
   }
 
-  function requireSignedInForEvaluation(selectedMode: GradingMode): boolean {
-    void selectedMode;
+  function ensureEvaluationAccess(selectedMode: GradingMode): boolean {
+
     if (!hasLoadedAccountSummary) {
       setError("Checking login status. Please try again.");
       setErrorCode("");
       return false;
     }
 
+    if (!signedInEmail && selectedMode === "standard") {
+      if (!resultReady) { setError("Checking preview availability. Please try again."); return false; }
+      if (trialUsed) {
+        openLoginModal("Your free preview has been used. Sign up for 3 free checks · No card required.");
+        return false;
+      }
+      return true;
+    }
     if (!signedInEmail) {
       setError("Log in before requesting an evaluation.");
       setErrorCode("AUTH_REQUIRED");
@@ -1051,7 +1067,47 @@ export default function Home() {
     setOpeningAssignment(false);
     setResultOwnerEmail(null);
     const restore = async () => {
-      if (!signedInEmail) return;
+      if (!signedInEmail) {
+        setTrialPreview(null);
+        trialPreviewRef.current = null;
+        try {
+          const response = await fetch("/api/trial", { cache: "no-store" });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (!active) return;
+          setTrialUsed(data.used === true);
+          if (isTrialPreview(data.result)) {
+            setTrialPreview(data.result);
+            trialPreviewRef.current = data.result;
+            try { window.sessionStorage.setItem("rubricheck_pending_trial", "1"); } catch {}
+          }
+        } catch { /* Submission will recheck availability on the server. */ }
+        return;
+      }
+      let pendingTrial = Boolean(trialPreviewRef.current);
+      try { pendingTrial ||= window.sessionStorage.getItem("rubricheck_pending_trial") === "1"; } catch {}
+      if (pendingTrial) {
+        try {
+          const response = await fetch("/api/trial", { method: "POST" });
+          const data = await response.json();
+          if (!active) return;
+          if (response.ok && isGradeResult(data.result, "standard")) {
+            setGradeResult(data.result); setResultMode("standard"); setWorkspaceView("result");
+            setTrialPreview(null); trialPreviewRef.current = null;
+            try { window.sessionStorage.removeItem("rubricheck_pending_trial"); } catch {}
+            const url = new URL(window.location.href);
+            url.searchParams.set("evaluation_id", data.result.evaluation_id);
+            window.history.replaceState({}, "", url.pathname + url.search);
+            if (response.headers.get("x-history-unavailable") === "1") setWorkspaceNotice("Your feedback is ready, but could not be added to Recents. Try reopening it shortly.");
+            return;
+          }
+          if (response.status === 404) {
+            setTrialPreview(null); trialPreviewRef.current = null;
+            try { window.sessionStorage.removeItem("rubricheck_pending_trial"); } catch {}
+          }
+          setWorkspaceNotice(data.message || "Could not open your preview. Please retry.");
+        } catch { if (active) setWorkspaceNotice("Could not open your preview. Please retry."); }
+      }
       try {
         const raw = window.sessionStorage.getItem(EVALUATION_RESULT_STORAGE_KEY) ?? window.localStorage.getItem(EVALUATION_RESULT_STORAGE_KEY);
         if (!raw) return;
@@ -1079,7 +1135,7 @@ export default function Home() {
     };
     void restore().finally(() => { if (active) { setResultOwnerEmail(signedInEmail); setResultReady(true); } });
     return () => { active = false; };
-  }, [hasLoadedAccountSummary, signedInEmail]);
+  }, [hasLoadedAccountSummary, signedInEmail, trialRestoreAttempt]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -1929,6 +1985,10 @@ export default function Home() {
   function mapApiError(data: GradeErrorResponse): string {
     const message = data.code ?? data.error;
 
+    if (message === "TRIAL_PENDING" || message === "TRIAL_INPUT_TOO_LONG" || message === "TRIAL_UNAVAILABLE") {
+      return data.message || "The preview is temporarily unavailable. Please retry shortly.";
+    }
+
     if (message === "EVALUATION_PENDING") {
       return "Your evaluation is still running. Please wait a moment and retry.";
     }
@@ -2080,6 +2140,7 @@ export default function Home() {
   }
 
   async function submitGrade(selectedMode: GradingMode) {
+    if (evaluationInFlightRef.current) return;
     if (isLoading || !draftReady || isResumingCheckout) {
       return;
     }
@@ -2089,7 +2150,7 @@ export default function Home() {
       return;
     }
 
-    if (!requireSignedInForEvaluation(selectedMode)) {
+    if (!ensureEvaluationAccess(selectedMode)) {
       return;
     }
 
@@ -2140,6 +2201,7 @@ export default function Home() {
       }
     }
 
+    evaluationInFlightRef.current = true;
     const startedAt = performance.now();
     const startedAtIso = new Date().toISOString();
 
@@ -2236,6 +2298,12 @@ export default function Home() {
         data && typeof data === "object" && "message" in data
           ? String((data as { message?: unknown }).message ?? "")
           : "";
+      if ((apiCode || apiError) === "TRIAL_LIMIT_REACHED") {
+        setTrialUsed(true);
+        setTrialRestoreAttempt(value => value + 1);
+        openLoginModal("Your free preview has been used. Sign up for 3 free checks · No card required.");
+        return;
+      }
       if ((apiCode || apiError) === "SIGN_IN_REQUIRED" || (apiCode || apiError) === "AUTH_REQUIRED") {
         openLoginModal("Log in to grade your assignment.");
         setError("");
@@ -2281,6 +2349,18 @@ export default function Home() {
 
       setOpenAiTimeoutCount(0);
 
+      if (isTrialPreview(data)) {
+        setTrialPreview(data); trialPreviewRef.current = data; setTrialUsed(true);
+        setSampleSelected(false);
+        try { window.sessionStorage.setItem("rubricheck_pending_trial", "1"); } catch {}
+        evaluationAttemptRef.current = null;
+        requestAnimationFrame(() => {
+          const heading = document.getElementById("guest-evaluation-summary");
+          heading?.scrollIntoView({ behavior: "smooth", block: "center" }); heading?.focus({ preventScroll: true });
+        });
+        return;
+      }
+
       if (!isGradeResult(data, selectedMode)) {
         setError("Something went wrong. Please try again.");
         return;
@@ -2308,6 +2388,7 @@ export default function Home() {
       console.error("EVALUATION_REQUEST_FAILED", error);
       setError("Something went wrong. Please try again.");
     } finally {
+      evaluationInFlightRef.current = false;
       for (const timer of stepTimers) {
         clearTimeout(timer);
       }
@@ -2326,7 +2407,7 @@ export default function Home() {
       return;
     }
 
-    if (!requireSignedInForEvaluation("strict")) {
+    if (!ensureEvaluationAccess("strict")) {
       return;
     }
     void submitGrade("strict");
@@ -2531,6 +2612,8 @@ export default function Home() {
     evaluationAttemptRef.current = null;
     setActiveProjectId(projectId);
     setDraftProjectId(projectId);
+    setSampleSelected(false);
+    setTrialPreview(null);
     setWorkspaceView("compose");
     setGradeResult(null);
     setResultMode(null);
@@ -2700,6 +2783,7 @@ export default function Home() {
                 ) : null}
               </div>
             </div>
+            {!signedInEmail ? <p className="mt-3 text-sm font-semibold text-indigo-700">3 free checks · No card required</p> : null}
             <p hidden={workspaceView !== "compose"} className="mt-2 text-sm text-slate-600 md:text-[15px]">
               {ACTIVE_LANDING_COPY.subtitle}
             </p>
@@ -2710,8 +2794,13 @@ export default function Home() {
             </nav>
           </div>
 
-          <form hidden={workspaceView !== "compose"} id="rubric-checker" className="scroll-mt-6 space-y-6" onSubmit={handleSubmit}>
-            <fieldset disabled={!draftReady} className="space-y-6">
+          {!signedInEmail && workspaceView === "compose" ? <>
+            <GuestChoices sampleSelected={sampleSelected} disabled={workspaceBusy} onSelect={setSampleSelected} />
+            {sampleSelected ? <SampleExperience onTryOwn={() => setSampleSelected(false)} /> : null}
+          </> : null}
+
+          <form hidden={workspaceView !== "compose" || (!signedInEmail && sampleSelected)} id="rubric-checker" className="scroll-mt-6 space-y-6" onSubmit={handleSubmit}>
+            <fieldset disabled={!draftReady || (!signedInEmail && !resultReady)} className="space-y-6">
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               <section
                 className={`rounded-2xl border border-slate-200/90 bg-white p-4 transition md:p-5 ${
@@ -3037,16 +3126,16 @@ export default function Home() {
                 disabled={isLoading || !draftReady || isResumingCheckout}
                 className="min-w-0 flex-1 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-400 active:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Grade my assignment
+                {!signedInEmail ? trialUsed ? "Sign up for 3 free checks" : "Get my free summary" : "Grade my assignment"}
               </button>
-              <button
+              {signedInEmail ? <button
                 type="button"
                 onClick={handleStrictSubmit}
                 disabled={isLoading || !draftReady || isResumingCheckout}
                 className="shrink-0 min-w-[9.25rem] rounded-xl border border-rose-300 bg-rose-50 px-5 py-2 text-xs font-semibold text-rose-700 transition-colors duration-150 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span>{"\u{1F525}"} Strict Mode</span>
-              </button>
+              </button> : null}
             </div>
             {isLoading ? (
               <div className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 md:text-sm">
@@ -3342,6 +3431,11 @@ export default function Home() {
               </div>
             </div>
           </div>
+        ) : null}
+
+        {trialPreview && (!sampleSelected || signedInEmail) && workspaceView !== "project" ? (
+          <GuestSummary result={trialPreview} signedIn={Boolean(signedInEmail)} busy={!resultReady}
+            onUnlock={() => signedInEmail ? setTrialRestoreAttempt(value => value + 1) : openLoginModal("Sign up to see feedback for each criterion. 3 free checks · No card required.")} />
         ) : null}
 
         {gradeResult && resultOwnerEmail === signedInEmail && workspaceView !== "project" ? (
@@ -3800,7 +3894,7 @@ export default function Home() {
               className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
             >
             <h3 id="main-login-title" className="text-lg font-semibold text-slate-900">
-              Log in
+              {trialPreview || trialUsed ? "Sign up or log in" : "Log in"}
             </h3>
             <p className="mt-2 text-sm text-slate-600">
               We will send a one-time code to verify ownership before logging you in.
