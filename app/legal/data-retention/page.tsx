@@ -15,7 +15,7 @@ export default function DataRetentionPolicyPage() {
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">Data Retention Policy</h1>
         <p className="mt-3 text-sm leading-6 text-slate-700">
-          Last updated: September 17, 2026. This policy summarizes default retention windows for
+          Last updated: September 21, 2026. This policy summarizes default retention windows for
           RubriCheck data categories.
         </p>
         <p className="mt-3 text-sm leading-6 text-slate-700">
@@ -33,6 +33,15 @@ export default function DataRetentionPolicyPage() {
           Raw rubric and assignment inputs used for result recovery are stored for 24 hours.
           A linked checkout may extend recovery to seven days. Uploaded files and raw inputs are
           not included in the persistent assignment history. Browser drafts expire after 24 hours.
+        </p>
+
+        <h2 className="mt-6 text-lg font-semibold text-slate-900">My Rubrics</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-700">
+          After a successful signed-in check, your rubric text, structured criteria, and original
+          rubric files are saved separately in My rubrics. Your 50 most recently used rubrics are
+          retained across devices until you remove them, they are replaced by more recent rubrics,
+          or account data deletion is requested. Guest previews and general criteria are not added
+          to this library. The seven-day rubric processing cache is separate from the library.
         </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">Guest Previews</h2>

@@ -1,9 +1,13 @@
-﻿export const DRAFT_KEY = "rubricheck_evaluation_draft_v1";
+import type { SavedRubricDetail } from "./rubricLibraryTypes";
+
+export const DRAFT_KEY = "rubricheck_evaluation_draft_v1";
 export const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 export type EvaluationDraft = {
   ownerEmail?: string;
   projectId?: string | null;
-  rubricMode: "file" | "text";
+  rubricMode: "file" | "text" | "general" | "library";
+  savedRubric?: SavedRubricDetail | null;
+  assignmentInstructions?: string;
   assignmentMode: "file" | "text";
   rubricText: string;
   assignmentText: string;
@@ -20,7 +24,11 @@ export function parseDraft(raw: string | null, now = Date.now()): EvaluationDraf
       typeof value.rubricText !== "string" || typeof value.assignmentText !== "string") return null;
     return {
       ...value,
-      rubricMode: value.rubricMode === "text" ? "text" : "file",
+      rubricMode: value.rubricMode === "general" ? "general" :
+        value.rubricMode === "library" && value.savedRubric && /^[a-f0-9]{64}$/.test(value.savedRubric.id) &&
+        typeof value.savedRubric.name === "string" && typeof value.savedRubric.text === "string" &&
+        Array.isArray(value.savedRubric.files) && value.savedRubric.files.every((file: { name?: unknown }) => typeof file?.name === "string")
+          ? "library" : value.rubricMode === "text" ? "text" : "file",
       assignmentMode: value.assignmentMode === "text" ? "text" : "file",
       gradingMode: value.gradingMode === "strict" ? "strict" : "standard",
     };

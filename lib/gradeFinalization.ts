@@ -24,6 +24,7 @@ type FinalCriterion = {
 
 export type FinalEvaluation = {
   title: string;
+  grading_basis?: "general";
   access_tier: FeedbackAccessTier;
   overall_range: [number, number];
   score_calculation?: {

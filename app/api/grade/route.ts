@@ -1,4 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
+import { generalRubric, ASSIGNMENT_INSTRUCTIONS_LIMIT } from "../../../lib/generalRubric";
+import { editSavedRubric, getSavedRubric, saveRubric, validRubricId } from "../../../src/lib/rubricLibrary";
 import { trialIdentity, reserveTrial, releaseTrial, completeTrial, setTrialCookie, TRIAL_TEXT_LIMIT, type TrialReservation } from "../../../src/lib/guestTrial";
 import { saveEvaluation } from "../../../src/lib/evaluationRecovery";
 import { archiveAssignment, getProject } from "../../../src/lib/assignmentWorkspace";
@@ -34,12 +36,14 @@ const MAX_TOTAL_FIELD_UPLOAD_BYTES = 30 * 1024 * 1024;
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg"]);
 const GradeRequestSchema = z.object({
   mode: GradingModeSchema.default("standard"),
+  rubricSource: z.enum(["provided", "general", "saved"]).default("provided"),
+  rubricId: z.string().refine(validRubricId).optional(),
+  assignmentInstructions: z.string().trim().max(ASSIGNMENT_INSTRUCTIONS_LIMIT).default(""),
 });
-const JsonGradeRequestSchema = z.object({
-  mode: GradingModeSchema.default("standard"),
-  rubricText: z.string().trim().min(1),
+const JsonGradeRequestSchema = GradeRequestSchema.extend({
+  rubricText: z.string().trim().optional(),
   assignmentText: z.string().trim().min(1),
-});
+}).refine(data => data.rubricSource !== "provided" || Boolean(data.rubricText));
 
 type FieldName = "rubric" | "assignment";
 
@@ -236,6 +240,10 @@ export async function POST(request: Request) {
 
     const contentType = request.headers.get("content-type") ?? "";
     let mode: GradingMode = "standard";
+    let rubricSource: "provided" | "general" | "saved" = "provided";
+    let rubricId: string | undefined;
+    let assignmentInstructions = "";
+    let savedRubric: Awaited<ReturnType<typeof getSavedRubric>> = null;
     let rubricFiles: File[] = [];
     let assignmentFiles: File[] = [];
     let rubricTextInput: string | null = null;
@@ -255,24 +263,50 @@ export async function POST(request: Request) {
       }
 
       mode = parsedRequest.data.mode;
-      rubricTextInput = parsedRequest.data.rubricText;
+      rubricSource = parsedRequest.data.rubricSource;
+      rubricId = parsedRequest.data.rubricId;
+      assignmentInstructions = parsedRequest.data.assignmentInstructions;
+      rubricTextInput = parsedRequest.data.rubricText || null;
       assignmentTextInput = parsedRequest.data.assignmentText;
     } else {
       const formData = await request.formData();
       const modeInput = formData.get("mode");
       const parsedRequest = GradeRequestSchema.safeParse({
         mode: typeof modeInput === "string" ? modeInput : undefined,
+        rubricSource: formData.get("rubricSource") ?? undefined,
+        rubricId: formData.get("rubricId") ?? undefined,
+        assignmentInstructions: formData.get("assignmentInstructions") ?? undefined,
       });
 
       if (!parsedRequest.success) {
-        return errorResponse(context, 400, "INVALID_MODE", "Invalid grading mode. Select Standard or Strict mode.");
+        const invalidMode = parsedRequest.error.issues.some(issue => issue.path[0] === "mode");
+        return errorResponse(context, 400, invalidMode ? "INVALID_MODE" : "INVALID_INPUT",
+          invalidMode ? "Invalid grading mode. Select Standard or Strict mode." : "Please provide valid grading options and assignment instructions (up to 5,000 characters).");
       }
 
       mode = parsedRequest.data.mode;
+      rubricSource = parsedRequest.data.rubricSource;
+      rubricId = parsedRequest.data.rubricId;
+      assignmentInstructions = parsedRequest.data.assignmentInstructions;
       rubricFiles = getUploadedFiles(formData, "rubric");
       assignmentFiles = getUploadedFiles(formData, "assignment");
       rubricTextInput = getTextInput(formData, "rubricText");
       assignmentTextInput = getTextInput(formData, "assignmentText");
+    }
+
+    if ((rubricSource === "saved") !== Boolean(rubricId) ||
+        (rubricSource !== "provided" && (rubricTextInput || rubricFiles.length)) ||
+        (rubricSource !== "general" && assignmentInstructions)) {
+      return errorResponse(context, 400, "INVALID_INPUT", "Choose one rubric source.");
+    }
+    if (rubricSource === "saved") {
+      if (!signedInEmail) return errorResponse(context, 401, "AUTH_REQUIRED", "Log in to use your saved rubrics.");
+      try {
+        savedRubric = await getSavedRubric(signedInEmail, rubricId!);
+        if (!savedRubric) return errorResponse(context, 404, "RUBRIC_NOT_FOUND", "This rubric is no longer available. Choose another rubric.");
+      } catch {
+        return errorResponse(context, 503, "RUBRIC_LIBRARY_UNAVAILABLE", "Could not open your rubric. Try again.");
+      }
     }
 
     const rubricValidation = validateUploadedFiles(rubricFiles, "rubric");
@@ -325,7 +359,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!rubricTextInput && rubricFiles.length === 0) {
+    if (rubricSource === "provided" && !rubricTextInput && rubricFiles.length === 0) {
       return errorResponse(context, 400, "MISSING_INPUT", "Please provide both a rubric and an assignment.");
     }
 
@@ -354,7 +388,8 @@ export async function POST(request: Request) {
       return null;
     });
     const [rubricText, assignmentText] = await Promise.all([
-      resolveFieldText("rubric", rubricTextInput, rubricFiles),
+      rubricSource === "general" ? Promise.resolve(JSON.stringify(generalRubric(assignmentInstructions))) :
+        savedRubric ? Promise.resolve(savedRubric.text) : resolveFieldText("rubric", rubricTextInput, rubricFiles),
       resolveFieldText("assignment", assignmentTextInput, assignmentFiles),
     ]);
     if (!signedInEmail && (rubricText.length > TRIAL_TEXT_LIMIT || assignmentText.length > TRIAL_TEXT_LIMIT)) {
@@ -378,6 +413,7 @@ export async function POST(request: Request) {
       // Scope retry keys to the parsed inputs and mode, never trust a caller's key alone.
       const requestKey = createHash("sha256").update(JSON.stringify([
         request.headers.get("idempotency-key") || randomUUID(), mode, rubricText, assignmentText,
+        ...(rubricSource === "provided" ? [] : [rubricSource, rubricId ?? null]),
       ])).digest("hex");
       usage = await checkUsageLimit(request, "evaluate", undefined, requestKey);
       Object.assign(usageHeaders, buildUsageLimitHeaders(usage));
@@ -425,7 +461,7 @@ export async function POST(request: Request) {
     stage = "rubric_structuring";
     let structuredRubric;
     try {
-      structuredRubric = await structureRubric(rubricText, {
+      structuredRubric = rubricSource === "general" ? generalRubric(assignmentInstructions) : savedRubric?.rubric ?? await structureRubric(rubricText, {
         cacheIdentity,
         requestId: context.requestId,
       });
@@ -452,6 +488,7 @@ export async function POST(request: Request) {
       });
       const finalEvaluation = {
         ...buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier),
+        ...(rubricSource === "general" ? { grading_basis: "general" as const } : {}),
         title: assignmentTitle(assignmentText, assignmentFiles.map(file => file.name)),
       };
       if (!signedInEmail && trialReservation) {
@@ -475,6 +512,17 @@ export async function POST(request: Request) {
       Object.assign(usageHeaders, buildUsageLimitHeaders(usage));
       const headers = new Headers(usageHeaders);
       headers.set("x-request-id", context.requestId);
+      if (rubricSource !== "general") {
+        try {
+          if (savedRubric) {
+            if (!await editSavedRubric(signedInEmail, savedRubric.id, "touch")) throw new Error("RUBRIC_NOT_FOUND");
+          } else {
+            await saveRubric(signedInEmail, rubricText, structuredRubric, rubricTextInput ? [] : rubricFiles);
+          }
+        } catch {
+          headers.set("x-rubric-library-unavailable", "1");
+        }
+      }
       const result = hiddenAiAlert ? { ...finalEvaluation, hidden_ai_alert: hiddenAiAlert } : finalEvaluation;
       // A recovery outage must not invalidate a successful, billed evaluation.
       try {

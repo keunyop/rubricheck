@@ -28,12 +28,13 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageContent }) {
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">{page.h1}</h1>
             <p className="mt-4 text-base leading-7 text-slate-700 md:text-lg">{page.intro}</p>
           </div>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link href={page.ctaHref} className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{page.ctaLabel}</Link>
-            <Link href="/pricing" className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">View pricing</Link>
+            <Link href={`/?start=general&from=${page.slug}#rubric-checker`} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Check without a rubric</Link>
+            <Link href={`/?start=library&from=${page.slug}#rubric-checker`} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Use a saved rubric</Link>
           </div>
           <p className="mt-4 text-sm leading-6 text-slate-600">
-            Start with {FREE_TRIAL_LIMIT} free trial evaluations. Detailed feedback and Strict mode are available with credits or Pro.
+            Try a free preview, or sign up for {FREE_TRIAL_LIMIT} free checks.
           </p>
         </section>
 
@@ -93,6 +94,10 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageContent }) {
             ))}
           </div>
         </section>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Link href={page.ctaHref} className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white">{page.ctaLabel}</Link>
+          <Link href={`/?start=general&from=${page.slug}#rubric-checker`} className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Check without a rubric</Link>
+        </div>
         <footer className="flex flex-wrap gap-x-5 gap-y-3 px-2 text-sm text-slate-600">
           <Link href="/">RubriCheck</Link>
           <Link href="/pricing">Pricing</Link>

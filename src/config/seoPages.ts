@@ -2,7 +2,7 @@ import type { FaqItem } from "../lib/seo";
 import { FREE_TRIAL_LIMIT } from "./plans";
 
 // Change only when the public content is substantially revised, never at build time.
-export const SEO_CONTENT_UPDATED_AT = "2026-09-14";
+export const SEO_CONTENT_UPDATED_AT = "2026-09-21";
 
 export type SeoSection = { title: string; body: string };
 export type SeoLink = { href: string; label: string; description: string };
@@ -383,8 +383,8 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
     ],
     "sections": [
       {
-        "title": "1. Upload your essay and the complete rubric",
-        "body": "Keep the essay and rubric in their separate input fields. Upload PDF, DOCX, TXT, PNG, JPG, or JPEG files, or paste the text. Include the rubric's performance levels and point values so the check can distinguish a basic response from the standard required for higher marks."
+        "title": "1. Add your essay and choose your criteria",
+        "body": "Upload your essay and rubric separately, paste text, or reuse a saved rubric. PDF, DOCX, TXT, PNG, JPG, and JPEG are supported. If you have no rubric, choose general criteria and optionally add the essay question or assignment instructions."
       },
       {
         "title": "2. Check your thesis and paragraph claims",
@@ -427,6 +427,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
       "note": "Illustrative essay review, not a submitted student's work or a generated evaluation. Apply your own rubric's descriptors."
     },
     "faqItems": [
+      {
+        "question": "Can I check an essay without a rubric?",
+        "answer": "Yes. Choose Check without a rubric to review task focus, reasoning, evidence, organization, and clarity using general criteria. You can add assignment instructions to guide the review. These estimates use general criteria rather than your instructor's grading scheme."
+      },
       {
         "question": "How can I check my essay against a rubric?",
         "answer": "Read each rubric row, find the passage in your essay that meets it, and compare that passage with the performance-level descriptions. Mark missing evidence and revise the most important gaps. In RubriCheck, add your essay and rubric together to get an AI-assisted review."

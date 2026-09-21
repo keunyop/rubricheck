@@ -1,6 +1,6 @@
-﻿import type { FinalEvaluation } from "../../lib/gradeFinalization";
+import type { FinalEvaluation } from "../../lib/gradeFinalization";
 
-export type TrialPreview = Pick<FinalEvaluation, "title" | "overall_range" | "summary"> & { guest_preview: true };
+export type TrialPreview = Pick<FinalEvaluation, "title" | "overall_range" | "summary" | "grading_basis"> & { guest_preview: true };
 
 export function isTrialPreview(value: unknown): value is TrialPreview {
   if (!value || typeof value !== "object") return false;

@@ -14,7 +14,8 @@
     "test:all": "node scripts/run_all_tests.mjs",
     "test:recovery:browser": "node scripts/check_evaluation_recovery.mjs",
     "test:trial:browser": "node scripts/check_guest_trial.mjs",
-    "test:workspace:browser": "node scripts/check_assignment_workspace.mjs"
+    "test:workspace:browser": "node scripts/check_assignment_workspace.mjs",
+    "test:rubrics:browser": "node scripts/check_rubric_library.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.36.2",

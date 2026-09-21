@@ -29,7 +29,7 @@ export function setTrialCookie(response: NextResponse, identity: TrialIdentity) 
 }
 export function trialPreview(result: FinalEvaluation): TrialPreview {
   // Explicit allowlist: never ship criteria, evidence or revision advice to guests.
-  return { guest_preview: true, title: result.title, overall_range: result.overall_range, summary: result.summary };
+  return { guest_preview: true, title: result.title, overall_range: result.overall_range, summary: result.summary, ...(result.grading_basis === "general" ? { grading_basis: "general" as const } : {}) };
 }
 export async function readTrial(identity: TrialIdentity) {
   const redis = recoveryRedis();

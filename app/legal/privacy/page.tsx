@@ -15,7 +15,7 @@ export default function PrivacyPolicyPage() {
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">Privacy Policy</h1>
         <p className="mt-3 text-sm leading-6 text-slate-700">
-          Last updated: September 15, 2026. This Privacy Policy explains what information RubriCheck
+          Last updated: September 21, 2026. This Privacy Policy explains what information RubriCheck
           processes, why we process it, and the choices available to you.
         </p>
         <p className="mt-3 text-sm leading-6 text-slate-700">
@@ -33,7 +33,7 @@ export default function PrivacyPolicyPage() {
         <h2 className="mt-6 text-lg font-semibold text-slate-900">How We Use Information</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700">
           We use data to deliver grading and rewrite suggestion features, enforce free and paid
-          limits, save account-specific assignment history and project versions, prevent abuse, troubleshoot issues, and maintain service performance and security.
+          limits, save account-specific rubrics and their original files for reuse, maintain assignment history and project versions, prevent abuse, troubleshoot issues, and maintain service performance and security.
         </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">Payments and Billing</h2>

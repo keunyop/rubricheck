@@ -123,6 +123,19 @@ As a portfolio project, RubriCheck shows experience across both product thinking
 
 - Website: https://rubricheck.com
 
+## My rubrics and general criteria
+
+Use **My rubrics** beside the rubric input to reopen recent rubrics, rename them,
+or download their original files. Successful signed-in checks save up to 50 recent
+rubrics per account using the existing Redis configuration.
+
+Choose **No rubric** to grade with general criteria. Assignment instructions are
+optional. The six existing guide pages, including the essay page, link directly
+to these starting options. No new migration or environment variables are needed.
+
+See [storage, behavior, and verification](doc/verification/rubric-library.md).
+Run `npm run test:all` and `npm run test:rubrics:browser` for regression coverage.
+
 ## Free evaluation usage
 
 Before deploying the reservation-based evaluation flow, apply `supabase/free_evaluate_reservations.sql` after the existing billing schema. See [deployment, behavior and verification](doc/free-evaluation-reservations.md).

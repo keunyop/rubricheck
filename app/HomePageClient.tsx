@@ -19,6 +19,9 @@ import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ProBadge } from "./components/ProBadge";
 import { AssignmentSidebar, WorkspaceIcon } from "./components/AssignmentSidebar";
 import { FeedbackButton } from "./components/FeedbackButton";
+import { RubricLibrary, RubricDownloads } from "./components/RubricLibrary";
+import type { SavedRubricDetail } from "../src/lib/rubricLibraryTypes";
+import { generalRubric, ASSIGNMENT_INSTRUCTIONS_LIMIT } from "../lib/generalRubric";
 import { GuestChoices, SampleExperience, GuestSummary } from "./components/GuestExperience";
 import { isTrialPreview, type TrialPreview } from "../src/lib/trialPreview";
 import { AssignmentProjectView } from "./components/AssignmentProjectView";
@@ -94,6 +97,7 @@ type GradeResult = {
   access_tier: AccountFeatureTier;
   overall_range: [number, number];
   score_calculation?: FinalEvaluation["score_calculation"];
+  grading_basis?: FinalEvaluation["grading_basis"];
   summary: string;
   top_improvements: string[];
   criteria: CriteriaResult[];
@@ -415,6 +419,7 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
         active
           ? "bg-slate-600 text-white shadow-sm"
@@ -847,7 +852,11 @@ export default function Home() {
     clearAccountSummary,
   } = useAccountSummary();
 
-  const [rubricMode, setRubricMode] = useState<InputMode>("file");
+  const [rubricMode, setRubricMode] = useState<EvaluationDraft["rubricMode"]>("file");
+  const [savedRubric, setSavedRubric] = useState<SavedRubricDetail | null>(null);
+  const [showRubricLibrary, setShowRubricLibrary] = useState(false);
+  const [assignmentInstructions, setAssignmentInstructions] = useState("");
+  const starterRef = useRef("");
   const [assignmentMode, setAssignmentMode] = useState<InputMode>("file");
 
   const [rubricFiles, setRubricFiles] = useState<File[]>([]);
@@ -1170,6 +1179,9 @@ export default function Home() {
   useEffect(() => {
     if (!hasLoadedAccountSummary) return;
     setDraftReady(false);
+    setShowRubricLibrary(false);
+    setSavedRubric(null);
+    setAssignmentInstructions("");
     let active = true;
     async function restoreDraft() {
       try {
@@ -1184,6 +1196,7 @@ export default function Home() {
         if (!active) return;
         if (draft.ownerEmail && draft.ownerEmail !== signedInEmail) {
           setRubricText(""); setAssignmentText(""); setRubricFiles([]); setAssignmentFiles([]);
+          setRubricMode("file");
           setDraftProjectId(null); setDraftRestoreNotice("");
           return;
         }
@@ -1192,6 +1205,8 @@ export default function Home() {
         setRubricText(draft.rubricText);
         setAssignmentText(draft.assignmentText);
         setRubricMode(draft.rubricMode);
+        setSavedRubric(draft.savedRubric ?? null);
+        setAssignmentInstructions(typeof draft.assignmentInstructions === "string" ? draft.assignmentInstructions : "");
         setAssignmentMode(draft.assignmentMode);
         setGradingMode(draft.gradingMode);
         const files = await loadDraftFiles(key).catch(() => null);
@@ -1213,10 +1228,27 @@ export default function Home() {
   }, [hasLoadedAccountSummary, signedInEmail]);
 
   useEffect(() => {
+    if (!draftReady) return;
+    const url = new URL(window.location.href);
+    const start = url.searchParams.get("start");
+    const entry = start + ":" + (signedInEmail || "guest");
+    if (!start || starterRef.current === entry || url.searchParams.has("evaluation_id") || url.searchParams.has("checkout_session_id")) return;
+    starterRef.current = entry;
+    if (start === "general") { setRubricMode("general"); setSavedRubric(null); setSampleSelected(false); }
+    if (start === "library") {
+      if (signedInEmail) setShowRubricLibrary(true);
+      else { setShowLoginModal(true); return; }
+    }
+    url.searchParams.delete("start");
+    window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    requestAnimationFrame(() => document.getElementById("rubric-checker")?.scrollIntoView({ block: "start" }));
+  }, [draftReady, signedInEmail]);
+
+  useEffect(() => {
     if (!draftReady || draftOwnerEmail !== signedInEmail) return;
     const snapshot: EvaluationDraft = {
       ownerEmail: signedInEmail, projectId: draftProjectId,
-      rubricMode, assignmentMode, rubricText, assignmentText, gradingMode,
+      rubricMode, savedRubric, assignmentInstructions, assignmentMode, rubricText, assignmentText, gradingMode,
       hadRubricFile: rubricFiles.length > 0, hadAssignmentFile: assignmentFiles.length > 0,
       savedAt: Date.now(),
     };
@@ -1227,7 +1259,7 @@ export default function Home() {
     save();
     window.addEventListener("pagehide", save);
     return () => window.removeEventListener("pagehide", save);
-  }, [draftReady, signedInEmail, draftOwnerEmail, draftProjectId, rubricMode, assignmentMode, rubricText, assignmentText, gradingMode, rubricFiles.length, assignmentFiles.length]);
+  }, [draftReady, signedInEmail, draftOwnerEmail, draftProjectId, rubricMode, savedRubric, assignmentInstructions, assignmentMode, rubricText, assignmentText, gradingMode, rubricFiles.length, assignmentFiles.length]);
 
   useEffect(() => {
     if (!draftReady || !draftFileKey.current) return;
@@ -1542,7 +1574,7 @@ export default function Home() {
     try {
       const snapshot: EvaluationDraft = {
         ownerEmail: signedInEmail, projectId: draftProjectId,
-        rubricMode, assignmentMode, rubricText, assignmentText, gradingMode,
+        rubricMode, savedRubric, assignmentInstructions, assignmentMode, rubricText, assignmentText, gradingMode,
         hadRubricFile: rubricFiles.length > 0, hadAssignmentFile: assignmentFiles.length > 0, savedAt: Date.now(),
       };
       window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(snapshot));
@@ -1908,11 +1940,12 @@ export default function Home() {
     }
   }
 
-  function switchRubricMode(nextMode: InputMode) {
+  function switchRubricMode(nextMode: EvaluationDraft["rubricMode"]) {
+    setSavedRubric(null);
     setRubricMode(nextMode);
     setError("");
 
-    if (nextMode === "text") {
+    if (nextMode === "text" || nextMode === "general") {
       clearFile("rubric");
       return;
     }
@@ -2034,6 +2067,14 @@ export default function Home() {
 
     if (message === "MULTI_FILE_IMAGES_ONLY") {
       return "Multiple files are supported for photos only. Upload one PDF/DOCX/TXT file or multiple images.";
+    }
+
+    if (message === "RUBRIC_NOT_FOUND") {
+      return "This saved rubric is no longer available. Choose another rubric from My rubrics.";
+    }
+
+    if (message === "RUBRIC_LIBRARY_UNAVAILABLE") {
+      return "Could not open your saved rubric. Please try again.";
     }
 
     if (message === "INVALID_MODE") {
@@ -2176,12 +2217,12 @@ export default function Home() {
 
     const stepTimers: Array<ReturnType<typeof setTimeout>> = [];
 
-    const rubricProvided = rubricMode === "file" ? rubricFiles.length > 0 : rubricText.trim().length > 0;
+    const rubricProvided = rubricMode === "general" || (rubricMode === "library" ? Boolean(savedRubric) : rubricMode === "file" ? rubricFiles.length > 0 : rubricText.trim().length > 0);
     const assignmentProvided =
       assignmentMode === "file" ? assignmentFiles.length > 0 : assignmentText.trim().length > 0;
 
     if (!rubricProvided || !assignmentProvided) {
-      setError("Please provide both a rubric and an assignment.");
+      setError(rubricMode === "general" ? "Please provide an assignment." : "Please provide both a rubric and an assignment.");
       return;
     }
 
@@ -2208,7 +2249,7 @@ export default function Home() {
     try {
       setLoadingStep("uploading");
       // Preserve the key after failures; changed inputs or a completed result start a new attempt.
-      const inputs = [draftProjectId, selectedMode, rubricMode, assignmentMode, rubricText.trim(), assignmentText.trim(), ...rubricFiles, ...assignmentFiles];
+      const inputs = [draftProjectId, selectedMode, rubricMode, savedRubric?.id, assignmentInstructions.trim(), assignmentMode, rubricText.trim(), assignmentText.trim(), ...rubricFiles, ...assignmentFiles];
       const previous = evaluationAttemptRef.current;
       if (!previous || previous.inputs.length !== inputs.length || inputs.some((value, index) => value !== previous.inputs[index])) {
         evaluationAttemptRef.current = { inputs, key: crypto.randomUUID() };
@@ -2216,7 +2257,7 @@ export default function Home() {
       const attemptKey = evaluationAttemptRef.current!.key;
       let requestPromise: Promise<Response>;
 
-      if (rubricMode === "text" && assignmentMode === "text") {
+      if (rubricMode !== "file" && assignmentMode === "text") {
         requestPromise = fetch("/api/evaluate", {
           method: "POST",
           headers: {
@@ -2225,13 +2266,19 @@ export default function Home() {
             ...(draftProjectId ? { "x-project-id": draftProjectId } : {}),
           },
           body: JSON.stringify({
-            rubricText: rubricText.trim(),
+            rubricSource: rubricMode === "general" ? "general" : rubricMode === "library" ? "saved" : "provided",
+            ...(rubricMode === "text" ? { rubricText: rubricText.trim() } : {}),
+            ...(rubricMode === "library" ? { rubricId: savedRubric?.id } : {}),
+            ...(rubricMode === "general" ? { assignmentInstructions: assignmentInstructions.trim() } : {}),
             assignmentText: assignmentText.trim(),
             mode: selectedMode,
           }),
         });
       } else {
         const formData = new FormData();
+        formData.set("rubricSource", rubricMode === "general" ? "general" : rubricMode === "library" ? "saved" : "provided");
+        if (rubricMode === "library" && savedRubric) formData.set("rubricId", savedRubric.id);
+        if (rubricMode === "general") formData.set("assignmentInstructions", assignmentInstructions.trim());
 
         if (rubricMode === "file") {
           if (rubricFiles.length === 0) {
@@ -2241,7 +2288,7 @@ export default function Home() {
           for (const file of rubricFiles) {
             formData.append("rubric", file);
           }
-        } else {
+        } else if (rubricMode === "text") {
           formData.append("rubricText", rubricText.trim());
         }
 
@@ -2376,6 +2423,9 @@ export default function Home() {
       }
       if (response.headers.get("x-recovery-unavailable") === "1") {
         setDraftRestoreNotice("Your result is ready, but server recovery is temporarily unavailable. Keep your inputs for a later evaluation.");
+      }
+      if (response.headers.get("x-rubric-library-unavailable") === "1") {
+        setDraftRestoreNotice("Your result is ready, but the rubric could not be saved to My rubrics. Keep your original rubric for reuse.");
       }
       const elapsedMs = performance.now() - startedAt;
       const requestId = response.headers.get("x-request-id") ?? "unknown";
@@ -2620,6 +2670,7 @@ export default function Home() {
     setRubricText(""); setAssignmentText("");
     clearFile("rubric"); clearFile("assignment");
     setRubricMode("file"); setAssignmentMode("file");
+    setSavedRubric(null); setAssignmentInstructions(""); setShowRubricLibrary(false);
     setError(""); setErrorCode(""); setWorkspaceNotice(""); setDraftRestoreNotice("");
     setExpandedRewriteSections({}); setShareFeedback("idle");
     updateWorkspaceUrl(null);
@@ -2668,6 +2719,12 @@ export default function Home() {
       onLogin={() => maybeOpenLoginModal()} onRetry={() => void workspace.refresh()}
       onCreate={async name => { const project = await workspace.mutate({ action: "createProject", name }); if (project) openProject(project); }}
     >
+    {showRubricLibrary && signedInEmail ? <RubricLibrary key={signedInEmail}
+      onClose={() => setShowRubricLibrary(false)}
+      onSelect={item => {
+        setSavedRubric(item); setRubricMode("library"); clearFile("rubric"); setRubricText("");
+        setShowRubricLibrary(false); setError("");
+      }} /> : null}
     <main className="min-h-screen bg-slate-50 px-4 pb-24 pt-6 md:px-8 md:pb-10 md:pt-14">
       <div className="mx-auto w-full max-w-6xl space-y-6">
         {workspaceNotice && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{workspaceNotice}</p>}
@@ -2840,13 +2897,43 @@ export default function Home() {
                     <TabButton active={rubricMode === "text"} onClick={() => switchRubricMode("text")}>
                       Text
                     </TabButton>
+                    <TabButton active={rubricMode === "general"} onClick={() => switchRubricMode("general")}>
+                      No rubric
+                    </TabButton>
                   </div>
                 </div>
-                <p className="mb-4 text-xs text-slate-500">
-                  Scoring rubric used to evaluate the assignment.
-                </p>
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <button type="button" disabled={isLoading} onClick={() => signedInEmail ? setShowRubricLibrary(true) : maybeOpenLoginModal("Log in to open your saved rubrics.")}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-400 disabled:opacity-50">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4" aria-hidden="true"><path d="M4 5h16v4H4zM6 9v11h12V9M10 13h4" /></svg>
+                    My rubrics
+                  </button>
+                  {rubricMode === "library" ? <span className="text-xs text-slate-500">Saved rubric</span> : null}
+                </div>
 
-                {rubricMode === "file" ? (
+                {rubricMode === "general" ? (
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <h3 className="text-sm font-semibold text-slate-800">General criteria</h3>
+                      <ul className="mt-3 space-y-2 text-xs text-slate-600">
+                        {generalRubric().criteria.map(criterion => <li key={criterion.name} className="flex justify-between gap-3"><span>{criterion.name}</span><span>{criterion.max_score}%</span></li>)}
+                      </ul>
+                    </div>
+                    <label className="block text-xs font-medium text-slate-600">Assignment instructions <span className="font-normal text-slate-400">(optional)</span>
+                      <textarea rows={5} value={assignmentInstructions} maxLength={ASSIGNMENT_INSTRUCTIONS_LIMIT} onChange={event => setAssignmentInstructions(event.target.value)}
+                        placeholder="Paste the assignment question or instructions"
+                        className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+                    </label>
+                  </div>
+                ) : rubricMode === "library" && savedRubric ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <h3 className="break-words text-sm font-semibold text-slate-800">{savedRubric.name}</h3>
+                    <RubricDownloads rubric={savedRubric} />
+                    <details className="mt-4 text-xs text-slate-600"><summary className="cursor-pointer">View rubric text</summary>
+                      <p className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words leading-6">{savedRubric.text}</p>
+                    </details>
+                  </div>
+                ) : rubricMode === "file" ? (
                   <div className="space-y-3">
                     <input
                       id={rubricFileInputId}
@@ -3463,6 +3550,7 @@ export default function Home() {
                 >
                   Evaluation Summary
                 </h2>
+                {gradeResult.grading_basis === "general" ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">General criteria</span> : null}
                 {resultMode === "strict" ? (
                   <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
                     {"\u{1F525}"} Strict Mode
