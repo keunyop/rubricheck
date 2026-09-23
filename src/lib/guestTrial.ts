@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { evaluationProvenance } from "./evaluationProvenance";
 import type { NextResponse } from "next/server";
 import type { FinalEvaluation } from "../../lib/gradeFinalization";
 import type { Rubric } from "../../lib/schema";
@@ -66,7 +67,7 @@ export async function releaseTrial(reservation: TrialReservation) {
 }
 export async function completeTrial(reservation: TrialReservation, input: { rubric: Rubric; assignmentText: string; result: FinalEvaluation }) {
   const record: TrialRecord = { ...input, mode: "standard", owner: null,
-    result: { ...input.result, evaluation_id: randomUUID() }, expiresAt: Date.now() + RECOVERY_TTL_SECONDS * 1000 };
+    result: { ...input.result, evaluation_id: randomUUID(), evaluation_provenance: evaluationProvenance(input.rubric, input.assignmentText, "standard", false) }, expiresAt: Date.now() + RECOVERY_TTL_SECONDS * 1000 };
   let saved: number;
   try {
     saved = await recoveryRedis().eval<unknown[], number>(

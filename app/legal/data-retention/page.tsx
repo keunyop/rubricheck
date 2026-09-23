@@ -15,7 +15,7 @@ export default function DataRetentionPolicyPage() {
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">Data Retention Policy</h1>
         <p className="mt-3 text-sm leading-6 text-slate-700">
-          Last updated: September 21, 2026. This policy summarizes default retention windows for
+          Last updated: September 22, 2026. This policy summarizes default retention windows for
           RubriCheck data categories.
         </p>
         <p className="mt-3 text-sm leading-6 text-slate-700">
@@ -33,6 +33,17 @@ export default function DataRetentionPolicyPage() {
           Raw rubric and assignment inputs used for result recovery are stored for 24 hours.
           A linked checkout may extend recovery to seven days. Uploaded files and raw inputs are
           not included in the persistent assignment history. Browser drafts expire after 24 hours.
+        </p>
+
+        <h2 className="mt-6 text-lg font-semibold text-slate-900">Actual Scores and Comments</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-700">
+          Actual scores, comments, optional course and assignment details, the saved AI estimate,
+          and your permission choices remain in your account until you delete the actual result
+          or request account data deletion. Deleting an actual result keeps the AI evaluation.
+          Quality validation and anonymized public case use each require a separate optional
+          permission. You can withdraw either permission by editing the record and saving.
+          Records are not published automatically. New evaluations also retain model and prompt
+          identifiers and a fingerprint of the inputs for comparing repeated checks.
         </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">My Rubrics</h2>

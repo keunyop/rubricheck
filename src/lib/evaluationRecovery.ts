@@ -1,10 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
+import { evaluationProvenance } from "./evaluationProvenance";
+import type { EvaluationProvenance } from "./actualResultTypes";
 import { Redis } from "@upstash/redis";
 import type { Rubric, GradingMode } from "../../lib/schema";
 import { restrictEvaluationFeedback, type FinalEvaluation } from "../../lib/gradeFinalization";
 import type { HiddenAiDocumentAlert } from "../../lib/hiddenAiAlert";
 
-export type RecoverableResult = FinalEvaluation & { evaluation_id: string; hidden_ai_alert?: HiddenAiDocumentAlert };
+export type RecoverableResult = FinalEvaluation & { evaluation_id: string; evaluation_provenance?: EvaluationProvenance; hidden_ai_alert?: HiddenAiDocumentAlert };
 export type EvaluationRecord = {
   owner: string; rubric: Rubric; assignmentText: string; mode: GradingMode;
   result: RecoverableResult; expiresAt: number;
@@ -28,7 +30,7 @@ export async function saveEvaluation(input: {
   result: FinalEvaluation & { hidden_ai_alert?: HiddenAiDocumentAlert };
 }): Promise<RecoverableResult> {
   const id = randomUUID();
-  const result = { ...input.result, evaluation_id: id };
+  const result = { ...input.result, evaluation_id: id, evaluation_provenance: evaluationProvenance(input.rubric, input.assignmentText, input.mode, input.result.access_tier !== "free") };
   const record: EvaluationRecord = {
     owner: ownerHash(input.email), rubric: input.rubric, assignmentText: input.assignmentText,
     mode: input.mode, result, expiresAt: Date.now() + RECOVERY_TTL_SECONDS * 1000,

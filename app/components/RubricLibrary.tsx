@@ -49,9 +49,12 @@ export function RubricLibrary({ onClose, onSelect }: {
   useEffect(() => {
     active.current = true;
     const previousFocus = document.activeElement;
-    dialog.current?.showModal();
+    const modal = dialog.current;
+    modal?.showModal();
     return () => {
       active.current = false;
+      // Close before restoring focus, including React Strict Mode effect cleanup.
+      modal?.close();
       if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
   }, []);

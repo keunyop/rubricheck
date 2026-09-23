@@ -15,7 +15,7 @@ export default function PrivacyPolicyPage() {
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">Privacy Policy</h1>
         <p className="mt-3 text-sm leading-6 text-slate-700">
-          Last updated: September 21, 2026. This Privacy Policy explains what information RubriCheck
+          Last updated: September 22, 2026. This Privacy Policy explains what information RubriCheck
           processes, why we process it, and the choices available to you.
         </p>
         <p className="mt-3 text-sm leading-6 text-slate-700">
@@ -34,6 +34,18 @@ export default function PrivacyPolicyPage() {
         <p className="mt-2 text-sm leading-6 text-slate-700">
           We use data to deliver grading and rewrite suggestion features, enforce free and paid
           limits, save account-specific rubrics and their original files for reuse, maintain assignment history and project versions, prevent abuse, troubleshoot issues, and maintain service performance and security.
+        </p>
+
+        <h2 className="mt-6 text-lg font-semibold text-slate-900">Actual Scores and Comments</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-700">
+          If you choose to save an actual result, we store your score, comments, optional course
+          and assignment details, and permission choices with the saved AI estimate. Personal
+          record storage, internal service quality validation, and anonymized public case use are
+          separate choices. Quality validation and public case use are optional, require their
+          own permission, and do not affect your access. You can edit or delete the record, or
+          withdraw either optional permission by unchecking it and saving. Records are not
+          published automatically. New evaluations include model and prompt identifiers and an
+          input fingerprint so comparable repeated checks can be identified.
         </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">Payments and Billing</h2>
