@@ -34,7 +34,9 @@ import { formatOverallScoreDisplay, explainScoreCalculation, SCORE_RANGE_NOTICE,
 import type { HiddenAiAlertSource } from "../lib/hiddenAiAlert";
 import { isKnownAdminEmail } from "../src/config/admin";
 import { ACTIVE_LANDING_COPY } from "../src/config/copy";
-import { HOME_FAQ_ITEMS, HOME_INTERNAL_LINKS } from "../src/config/seoPages";
+import { HomeResources } from "./components/HomeResources";
+import { Modal } from "./components/Modal";
+import styles from "./home.module.css";
 import {
   canAccessDetailedFeedback,
   canAccessRewriteSuggestions,
@@ -168,26 +170,6 @@ const FOOTER_LEGAL_LINKS = [
   { label: "AI Disclaimer", href: "/legal/ai-disclaimer" },
   { label: "Data Retention", href: "/legal/data-retention" },
 ] as const;
-
-const HOME_PRODUCT_HIGHLIGHTS = [
-  {
-    title: "Criterion-level feedback",
-    description:
-      "See how the draft lines up with individual rubric criteria instead of relying on a generic writing score.",
-  },
-  {
-    title: "Score prediction ranges",
-    description:
-      "Use AI-estimated score ranges to understand likely outcomes before the official grade is given.",
-  },
-  {
-    title: "Faster revision decisions",
-    description:
-      "Focus revision time on the feedback that matters most before a deadline, not on low-impact edits first.",
-  },
-] as const;
-
-const HOME_PRODUCT_TAGS = ["For students", "Rubric-first", "Pre-submission"] as const;
 
 const loadingStepLabels: Record<Exclude<LoadingStep, "idle">, string> = {
   uploading: "Uploading...",
@@ -421,11 +403,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
-        active
-          ? "bg-slate-600 text-white shadow-sm"
-          : "bg-transparent text-slate-500 hover:text-slate-800"
-      }`}
+      className={styles.mode}
     >
       {children}
     </button>
@@ -2726,20 +2704,17 @@ export default function Home() {
         setSavedRubric(item); setRubricMode("library"); clearFile("rubric"); setRubricText("");
         setShowRubricLibrary(false); setError("");
       }} /> : null}
-    <main className="min-h-screen bg-slate-50 px-4 pb-24 pt-6 md:px-8 md:pb-10 md:pt-14">
+    <main id="main-content" tabIndex={-1} className={styles.page}>
       <div className="mx-auto w-full max-w-6xl space-y-6">
         {workspaceNotice && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{workspaceNotice}</p>}
-        {openingAssignment && <p role="status" className="text-sm text-slate-500">Opening assignment?</p>}
+        {openingAssignment && <p role="status" className="text-sm text-slate-500">Opening assignment...</p>}
         {workspaceView === "compose" && activeProject ? <div className={workspaceStyles.contextBar}><div className={workspaceStyles.contextTitle}><WorkspaceIcon name="folder" /><button onClick={() => openProject(activeProject)}>{activeProject.name}</button><span>/ New version</span></div></div> : null}
-        <section className={workspaceView === "compose" ? "relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 md:p-8" : "relative overflow-hidden rounded-xl border border-slate-200 bg-white px-5 py-3"}>
-          <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-indigo-200/40 blur-3xl" />
-          <div className={workspaceView === "compose" ? "relative mb-6 border-b border-slate-100 pb-5" : "relative"}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex min-w-0 flex-col items-start gap-3">
-                <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="h-9 w-auto" />
-                <h1 hidden={workspaceView !== "compose"} className="max-w-2xl text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
-                  {ACTIVE_LANDING_COPY.headline}
-                </h1>
+        <section className={workspaceView === "compose" ? styles.workspace : "relative rounded-xl border border-slate-200 bg-white px-5 py-4"}>
+          <div className={workspaceView === "compose" ? styles.header : styles.headerCompact}>
+            <div className={styles.topbar}>
+              <div className={styles.brand}>
+                <Image src="/rubricheck-logo.svg" alt="" width={135} height={36} />
+                <span>RubriCheck</span>
               </div>
               <div className="inline-flex items-center gap-2">
                 {canShowAccountActions() ? (
@@ -2841,14 +2816,10 @@ export default function Home() {
                 ) : null}
               </div>
             </div>
-            <p hidden={workspaceView !== "compose"} className="mt-2 text-sm text-slate-600 md:text-[15px]">
+            <h1 hidden={workspaceView !== "compose"} className={styles.title}>{ACTIVE_LANDING_COPY.headline}</h1>
+            <p hidden={workspaceView !== "compose"} className={styles.subtitle}>
               {ACTIVE_LANDING_COPY.subtitle}
             </p>
-            <nav hidden={workspaceView !== "compose"} aria-label="Draft review guides" className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-indigo-700">
-              <Link href="/essay-rubric-checker" className="underline underline-offset-4">Check an essay against a rubric</Link>
-              <Link href="/assignment-rubric-checker" className="underline underline-offset-4">Check assignment requirements</Link>
-              <Link href="/how-to-use-a-rubric-to-check-an-assignment" className="underline underline-offset-4">How to use a rubric</Link>
-            </nav>
           </div>
 
           {!signedInEmail && workspaceView === "compose" ? <>
@@ -2858,58 +2829,16 @@ export default function Home() {
 
           <form hidden={workspaceView !== "compose" || (!signedInEmail && sampleSelected)} id="rubric-checker" className="scroll-mt-6 space-y-6" onSubmit={handleSubmit}>
             <fieldset disabled={!draftReady || (!signedInEmail && !resultReady)} className="space-y-6">
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <section
-                className={`rounded-2xl border border-slate-200/90 bg-white p-4 transition md:p-5 ${
-                  rubricMode === "file" && rubricDragOver
-                    ? "-translate-y-px border-indigo-200 shadow-md ring-2 ring-indigo-100"
-                    : "shadow-sm"
-                }`}
-              >
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      className="h-4 w-4 text-indigo-600/70"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M8 3h6l5 5v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M14 3v5h5M9 13h6M9 17h6"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <h2 className="text-base font-semibold text-slate-900">Rubric</h2>
-                  </div>
-                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-100/90 p-1">
-                    <TabButton active={rubricMode === "file"} onClick={() => switchRubricMode("file")}>
-                      File
-                    </TabButton>
-                    <TabButton active={rubricMode === "text"} onClick={() => switchRubricMode("text")}>
-                      Text
-                    </TabButton>
-                    <TabButton active={rubricMode === "general"} onClick={() => switchRubricMode("general")}>
-                      No rubric
-                    </TabButton>
-                  </div>
+            <div className={styles.inputGrid}>
+              <section aria-labelledby="rubric-input-title" className={styles.inputCard}>
+                <div className={styles.inputHeading}>
+                  <div className={styles.inputTitle}><span className={styles.step} aria-hidden="true">1</span><h2 id="rubric-input-title" className="text-base font-semibold text-slate-900">Rubric</h2></div>
+                  <button type="button" disabled={isLoading} onClick={() => signedInEmail ? setShowRubricLibrary(true) : maybeOpenLoginModal("Log in to open your saved rubrics.")} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"><WorkspaceIcon name="folder" />My rubrics</button>
                 </div>
-                <div className="mb-4 flex items-center justify-between gap-2">
-                  <button type="button" disabled={isLoading} onClick={() => signedInEmail ? setShowRubricLibrary(true) : maybeOpenLoginModal("Log in to open your saved rubrics.")}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-400 disabled:opacity-50">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4" aria-hidden="true"><path d="M4 5h16v4H4zM6 9v11h12V9M10 13h4" /></svg>
-                    My rubrics
-                  </button>
-                  {rubricMode === "library" ? <span className="text-xs text-slate-500">Saved rubric</span> : null}
+                <div role="group" aria-label="Rubric input method" className={styles.modes}>
+                  <TabButton active={rubricMode === "file"} onClick={() => switchRubricMode("file")}>File</TabButton>
+                  <TabButton active={rubricMode === "text"} onClick={() => switchRubricMode("text")}>Text</TabButton>
+                  <TabButton active={rubricMode === "general"} onClick={() => switchRubricMode("general")}>No rubric</TabButton>
                 </div>
 
                 {rubricMode === "general" ? (
@@ -2973,26 +2902,19 @@ export default function Home() {
                         setRubricDragOver(false);
                       }}
                       onDrop={(event) => handleDrop("rubric", event, setRubricDragOver)}
-                      className={`rounded-xl border-2 border-dashed bg-white p-5 text-center transition ${
-                        rubricDragOver
-                          ? "border-indigo-300 bg-indigo-50/50 ring-2 ring-indigo-100"
-                          : "border-slate-300 hover:border-indigo-300"
-                      }`}
+                      className={styles.dropzone}
+                      data-dragging={rubricDragOver}
                     >
-                      <p className="text-sm font-medium text-slate-700">Drag and drop a file here</p>
-                      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                        <label
-                          htmlFor={rubricFileInputId}
-                          className="inline-flex cursor-pointer rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                        >
+                      <WorkspaceIcon name="file" />
+                      <p>Drag and drop a file here</p>
+                      <p className={styles.formats}>PDF, DOCX, TXT or images · Up to 10 MB each</p>
+                      <div className={styles.fileActions}>
+                        <button type="button" onClick={() => rubricInputRef.current?.click()} className={styles.fileButton}>
                           Choose File
-                        </label>
-                        <label
-                          htmlFor={rubricCameraInputId}
-                          className="inline-flex cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                        >
+                        </button>
+                        <button type="button" onClick={() => rubricCameraInputRef.current?.click()} className={styles.cameraButton}>
                           Take Photo
-                        </label>
+                        </button>
                       </div>
                     </div>
                     {rubricFiles.length > 0 ? (
@@ -3018,58 +2940,25 @@ export default function Home() {
                   </div>
                 ) : (
                   <textarea
-                    rows={10}
+                    rows={7}
+                    aria-labelledby="rubric-input-title"
                     value={rubricText}
                     onChange={(event) => setRubricText(event.target.value)}
                     placeholder="Paste rubric text here"
-                    className="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    className={styles.textarea}
                   />
                 )}
               </section>
 
-              <section
-                className={`rounded-2xl border border-slate-200/90 bg-white p-4 transition md:p-5 ${
-                  assignmentMode === "file" && assignmentDragOver
-                    ? "-translate-y-px border-indigo-200 shadow-md ring-2 ring-indigo-100"
-                    : "shadow-sm"
-                }`}
-              >
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      className="h-4 w-4 text-indigo-600/70"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="m8 13.5 6.8-6.8a3 3 0 0 1 4.2 4.2l-8.5 8.5a5 5 0 0 1-7.1-7.1l8.5-8.5"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <h2 className="text-base font-semibold text-slate-900">Assignment</h2>
-                  </div>
-                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-100/90 p-1">
-                    <TabButton
-                      active={assignmentMode === "file"}
-                      onClick={() => switchAssignmentMode("file")}
-                    >
-                      File
-                    </TabButton>
-                    <TabButton
-                      active={assignmentMode === "text"}
-                      onClick={() => switchAssignmentMode("text")}
-                    >
-                      Text
-                    </TabButton>
-                  </div>
+              <section aria-labelledby="assignment-input-title" className={styles.inputCard}>
+                <div className={styles.inputHeading}>
+                  <div className={styles.inputTitle}><span className={styles.step} aria-hidden="true">2</span><h2 id="assignment-input-title" className="text-base font-semibold text-slate-900">Assignment</h2></div>
+
                 </div>
-                <p className="mb-4 text-xs text-slate-500">
-                  Original assignment submission to be graded.
-                </p>
+                <div role="group" aria-label="Assignment input method" className={styles.modes}>
+                  <TabButton active={assignmentMode === "file"} onClick={() => switchAssignmentMode("file")}>File</TabButton>
+                  <TabButton active={assignmentMode === "text"} onClick={() => switchAssignmentMode("text")}>Text</TabButton>
+                </div>
 
                 {assignmentMode === "file" ? (
                   <div className="space-y-3">
@@ -3110,26 +2999,19 @@ export default function Home() {
                         setAssignmentDragOver(false);
                       }}
                       onDrop={(event) => handleDrop("assignment", event, setAssignmentDragOver)}
-                      className={`rounded-xl border-2 border-dashed bg-white p-5 text-center transition ${
-                        assignmentDragOver
-                          ? "border-indigo-300 bg-indigo-50/50 ring-2 ring-indigo-100"
-                          : "border-slate-300 hover:border-indigo-300"
-                      }`}
+                      className={styles.dropzone}
+                      data-dragging={assignmentDragOver}
                     >
-                      <p className="text-sm font-medium text-slate-700">Drag and drop a file here</p>
-                      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                        <label
-                          htmlFor={assignmentFileInputId}
-                          className="inline-flex cursor-pointer rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                        >
+                      <WorkspaceIcon name="file" />
+                      <p>Drag and drop a file here</p>
+                      <p className={styles.formats}>PDF, DOCX, TXT or images · Up to 10 MB each</p>
+                      <div className={styles.fileActions}>
+                        <button type="button" onClick={() => assignmentInputRef.current?.click()} className={styles.fileButton}>
                           Choose File
-                        </label>
-                        <label
-                          htmlFor={assignmentCameraInputId}
-                          className="inline-flex cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                        >
+                        </button>
+                        <button type="button" onClick={() => assignmentCameraInputRef.current?.click()} className={styles.cameraButton}>
                           Take Photo
-                        </label>
+                        </button>
                       </div>
                     </div>
                     {assignmentFiles.length > 0 ? (
@@ -3155,11 +3037,12 @@ export default function Home() {
                   </div>
                 ) : (
                   <textarea
-                    rows={10}
+                    rows={7}
+                    aria-labelledby="assignment-input-title"
                     value={assignmentText}
                     onChange={(event) => setAssignmentText(event.target.value)}
                     placeholder="Paste assignment text here"
-                    className="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm placeholder:text-slate-400 focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    className={styles.textarea}
                   />
                 )}
               </section>
@@ -3171,7 +3054,7 @@ export default function Home() {
               </div>
             ) : null}
             {errorCode === "OPENAI_TIMEOUT" ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <p>{error}</p>
                 {openAiTimeoutCount >= 2 ? (
                   <p className="mt-1 text-xs">Service is busy right now. Please wait a bit, then retry.</p>
@@ -3186,7 +3069,7 @@ export default function Home() {
               </div>
             ) : null}
             {errorCode === "FILE_PARSE_FAILED" ? (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
                 <p>{error}</p>
                 <ul className="mt-2 list-disc pl-5 text-xs">
                   <li>Try again.</li>
@@ -3197,7 +3080,7 @@ export default function Home() {
               </div>
             ) : null}
             {error && errorCode !== "OPENAI_TIMEOUT" && errorCode !== "FILE_PARSE_FAILED" ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
               </div>
             ) : null}
@@ -3207,11 +3090,12 @@ export default function Home() {
               </div>
             ) : null}
 
-            <div className="flex items-stretch gap-2">
+            <div className={styles.submitRow}>
               <button
                 type="submit"
                 disabled={isLoading || !draftReady || isResumingCheckout}
-                className="min-w-0 flex-1 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-indigo-400 active:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                className={styles.submit}
+                aria-busy={isLoading}
               >
                 {!signedInEmail ? trialUsed ? "Sign up for 3 free checks" : "Get my free summary" : "Grade my assignment"}
               </button>
@@ -3219,13 +3103,13 @@ export default function Home() {
                 type="button"
                 onClick={handleStrictSubmit}
                 disabled={isLoading || !draftReady || isResumingCheckout}
-                className="shrink-0 min-w-[9.25rem] rounded-xl border border-rose-300 bg-rose-50 px-5 py-2 text-xs font-semibold text-rose-700 transition-colors duration-150 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                className="min-h-12 shrink-0 rounded-xl border border-slate-300 bg-white px-5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <span>{"\u{1F525}"} Strict Mode</span>
+                <span>Strict Mode</span>
               </button> : null}
             </div>
             {isLoading ? (
-              <div className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 md:text-sm">
+              <div role="status" className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 md:text-sm">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
                 <span className="leading-5">{loadingMessage}</span>
               </div>
@@ -3243,19 +3127,7 @@ export default function Home() {
         ) : null}
 
         {showDailyLimitAlert ? (
-          <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-            <button
-              type="button"
-              aria-label="Close daily limit warning"
-              onClick={() => setShowDailyLimitAlert(false)}
-              className="absolute inset-0 bg-slate-950/45"
-            />
-            <section
-              role="alertdialog"
-              aria-modal="true"
-              aria-labelledby="daily-limit-title"
-              className="relative w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 shadow-xl"
-            >
+          <Modal titleId="daily-limit-title" closeLabel="Close daily limit warning" onClose={() => setShowDailyLimitAlert(false)} alert>
               <div className="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
                 Warning
               </div>
@@ -3288,24 +3160,11 @@ export default function Home() {
                   </Link>
                 ) : null}
               </div>
-            </section>
-          </div>
+          </Modal>
         ) : null}
 
         {showStrictModeUpgradeModal ? (
-          <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-            <button
-              type="button"
-              aria-label="Close Strict Mode upgrade prompt"
-              onClick={() => setShowStrictModeUpgradeModal(false)}
-              className="absolute inset-0 bg-slate-950/45"
-            />
-            <section
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="strict-mode-upgrade-title"
-              className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
-            >
+          <Modal titleId="strict-mode-upgrade-title" closeLabel="Close Strict Mode upgrade prompt" onClose={() => setShowStrictModeUpgradeModal(false)}>
               <div className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
                 Strict Mode
               </div>
@@ -3334,8 +3193,7 @@ export default function Home() {
                   Go to Pricing
                 </button>
               </div>
-            </section>
-          </div>
+          </Modal>
         ) : null}
 
         <section hidden={workspaceView !== "compose" || (!comparisonImages.length && !canAccessAdmin)} className="overflow-hidden rounded-2xl border border-slate-200 bg-[linear-gradient(160deg,#ffffff_0%,#f8fafc_58%,#eef2ff_100%)] p-4 shadow-sm md:p-5">
@@ -3970,29 +3828,20 @@ export default function Home() {
         ) : null}
 
         {SHOW_ACCOUNT_AND_PRICING && showLoginModal ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <button
-              type="button"
-              aria-label="Close login modal"
-              onClick={() => setShowLoginModal(false)}
-              className="absolute inset-0 bg-slate-950/45"
-            />
-            <section
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="main-login-title"
-              className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
-            >
+          <Modal titleId="main-login-title" closeLabel="Close login modal" onClose={() => setShowLoginModal(false)}>
+            <form onSubmit={event => { event.preventDefault(); if (!isStartingRestore && !isVerifyingRestore) void (restoreStep === "code" ? handleVerifyRestorePro() : handleStartRestorePro()); }}>
             <h3 id="main-login-title" className="text-lg font-semibold text-slate-900">
               {trialPreview || trialUsed ? "Sign up or log in" : "Log in"}
             </h3>
             <p className="mt-2 text-sm text-slate-600">
-              We will send a one-time code to verify ownership before logging you in.
+              We will email you a sign-in code.
             </p>
               <label htmlFor="main-restore-email" className="mt-4 block">
                 <span className="text-xs font-semibold text-slate-700">Email</span>
                 <input
                   id="main-restore-email"
+                  autoFocus
+                  required
                   type="email"
                   inputMode="email"
                   autoComplete="email"
@@ -4011,6 +3860,9 @@ export default function Home() {
                   <span className="text-xs font-semibold text-slate-700">Verification code</span>
                   <input
                     id="main-restore-code"
+                    autoFocus
+                    autoComplete="one-time-code"
+                    required
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
@@ -4027,12 +3879,12 @@ export default function Home() {
                 </label>
               ) : null}
               {restoreInfo ? (
-                <p className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+                <p role="status" className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
                   {restoreInfo}
                 </p>
               ) : null}
               {restoreError ? (
-                <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {restoreError}
                 </p>
               ) : null}
@@ -4053,8 +3905,7 @@ export default function Home() {
                       Back
                     </button>
                     <button
-                      type="button"
-                      onClick={() => void handleVerifyRestorePro()}
+                      type="submit"
                       disabled={isStartingRestore || isVerifyingRestore || !restoreCode.trim()}
                       className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -4063,8 +3914,7 @@ export default function Home() {
                   </>
                 ) : (
                   <button
-                    type="button"
-                    onClick={() => void handleStartRestorePro()}
+                    type="submit"
                     disabled={isStartingRestore || isVerifyingRestore || !restoreEmail.trim()}
                     className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -4072,150 +3922,11 @@ export default function Home() {
                   </button>
                 )}
               </div>
-            </section>
-          </div>
+            </form>
+          </Modal>
         ) : null}
 
-        {!gradeResult && workspaceView === "compose" ? (
-          <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-[linear-gradient(180deg,#fcfdff_0%,#f3f6fb_100%)] p-5 shadow-[0_28px_70px_-52px_rgba(15,23,42,0.5)] md:p-7">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -right-20 top-0 h-56 w-56 rounded-full bg-sky-200/35 blur-3xl"
-            />
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -left-10 bottom-0 h-44 w-44 rounded-full bg-amber-100/60 blur-3xl"
-            />
-
-            <div className="relative">
-              <div className="mb-6 flex flex-col gap-3 border-b border-slate-200/80 pb-5 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-                    More About RubriCheck
-                  </p>
-                </div>
-                <div className="inline-flex self-start rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm">
-                  Product details
-                </div>
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-                <section className="rounded-[1.75rem] border border-amber-200/70 bg-[linear-gradient(180deg,#fffdf7_0%,#fff6e7_100%)] p-6 shadow-[0_18px_40px_-34px_rgba(180,83,9,0.35)]">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="max-w-3xl">
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700/80">
-                        Product Overview
-                      </p>
-                      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
-                        AI rubric checking for assignments before submission
-                      </h2>
-                    </div>
-                    <div className="inline-flex rounded-full border border-amber-300/70 bg-white/80 px-3 py-1 text-xs font-semibold text-amber-800">
-                      Student workflow
-                    </div>
-                  </div>
-
-                  <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-700 md:text-[15px]">
-                    RubriCheck is built for students who want a rubric-based draft check before they submit. Upload the
-                    rubric and assignment, review likely score ranges, and focus on the changes most likely to improve
-                    your result.
-                  </p>
-
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {HOME_PRODUCT_TAGS.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex rounded-full border border-amber-200 bg-white/75 px-3 py-1 text-xs font-medium text-slate-700"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                    {HOME_PRODUCT_HIGHLIGHTS.map((item) => (
-                      <article
-                        key={item.title}
-                        className="rounded-2xl border border-white/80 bg-white/75 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
-                      >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Highlight
-                        </p>
-                        <h3 className="mt-2 text-base font-semibold text-slate-900">{item.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-
-                <div className="grid gap-4">
-                  <section className="rounded-[1.75rem] border border-slate-200/80 bg-white/92 p-5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.35)]">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="max-w-2xl">
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Use Cases</p>
-                        <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">
-                          Explore rubric checker use cases
-                        </h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                          Find a guide for your essay, report, or assignment, and learn how to turn rubric feedback
-                          into your next revision.
-                        </p>
-                      </div>
-                      <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
-                        Explore
-                      </div>
-                    </div>
-
-                    <div className="mt-5 space-y-2">
-                      {HOME_INTERNAL_LINKS.map((link) => (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          className="group flex items-start justify-between gap-4 rounded-2xl border border-transparent px-3 py-3 transition hover:border-slate-200 hover:bg-slate-50"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-base font-semibold text-slate-900">{link.label}</p>
-                            <p className="mt-1 text-sm leading-6 text-slate-600">{link.description}</p>
-                          </div>
-                          <span className="mt-0.5 shrink-0 text-sm font-semibold text-slate-400 transition group-hover:text-slate-700">
-                            Open
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  </section>
-
-                  <section className="rounded-[1.75rem] border border-slate-200/80 bg-white/82 p-5 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.22)]">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="max-w-2xl">
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">FAQ</p>
-                        <h2 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">RubriCheck FAQ</h2>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                          Learn what to upload, how to interpret your results, and what is included in the free trial.
-                        </p>
-                      </div>
-                      <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500">
-                        Quick answers
-                      </div>
-                    </div>
-
-                    <div className="mt-5 grid gap-3">
-                      {HOME_FAQ_ITEMS.map((item) => (
-                        <article
-                          key={item.question}
-                          className="rounded-2xl border border-slate-200 bg-white px-4 py-4"
-                        >
-                          <h3 className="text-base font-semibold text-slate-900">{item.question}</h3>
-                          <p className="mt-2 text-sm leading-6 text-slate-600">{item.answer}</p>
-                        </article>
-                      ))}
-                    </div>
-                  </section>
-                </div>
-              </div>
-            </div>
-          </section>
-        ) : null}
+        {!gradeResult && workspaceView === "compose" ? <HomeResources /> : null}
 
         <footer className="mt-10 px-1 py-2">
           <div className="flex flex-col gap-3 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">

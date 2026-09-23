@@ -1,0 +1,32 @@
+.dialog {
+  position: fixed;
+  margin: auto;
+  width: min(448px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 28px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 24px 80px #0f172a26;
+}
+.dialog::backdrop { background: #0f172a66; backdrop-filter: blur(3px); }
+.dialog h2, .dialog h3 { padding-right: 32px; }
+.close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  color: #64748b;
+  cursor: pointer;
+}
+.close:hover { background: #f1f5f9; color: #0f172a; }
+.dialog input { min-height: 44px; font-size: 16px; }
+.dialog button { min-height: 40px; }
+@media (max-width: 480px) { .dialog { padding: 24px 20px; } }

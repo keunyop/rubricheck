@@ -1,0 +1,13 @@
+.resources { display: grid; align-items: start; gap: 32px; padding: 16px 4px 8px; }
+.resources h2 { margin-bottom: 16px; color: #334155; font-size: 15px; font-weight: 600; letter-spacing: -.2px; }
+.guides { display: grid; }
+.guides a { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; border-radius: 8px; padding: 10px 0; font-size: 13px; color: #475569; }
+.guides a:hover { color: #4f46e5; }
+.guides svg { flex-shrink: 0; color: #64748b; }
+.faq details { border-bottom: 1px solid #e2e8f0; }
+.faq summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; padding: 12px 0; list-style: none; cursor: pointer; font-size: 13px; font-weight: 500; color: #334155; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary span { color: #64748b; font-size: 20px; font-weight: 400; }
+.faq details[open] summary span { transform: rotate(45deg); }
+.faq p { padding: 0 24px 16px 0; color: #64748b; font-size: 13px; line-height: 1.75; }
+@media (min-width: 1100px) { .resources { grid-template-columns: 1fr 1fr; gap: 56px; padding: 24px 8px 8px; } }

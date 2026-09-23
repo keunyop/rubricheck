@@ -1,0 +1,51 @@
+.page { min-height: 100dvh; padding: 28px 24px 40px; background: #f8fafc; }
+.workspace { border: 1px solid #e2e8f0; border-radius: 20px; padding: 28px; background: #fff; }
+.header { position: relative; margin-bottom: 24px; border-bottom: 1px solid #edf0f4; padding-bottom: 24px; }
+.headerCompact { position: relative; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: #0f172a; font-size: 18px; font-weight: 650; letter-spacing: -.6px; }
+.brand img { width: 34px; height: auto; }
+.title { max-width: 720px; margin-top: 28px; color: #0f172a; font-size: clamp(24px, 2.4vw, 32px); line-height: 1.25; font-weight: 600; letter-spacing: -.8px; text-wrap: balance; }
+.subtitle { max-width: 650px; margin-top: 10px; color: #64748b; font-size: 14px; line-height: 1.7; }
+.inputGrid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 20px; }
+.inputCard { min-width: 0; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; background: #fff; }
+.inputHeading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; min-height: 36px; }
+.inputTitle { display: flex; align-items: center; gap: 10px; }
+.step { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: #eef2ff; color: #4f46e5; font-size: 12px; font-weight: 600; }
+.modes { display: inline-flex; flex-wrap: wrap; gap: 2px; margin-bottom: 16px; padding: 4px; border-radius: 10px; background: #f1f5f9; }
+.mode { min-height: 36px; padding: 7px 13px; border-radius: 7px; font-size: 12px; font-weight: 500; color: #64748b; cursor: pointer; }
+.mode:hover { color: #334155; }
+.mode[aria-pressed="true"] { background: #fff; color: #0f172a; box-shadow: 0 1px 4px #0f172a14; }
+.dropzone { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 176px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #fafbfe; padding: 20px 12px; text-align: center; }
+.dropzone[data-dragging="true"] { border-color: #6366f1; background: #eef2ff; outline: 2px solid #e0e7ff; }
+.dropzone svg { margin-bottom: 10px; width: 24px; height: 24px; color: #94a3b8; }
+.dropzone p:first-of-type { color: #475569; font-size: 13px; font-weight: 500; }
+.formats { margin-top: 6px; font-size: 11px; color: #64748b; }
+.fileActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+.fileButton, .cameraButton { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 9px 14px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #334155; font-size: 12px; font-weight: 600; cursor: pointer; }
+.fileButton:hover, .cameraButton:hover { border-color: #818cf8; color: #4338ca; background: #f5f6ff; }
+.cameraButton { border-color: transparent; background: transparent; color: #64748b; }
+.textarea { display: block; width: 100%; min-height: 176px; resize: vertical; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px; color: #334155; background: #fff; font-size: 14px; line-height: 1.7; }
+.textarea::placeholder { color: #64748b; }
+.submitRow { display: flex; gap: 10px; border-top: 1px solid #edf0f4; padding-top: 20px; }
+.submit { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; flex: 1; border-radius: 10px; background: #4f46e5; padding: 12px 20px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color .15s; }
+.submit:hover { background: #4338ca; }
+.submit:disabled { opacity: .6; cursor: wait; }
+@media (min-width: 1280px) { .inputGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 767px) {
+  .page { padding: 16px 12px 96px; }
+  .workspace { padding: 20px 16px; border-radius: 16px; }
+  .topbar { gap: 12px; }
+  .brand { font-size: 16px; gap: 7px; }
+  .brand img { width: 26px; }
+  .title { margin-top: 24px; font-size: 25px; }
+  .inputCard { padding: 16px; }
+  .inputGrid { gap: 16px; }
+  .textarea { font-size: 16px; }
+  .fileButton, .cameraButton { min-height: 44px; }
+  .mode { min-height: 40px; }
+  .submitRow { flex-wrap: wrap; }
+  .submit { flex-basis: 100%; }
+}
+@media (min-width: 768px) and (max-width: 1279px) { .page { padding-top: 56px; } }
+@media (prefers-reduced-motion: reduce) { .submit { transition: none; } }

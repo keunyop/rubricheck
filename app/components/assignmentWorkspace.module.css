@@ -8,7 +8,7 @@
 .iconButton, .desktopOpen, .mobileOpen { display: inline-flex; justify-content: center; align-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 8px; color: #62656c; cursor: pointer; }
 .iconButton:hover, .desktopOpen:hover, .mobileOpen:hover { background: #e5e7eb; color: #18181b; }
 .newAssignment, .navItem, .mutedItem { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 8px; text-align: left; font-size: 14px; color: #35383f; cursor: pointer; min-width: 0; }
-.newAssignment { font-weight: 550; margin-bottom: 16px; }
+.newAssignment { font-weight: 550; margin-bottom: 16px; background: #fff; border: 1px solid #e2e8f0; }
 .newAssignment:hover, .navItem:hover, .mutedItem:hover, .searchResult:hover { background: #e7e8eb; }
 .navItem[data-active="true"] { background: #e1e3e8; color: #111827; }
 .navItem span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -16,8 +16,8 @@
 .mutedItem { color: #71717a; }
 .sidebarScroll { overflow-y: auto; flex: 1; min-height: 0; scrollbar-width: thin; }
 .sectionHeading { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; margin-top: 12px; color: #777982; font-size: 12px; font-weight: 550; min-height: 40px; }
-.sectionHeading .iconButton { width: 24px; height: 24px; }
-.empty { padding: 8px 12px; color: #858790; font-size: 13px; line-height: 1.65; }
+.sectionHeading .iconButton { width: 32px; height: 32px; }
+.empty { padding: 8px 12px; color: #646b78; font-size: 13px; line-height: 1.65; }
 .sidebarFooter { display: flex; align-items: center; gap: 10px; padding: 14px 8px 4px; margin-top: 12px; border-top: 1px solid #e3e5e9; min-height: 54px; }
 .avatar { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #e1e5ef; font-size: 12px; font-weight: 600; flex-shrink: 0; }
 .email { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; color: #63666f; }
@@ -31,7 +31,7 @@
 .accountHeading .email { flex: 1; }
 .accountItem { display: block; width: 100%; padding: 12px; border-radius: 9px; text-align: left; font-size: 14px; cursor: pointer; }
 .accountItem:hover { background: #f3f4f6; }
-.accountItem:focus-visible { outline: 2px solid #8695b7; outline-offset: -2px; }
+.accountItem:focus-visible { outline: 2px solid #4f46e5; outline-offset: -2px; }
 .logoutItem { margin-top: 6px; border-top: 1px solid #eceef2; color: #b91c1c; }
 .login { width: 100%; padding: 8px; border-radius: 8px; background: #fff; border: 1px solid #dddfe4; font-size: 13px; cursor: pointer; }
 .openBar { position: absolute; top: 12px; left: 16px; z-index: 20; }
@@ -88,10 +88,11 @@
 .contextBar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; font-size: 13px; color: #6b7280; }
 .contextBar select { max-width: min(250px, 65vw); padding: 8px 28px 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; font-size: 13px; color: #52525b; }
 .contextTitle { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.contextTitle button { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; cursor: pointer; }
+.contextTitle { max-width: 100%; }
+.contextTitle button { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: min(260px, 55vw); cursor: pointer; }
 .contextTitle button:hover { color: #111827; }
 .contextActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.shell button:focus-visible, .shell select:focus-visible { outline: 2px solid #8695b7; outline-offset: 2px; }
+.shell button:focus-visible, .shell select:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
 .shell button:disabled { cursor: default; opacity: .5; }
 @media (max-width: 767px) {
   .content { transition: none; }

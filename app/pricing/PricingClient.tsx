@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { Modal } from "../components/Modal";
 import { FeedbackButton } from "../components/FeedbackButton";
 import { useAccountSummary } from "../components/AccountSummaryProvider";
 import { AccountStatusPill } from "../components/AccountStatusPill";
@@ -414,14 +415,14 @@ export function PricingClient() {
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(160deg,#f8fafc_0%,#eef2ff_45%,#f8fafc_100%)] px-4 py-10 md:py-14">
-      <div className="mx-auto w-full max-w-5xl space-y-8">
-        <section className="rounded-3xl border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
+    <main className="min-h-screen bg-slate-50 px-3 py-6 sm:px-6 md:py-12">
+      <div className="mx-auto w-full max-w-4xl space-y-8">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8">
           <SubpageBackHomeLink className="mb-3 inline-block text-sm font-medium text-indigo-700 transition hover:text-indigo-600" />
           <div className="border-b border-slate-100 pb-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="mt-0.5 h-9 w-auto shrink-0" />
+              <div className="flex flex-wrap items-center gap-3">
+                <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="h-auto w-10 shrink-0" />
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Pricing</h1>
               </div>
               <div className="inline-flex items-center gap-2">
@@ -518,11 +519,12 @@ export function PricingClient() {
             </p>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-2 rounded-xl border border-slate-300 bg-slate-100 p-1.5">
+          <div role="group" aria-label="Plan type" className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
             <button
               type="button"
+              aria-pressed={activePricingTab === "pro"}
               onClick={() => setActivePricingTab("pro")}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              className={`min-h-11 rounded-lg px-3 py-2 text-sm font-semibold transition ${
                 activePricingTab === "pro"
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
@@ -538,7 +540,8 @@ export function PricingClient() {
                 }
               }}
               disabled={isTopUpsLocked}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              aria-pressed={activePricingTab === "topups"}
+              className={`min-h-11 rounded-lg px-3 py-2 text-sm font-semibold transition ${
                 activePricingTab === "topups"
                   ? "bg-white text-slate-900 shadow-sm"
                   : isTopUpsLocked
@@ -552,21 +555,22 @@ export function PricingClient() {
           </div>
 
           {activePricingTab === "pro" || isTopUpsLocked ? (
-            <section className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-5">
+            <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
               <h2 className="text-lg font-semibold text-slate-900">Upgrade to Pro</h2>
               {accountPlan === "pro" ? (
                 <p className="mt-1 text-sm text-emerald-700">Pro is already active for this account.</p>
               ) : (
-                <p className="mt-1 text-sm text-slate-600">
-                  Unlimited evaluations, Strict Mode, full Top Improvements, detailed criteria feedback, and rewrite suggestions.
-                </p>
+                <ul className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
+                  {["Unlimited evaluations", "Standard and Strict Mode", "Full improvements and criterion feedback", "Rewrite suggestions"].map(feature => <li key={feature} className="flex items-start gap-2"><span aria-hidden="true" className="font-semibold text-indigo-600">{"\u2713"}</span>{feature}</li>)}
+                </ul>
               )}
-              <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-slate-300 bg-slate-200 p-1.5">
+              <div role="group" aria-label="Billing period" className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
                 <button
                   type="button"
+                  aria-pressed={checkoutPlan === "monthly"}
                   onClick={() => setCheckoutPlan("monthly")}
                   disabled={isCreatingCheckout || accountPlan === "pro"}
-                  className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                  className={`min-h-10 rounded-md px-3 py-2 text-sm font-semibold transition ${
                     checkoutPlan === "monthly"
                       ? "bg-slate-900 text-white shadow-sm"
                       : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
@@ -576,9 +580,10 @@ export function PricingClient() {
                 </button>
                 <button
                   type="button"
+                  aria-pressed={checkoutPlan === "annual"}
                   onClick={() => setCheckoutPlan("annual")}
                   disabled={isCreatingCheckout || accountPlan === "pro"}
-                  className={`rounded-md px-3 py-2 text-xs font-semibold transition ${
+                  className={`min-h-10 rounded-md px-3 py-2 text-sm font-semibold transition ${
                     checkoutPlan === "annual"
                       ? "bg-slate-900 text-white shadow-sm"
                       : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
@@ -587,10 +592,10 @@ export function PricingClient() {
                   Annual
                 </button>
               </div>
-              <div className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2">
-                <p className="text-4xl font-bold leading-tight text-indigo-900">
+              <div aria-live="polite" className="my-6 px-1">
+                <p className="text-4xl font-semibold tracking-tight text-slate-900">
                   {selectedCheckoutPlanDisplay.price}
-                  <span className="ml-1 text-base font-semibold text-indigo-700">
+                  <span className="ml-1 text-sm font-normal text-slate-500">
                     {selectedCheckoutPlanDisplay.periodLabel}
                   </span>
                 </p>
@@ -599,14 +604,10 @@ export function PricingClient() {
                 ) : null}
               </div>
               {signedInEmail ? (
-                <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                <div className="mt-3 break-words text-xs text-slate-500">
                   Checkout account: <span className="font-semibold text-slate-900">{signedInEmail}</span>
                 </div>
-              ) : (
-                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
-                  Log in first to start a Pro checkout.
-                </div>
-              )}
+              ) : null}
               {checkoutError ? (
                 <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {checkoutError}
@@ -638,23 +639,19 @@ export function PricingClient() {
               )}
             </section>
           ) : (
-            <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+            <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
               <h2 className="text-xl font-semibold text-slate-900">Evaluation Top-Ups</h2>
-              <p className="mt-1 text-base text-slate-600">
+              <p className="mt-2 text-sm leading-6 text-slate-600">
                 One-time purchase. Credits apply to Evaluate only and unlock Strict Mode plus full evaluation feedback. Rewrite suggestions remain Pro-only.
               </p>
               {typeof creditBalance === "number" ? (
                 <p className="mt-1 text-base text-slate-600">Current credits: {creditBalance}</p>
               ) : null}
               {signedInEmail ? (
-                <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                <div className="mt-3 break-words text-xs text-slate-500">
                   Purchase account: <span className="font-semibold text-slate-900">{signedInEmail}</span>
                 </div>
-              ) : (
-                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
-                  Log in first to purchase evaluation top-ups.
-                </div>
-              )}
+              ) : null}
               {creditCheckoutError ? (
                 <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {creditCheckoutError}
@@ -669,7 +666,7 @@ export function PricingClient() {
                 {CREDIT_PACK_IDS.map((packId) => (
                   <article
                     key={packId}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+                    className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/60 p-4"
                   >
                     <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
                       {getCreditPackMarketingLabel(packId)}
@@ -680,7 +677,7 @@ export function PricingClient() {
                     <button
                       type="button"
                       onClick={() => void handleBuyCredits(packId)}
-                      disabled={isCreatingCreditCheckout || !signedInEmail}
+                      disabled={isCreatingCreditCheckout}
                       className="mt-4 w-full rounded-lg bg-slate-800 px-3 py-2 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {!signedInEmail ? "Log in to Top Up" : isCreatingCreditCheckout ? "Redirecting..." : "Top up"}
@@ -694,29 +691,20 @@ export function PricingClient() {
       </div>
 
       {showLoginModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button
-            type="button"
-            aria-label="Close login modal"
-            onClick={() => setShowLoginModal(false)}
-            className="absolute inset-0 bg-slate-950/45"
-          />
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="pricing-login-title"
-            className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
-          >
+        <Modal titleId="pricing-login-title" closeLabel="Close login modal" onClose={() => setShowLoginModal(false)}>
+            <form onSubmit={event => { event.preventDefault(); if (!isStartingRestore && !isVerifyingRestore) void (restoreStep === "code" ? handleVerifyRestorePro() : handleStartRestorePro()); }}>
             <h3 id="pricing-login-title" className="text-lg font-semibold text-slate-900">
               Log in
             </h3>
             <p className="mt-2 text-sm text-slate-600">
-              We will send a one-time code to verify ownership before logging you in.
+              We will email you a sign-in code.
             </p>
             <label htmlFor="pricing-restore-email" className="mt-4 block">
               <span className="text-xs font-semibold text-slate-700">Email</span>
               <input
                 id="pricing-restore-email"
+                autoFocus
+                required
                 type="email"
                 inputMode="email"
                 autoComplete="email"
@@ -735,6 +723,9 @@ export function PricingClient() {
                 <span className="text-xs font-semibold text-slate-700">Verification code</span>
                 <input
                   id="pricing-restore-code"
+                  autoFocus
+                  autoComplete="one-time-code"
+                  required
                   type="text"
                   inputMode="numeric"
                   pattern="[0-9]*"
@@ -751,12 +742,12 @@ export function PricingClient() {
               </label>
             ) : null}
             {restoreInfo ? (
-              <p className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+              <p role="status" className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
                 {restoreInfo}
               </p>
             ) : null}
             {restoreError ? (
-              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                 {restoreError}
               </p>
             ) : null}
@@ -777,8 +768,7 @@ export function PricingClient() {
                     Back
                   </button>
                   <button
-                    type="button"
-                    onClick={() => void handleVerifyRestorePro()}
+                    type="submit"
                     disabled={isStartingRestore || isVerifyingRestore || !restoreCode.trim()}
                     className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -787,8 +777,7 @@ export function PricingClient() {
                 </>
               ) : (
                 <button
-                  type="button"
-                  onClick={() => void handleStartRestorePro()}
+                  type="submit"
                   disabled={isStartingRestore || isVerifyingRestore || !restoreEmail.trim()}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -796,11 +785,11 @@ export function PricingClient() {
                 </button>
               )}
             </div>
-          </section>
-        </div>
+            </form>
+        </Modal>
       ) : null}
 
-      <footer className="mt-10 px-1 py-2">
+      <footer className="mx-auto mt-8 w-full max-w-4xl px-1 py-2">
         <div className="flex flex-col gap-3 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
           <p>AI-generated estimate only. Not an official grade. RubriCheck.</p>
           <div className="flex flex-wrap items-center gap-3">

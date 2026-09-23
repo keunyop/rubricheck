@@ -112,6 +112,7 @@ export function AssignmentSidebar(props: Props) {
   </>;
 
   return <div className={styles.shell} data-expanded={expanded}>
+    <a href="#main-content" className="skip-link">Skip to content</a>
     <aside className={styles.desktopSidebar} aria-label="Sidebar">{content(false)}</aside>
     <div className={styles.content}>
       <div className={styles.openBar}>

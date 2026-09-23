@@ -1,0 +1,40 @@
+{
+  "checks": [
+    "Inputs, navigation and buttons fit 320, 390, 768, 1024 and 1440 px; sidebar does not overlap",
+    "Skip to content works by keyboard",
+    "File and camera pickers open with Enter; selecting and removing a file works",
+    "FAQ expands and collapses by keyboard",
+    "Login fits a short mobile viewport, traps and restores focus, closes with Esc, and submits email/code with Enter",
+    "Strict Mode upgrade keeps its existing access gate and dismisses with Esc",
+    "Usage-limit dialog closes with Esc and preserves the draft",
+    "Pricing selection states, guest top-up login, and checkout error/retry remain usable"
+  ],
+  "dimensions": [
+    {
+      "width": 320,
+      "height": 2452,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 390,
+      "height": 2248,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 768,
+      "height": 2238,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 1024,
+      "height": 2076,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 1440,
+      "height": 1352,
+      "horizontalOverflow": false
+    }
+  ],
+  "browserErrors": []
+}

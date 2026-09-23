@@ -1,8 +1,8 @@
 export const LANDING_COPY = {
   headline: "Rubric Checker for Essays and Assignments",
   subtitle: {
-    A: "Upload your assignment and rubric to estimate likely scores, get criterion-level feedback, and revise before submission.",
-    B: "Run a quick rubric check on assignment and essay drafts, then focus on the next changes most likely to improve your result.",
+    A: "Add your rubric and draft. See estimated scores and what to improve before you submit.",
+    B: "Check your draft against the rubric and find your next revision priorities.",
   },
 } as const;
 

@@ -15,12 +15,11 @@ const button = "rounded-xl border px-5 py-3 text-sm font-semibold transition foc
 export function GuestChoices({ sampleSelected, disabled, onSelect }: { sampleSelected: boolean; disabled: boolean; onSelect: (sample: boolean) => void }) {
   const id = useId();
   const choices = [
-    { sample: true, title: "Try a sample", description: "Explore a sample essay, rubric, and feedback.", icon: "file" as const },
-    { sample: false, title: "Try your own assignment", description: "Add your rubric and draft to get feedback.", icon: "new" as const },
+    { sample: true, title: "Try a sample", description: "Essay, rubric and feedback.", icon: "file" as const },
+    { sample: false, title: "Try your own assignment", description: "One free summary. No sign-up.", icon: "new" as const },
   ];
 
   return <section aria-label="Try RubriCheck" className={guestStyles.choices}>
-    <p className={guestStyles.choicesHeading}>Choose how to start</p>
     <div className={guestStyles.choicesGrid}>
       {choices.map(choice => {
         const selected = sampleSelected === choice.sample;
