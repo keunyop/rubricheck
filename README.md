@@ -215,3 +215,7 @@ No extra checks, credits, SQL migration or new environment variables are require
 
 See [storage, consent, comparison and verification](doc/verification/actual-results.md).
 Run `npm run test:all` and `npm run test:actual-results:browser` for regression coverage.
+
+## Admin subscriber pagination
+
+Before deploying the paginated admin dashboard, apply [supabase/admin_dashboard.sql](supabase/admin_dashboard.sql). See [deployment and verification](doc/admin-subscriber-pagination.md).

@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const dashboard = await getAdminDashboardData();
+    const dashboard = await getAdminDashboardData(new URL(request.url).searchParams);
     return successJson(context, {
       adminEmail: getAdminEmailFromRequest(request),
       ...dashboard,

@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { FeedbackInbox } from "./FeedbackInbox";
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+
+import type { AdminDashboardData as ServerDashboardData } from "../../src/lib/adminDashboard";
 
 type AdminSubscriberRow = {
   email?: string | null;
@@ -28,10 +30,12 @@ type AdminDashboardResponse = {
     remainingCredits?: number;
   };
   subscribers?: AdminSubscriberRow[];
+  pagination?: ServerDashboardData["pagination"];
 };
 
 type AdminDashboardData = {
   adminEmail: string;
+  pagination: ServerDashboardData["pagination"];
   generatedAt: string;
   summary: {
     knownUsers: number;
@@ -105,6 +109,12 @@ function normalizeDashboardData(value: AdminDashboardResponse, fallbackAdminEmai
   return {
     adminEmail: typeof value.adminEmail === "string" && value.adminEmail.trim() ? value.adminEmail : fallbackAdminEmail,
     generatedAt: typeof value.generatedAt === "string" ? value.generatedAt : "",
+    pagination: {
+      page: Math.max(1, normalizeNumber(value.pagination?.page)),
+      pageSize: Math.max(1, normalizeNumber(value.pagination?.pageSize) || 25),
+      total: Math.max(0, normalizeNumber(value.pagination?.total)),
+      totalPages: Math.max(1, normalizeNumber(value.pagination?.totalPages)),
+    },
     summary: {
       knownUsers: normalizeNumber(value.summary?.knownUsers),
       proUsers: normalizeNumber(value.summary?.proUsers),
@@ -162,6 +172,10 @@ export function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filterText, setFilterText] = useState("");
+  const [listParams, setListParams] = useState({ page: 1, pageSize: 25, query: "" });
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const activeRequest = useRef<AbortController | null>(null);
+  const searchPending = filterText.trim().toLowerCase() !== listParams.query;
   const [creditEmail, setCreditEmail] = useState("");
   const [creditDelta, setCreditDelta] = useState("10");
   const [creditNotice, setCreditNotice] = useState("");
@@ -169,50 +183,52 @@ export function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
   const [adjustingCredits, setAdjustingCredits] = useState(false);
 
   const loadDashboard = useCallback(async () => {
+    activeRequest.current?.abort();
+    const controller = new AbortController();
+    activeRequest.current = controller;
     setLoading(true);
     setError("");
 
     try {
-      const response = await fetch("/api/admin/dashboard", {
+      const searchParams = new URLSearchParams({
+        page: String(listParams.page),
+        pageSize: String(listParams.pageSize),
+        q: listParams.query,
+      });
+      const response = await fetch(`/api/admin/dashboard?${searchParams}`, {
         method: "GET",
         cache: "no-store",
+        signal: controller.signal,
       });
       const data: AdminDashboardResponse & { message?: string } = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data.message ?? "Unable to load admin dashboard.");
       }
 
-      setDashboard(normalizeDashboardData(data, adminEmail));
+      if (!controller.signal.aborted) {
+        setDashboard(normalizeDashboardData(data, adminEmail));
+      }
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load admin dashboard.");
+      if (!controller.signal.aborted) {
+        setError(loadError instanceof Error ? loadError.message : "Unable to load admin dashboard.");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  }, [adminEmail]);
+  }, [adminEmail, listParams]);
 
   useEffect(() => {
     void loadDashboard();
-  }, [loadDashboard]);
+    return () => activeRequest.current?.abort();
+  }, [loadDashboard, refreshVersion]);
 
-  const filteredSubscribers = useMemo(() => {
-    if (!dashboard) {
-      return [];
-    }
-
-    const query = filterText.trim().toLowerCase();
-    if (!query) {
-      return dashboard.subscribers;
-    }
-
-    return dashboard.subscribers.filter((row) => {
-      return (
-        (row.email ?? "").includes(query) ||
-        (row.customerId ?? "").toLowerCase().includes(query) ||
-        row.plan.includes(query) ||
-        row.subscriptionStatus.includes(query)
-      );
-    });
-  }, [dashboard, filterText]);
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const query = filterText.trim().toLowerCase();
+      setListParams((current) => current.query === query ? current : { ...current, query, page: 1 });
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [filterText]);
 
   async function handleAdjustCredits(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -243,7 +259,7 @@ export function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
       }
 
       setCreditNotice(`Updated ${data.email ?? creditEmail.trim().toLowerCase()}. New balance: ${data.balance ?? 0}.`);
-      await loadDashboard();
+      setRefreshVersion((current) => current + 1);
     } catch (submitError) {
       setCreditError(submitError instanceof Error ? submitError.message : "Unable to adjust credits.");
     } finally {
@@ -315,13 +331,14 @@ export function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
                     <input
                       type="text"
                       value={filterText}
+                      maxLength={200}
                       onChange={(event) => setFilterText(event.target.value)}
                       placeholder="email, customer id, or plan"
                       className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     />
                   </label>
                 </div>
-                <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
+                <div aria-busy={loading || searchPending} className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
                   <table className="min-w-full text-left text-sm">
                     <thead className="bg-slate-50 text-slate-700">
                       <tr>
@@ -335,14 +352,14 @@ export function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 bg-white">
-                      {filteredSubscribers.length === 0 ? (
+                      {dashboard.subscribers.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="px-4 py-6 text-center text-slate-500">
-                            No known user records match this filter.
+                            {loading || searchPending ? "Loading subscribers..." : "No known user records match this filter."}
                           </td>
                         </tr>
                       ) : (
-                        filteredSubscribers.map((row) => {
+                        dashboard.subscribers.map((row) => {
                           const identityLabel = row.email ?? "email unavailable";
                           const canAdjustCredits = Boolean(row.email);
 
@@ -390,6 +407,47 @@ export function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
                     </tbody>
                   </table>
                 </div>
+                <nav aria-label="Subscriber pagination" className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+                  <p role="status" aria-live="polite">
+                    {loading || searchPending ? "Loading subscribers..." : (
+                      <>
+                        {dashboard.pagination.total === 0 ? 0 : (dashboard.pagination.page - 1) * dashboard.pagination.pageSize + 1}
+                        {" - "}{Math.min(dashboard.pagination.page * dashboard.pagination.pageSize, dashboard.pagination.total)}
+                        {" of "}{dashboard.pagination.total} subscribers
+                      </>
+                    )}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2">
+                      Per page
+                      <select
+                        value={listParams.pageSize}
+                        disabled={loading || searchPending}
+                        onChange={(event) => setListParams((current) => ({ ...current, page: 1, pageSize: Number(event.target.value) }))}
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 disabled:opacity-50"
+                      >
+                        {[25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      disabled={loading || searchPending || dashboard.pagination.page <= 1}
+                      onClick={() => setListParams((current) => ({ ...current, page: dashboard.pagination.page - 1 }))}
+                      className="rounded-full border border-slate-300 px-3 py-1.5 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <span>Page {dashboard.pagination.page} of {dashboard.pagination.totalPages}</span>
+                    <button
+                      type="button"
+                      disabled={loading || searchPending || dashboard.pagination.page >= dashboard.pagination.totalPages}
+                      onClick={() => setListParams((current) => ({ ...current, page: dashboard.pagination.page + 1 }))}
+                      className="rounded-full border border-slate-300 px-3 py-1.5 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </nav>
               </section>
 
               <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
