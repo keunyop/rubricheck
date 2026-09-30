@@ -160,6 +160,7 @@ function resolveOpenAiTimeoutMs(): number {
 
 async function callJsonModel(
   modelEnvKey: "STRUCTURE_MODEL" | "EVALUATION_MODEL",
+  reasoningEffort: "low" | "medium",
   prompt: string,
   options?: JsonModelOptions,
 ) {
@@ -179,6 +180,7 @@ async function callJsonModel(
   try {
     response = await client.responses.create({
       model,
+      reasoning: { effort: reasoningEffort },
       input: [
         {
           role: "system",
@@ -206,9 +208,9 @@ async function callJsonModel(
 }
 
 export async function callStructureModel(prompt: string, options?: JsonModelOptions): Promise<unknown> {
-  return callJsonModel("STRUCTURE_MODEL", prompt, options);
+  return callJsonModel("STRUCTURE_MODEL", "low", prompt, options);
 }
 
 export async function callEvaluationModel(prompt: string, options?: JsonModelOptions): Promise<unknown> {
-  return callJsonModel("EVALUATION_MODEL", prompt, options);
+  return callJsonModel("EVALUATION_MODEL", "medium", prompt, options);
 }
