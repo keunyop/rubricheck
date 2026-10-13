@@ -18,13 +18,14 @@ export function LanguageSettings() {
   owner.current = signedInEmail;
   const id = useId();
   useEffect(() => { setSite(siteLanguage); setResult(resultLanguage); setError(""); }, [siteLanguage, resultLanguage, signedInEmail]);
-  async function change(preferences: LanguagePreferences) {
+  async function change(updates: Partial<LanguagePreferences>) {
+    const preferences = { siteLanguage: site, resultLanguage: result, ...updates };
     if (pending.current || preferencesLoading || (preferences.siteLanguage === siteLanguage && preferences.resultLanguage === resultLanguage)) return;
     const email = signedInEmail;
     pending.current = true;
     setSaving(true); setError("");
     setSite(preferences.siteLanguage); setResult(preferences.resultLanguage);
-    try { await savePreferences(preferences); }
+    try { await savePreferences(updates); }
     catch {
       if (owner.current === email) {
         setSite(siteLanguage); setResult(resultLanguage);
@@ -34,11 +35,11 @@ export function LanguageSettings() {
   }
   return <div className={styles.settings} aria-busy={saving || preferencesLoading}>
     <label htmlFor={id + "-site"}>{t("Site language")}</label>
-    <select id={id + "-site"} value={site} disabled={saving || preferencesLoading} onChange={event => void change({ siteLanguage: event.target.value as Locale, resultLanguage: result })}>
+    <select id={id + "-site"} value={site} disabled={saving || preferencesLoading} onChange={event => void change({ siteLanguage: event.target.value as Locale })}>
       {LOCALES.map(locale => <option key={locale} value={locale} lang={locale}>{LANGUAGE_NAMES[locale]}</option>)}
     </select>
     <label htmlFor={id + "-result"}>{t("Grading result language")}</label>
-    <select id={id + "-result"} value={result} disabled={saving || preferencesLoading} onChange={event => void change({ siteLanguage: site, resultLanguage: event.target.value as Locale })}>
+    <select id={id + "-result"} value={result} disabled={saving || preferencesLoading} onChange={event => void change({ resultLanguage: event.target.value as Locale })}>
       {LOCALES.map(locale => <option key={locale} value={locale} lang={locale}>{LANGUAGE_NAMES[locale]}</option>)}
     </select>
     {preferencesError && <p className={styles.error} role="alert">{t(preferencesError)} <button type="button" onClick={retryPreferences}>{t("Try again")}</button></p>}

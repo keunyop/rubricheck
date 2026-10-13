@@ -9,7 +9,11 @@
     "Failed preference saves do not apply; successful saves translate the page without losing the session",
     "Korean and Malay settings remain usable on 375 px mobile screens with no horizontal overflow",
     "Guests can discover language settings from the sidebar",
-    "Public guide navigation and restored account language load matching server-rendered content"
+    "Explicit guide language survives loading a different account default",
+    "Signed-in /ko and /ms home visits preserve URL, query, fragment and visible language despite an English account default",
+    "Changing the grading language on an explicit locale keeps the saved site default and current URL",
+    "The neutral home entry still restores the saved account site language",
+    "Guest /ko and /ms visits also override an English browser cookie"
   ],
   "errors": []
 }

@@ -3,12 +3,12 @@
   "environment": "Local production Next.js server, Chromium, API and model fixtures; no production writes",
   "languages": ["en", "ko", "ms"],
   "checks": [
-    { "command": "npm run test:all", "status": "passed", "tests": 164, "failed": 0 },
+    { "command": "npm run test:all", "status": "passed", "tests": 165, "failed": 0 },
     { "command": "npm run build", "status": "passed", "note": "Includes production compilation and TypeScript validation. Existing Google Fonts downloaded during build." },
     { "command": "npx tsc --noEmit", "status": "passed" },
     { "command": "npx eslint app lib src proxy.ts scripts/check_i18n.mjs scripts/check_seo.mjs", "status": "passed", "errors": 0, "existingWarnings": 3 },
     { "command": "npm run test:seo", "status": "passed", "publicPages": 39 },
-    { "command": "node scripts/check_i18n.mjs", "status": "passed", "checks": 10, "browserErrors": 0 },
+    { "command": "node scripts/check_i18n.mjs", "status": "passed", "checks": 14, "browserErrors": 0 },
     { "command": "node scripts/check_ui.mjs", "status": "passed" },
     { "command": "node scripts/check_assignment_workspace.mjs", "status": "passed" },
     { "command": "node scripts/check_evaluation_recovery.mjs", "status": "passed" },
@@ -22,6 +22,7 @@
     "Settings stay within 375px Korean and Malay mobile viewports; visible labels, focus indicators, error messages and Escape dismissal.",
     "Project selector beside Assignment on the left and result language on the right share the top result row. Controls wrap on mobile without horizontal overflow; the temporary-translation explanation is removed.",
     "Switching workspace language preserves the current draft and original evaluation.",
+    "Explicit /ko and /ms home and guide URLs override saved account or browser site language. Query strings and fragments survive account preference loading. The neutral root still restores the account default; grading language changes do not overwrite that default.",
     "Temporary translation preserves scores, rubric names, evidence, account preferences, access restrictions and the saved original.",
     "Server-rendered public copy, unique localized metadata, canonical URLs, reciprocal hreflang, internal links, structured data and sitemap verified. Unknown localized paths return 404."
   ],

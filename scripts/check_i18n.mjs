@@ -177,10 +177,47 @@ try {
   await page.getByRole("heading", { name: "Semak esei dan tugasan anda berdasarkan rubrik" }).waitFor();
   email = "student@example.com"; preferences = { siteLanguage: "ko", resultLanguage: "ms" };
   await page.goto(base + "/ms/rubric-checker");
-  await page.waitForURL(base + "/ko/rubric-checker");
-  await page.waitForFunction(() => document.documentElement.lang === "ko");
-  assert.ok(/[가-힣]/.test(await page.locator("h1").innerText()));
-  pass("Public guide navigation and restored account language load matching server-rendered content");
+  await page.waitForLoadState("networkidle");
+  assert.equal(new URL(page.url()).pathname, "/ms/rubric-checker");
+  assert.equal(await page.locator("html").getAttribute("lang"), "ms");
+  pass("Explicit guide language survives loading a different account default");
+  preferences = { siteLanguage: "en", resultLanguage: "ms" };
+  for (const [locale, title] of [["ko", "제출 전, 채점 기준에 맞춰 과제를 점검하세요"], ["ms", "Semak esei dan tugasan anda berdasarkan rubrik"]]) {
+    const target = base + "/" + locale + "?utm_source=locale-test#rubric-checker";
+    await page.goto(target);
+    await page.waitForLoadState("networkidle");
+    assert.equal(page.url(), target);
+    assert.equal(await page.locator("html").getAttribute("lang"), locale);
+    await page.getByRole("heading", { name: title, exact: true }).waitFor();
+    assert.deepEqual(preferences, { siteLanguage: "en", resultLanguage: "ms" });
+    const menuName = locale === "ko" ? "계정 메뉴 열기" : "Buka menu akaun";
+    await page.getByRole("button", { name: menuName }).click();
+    const resultSelect = page.getByLabel(locale === "ko" ? "채점 결과 언어" : "Bahasa hasil penilaian", { exact: true });
+    assert.equal(await resultSelect.inputValue(), "ms");
+    await page.keyboard.press("Escape");
+  }
+  pass("Signed-in /ko and /ms home visits preserve URL, query, fragment and visible language despite an English account default");
+  await page.goto(base + "/ko");
+  await page.getByRole("button", { name: "계정 메뉴 열기" }).click();
+  await page.getByLabel("채점 결과 언어", { exact: true }).selectOption("ko");
+  await page.waitForFunction(() => [...document.querySelectorAll('dialog[open] select')].every(select => !select.disabled));
+  assert.deepEqual(preferences, { siteLanguage: "en", resultLanguage: "ko" });
+  assert.equal(new URL(page.url()).pathname, "/ko");
+  pass("Changing the grading language on an explicit locale keeps the saved site default and current URL");
+  preferences = { siteLanguage: "ms", resultLanguage: "ko" };
+  await page.goto(base + "/");
+  await page.waitForURL(base + "/ms");
+  await page.getByRole("heading", { name: "Semak esei dan tugasan anda berdasarkan rubrik" }).waitFor();
+  pass("The neutral home entry still restores the saved account site language");
+  email = ""; preferences = null;
+  await context.addCookies([{ name: "rubricheck_language", value: "en", url: base }]);
+  for (const locale of ["ko", "ms"]) {
+    await page.goto(base + "/" + locale);
+    await page.waitForLoadState("networkidle");
+    assert.equal(new URL(page.url()).pathname, "/" + locale);
+    assert.equal(await page.locator("html").getAttribute("lang"), locale);
+  }
+  pass("Guest /ko and /ms visits also override an English browser cookie");
   assert.deepEqual(errors, []);
   writeFileSync(dir + "/results.json", JSON.stringify({ checks, errors }, null, 2));
 } finally { await browser.close(); }

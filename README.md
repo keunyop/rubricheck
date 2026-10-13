@@ -244,6 +244,10 @@ data deletion procedures; transient translation keys expire automatically.
 
 Public pages use the English canonical path, `/ko` and `/ms`, with server-rendered
 translations, localized metadata, reciprocal hreflang links and sitemap entries.
+Explicit public URLs keep their language even when the account or browser has a
+different saved default. The neutral home URL (`/`) restores the saved site language;
+the grading language is restored independently. Changing only the grading language
+preserves the saved site default.
 Add languages in `src/i18n`; English messages are the fallback. Grading evidence
 quotes and user-supplied rubric names retain their original wording.
 

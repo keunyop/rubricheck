@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { isLocale, localeFromPath, localizedPath, stripLocale, LOCALE_COOKIE, type LanguagePreferences, type Locale } from "../../src/i18n/config";
+import { isLocale, localeFromPath, localizedPath, shouldRestoreSiteLanguage, stripLocale, LOCALE_COOKIE, type LanguagePreferences, type Locale } from "../../src/i18n/config";
 import { HOME_SEO } from "../../src/i18n/homeSeo";
 import { translate } from "../../src/i18n/translate";
 import { useAccountSummary } from "./AccountSummaryProvider";
@@ -10,7 +10,7 @@ import { useAccountSummary } from "./AccountSummaryProvider";
 type LanguageContextValue = LanguagePreferences & {
   t: (message: string, values?: Record<string, string | number>) => string;
   href: (path: string) => string;
-  savePreferences: (preferences: LanguagePreferences) => Promise<void>;
+  savePreferences: (preferences: Partial<LanguagePreferences>) => Promise<void>;
   preferencesLoading: boolean;
   preferencesError: string;
   retryPreferences: () => void;
@@ -26,8 +26,9 @@ export function LanguageProvider({ children, initialLocale }: { children: ReactN
   const [preferencesError, setPreferencesError] = useState("");
   const [retry, setRetry] = useState(0);
   const identity = useRef(signedInEmail);
-  identity.current = signedInEmail;
+  useLayoutEffect(() => { identity.current = signedInEmail; }, [signedInEmail]);
   const revision = useRef(0);
+  const savedPreferences = useRef<LanguagePreferences | null>(null);
   const previousPath = useRef(pathname);
 
   const applySiteLanguage = useCallback((locale: Locale) => {
@@ -52,6 +53,7 @@ export function LanguageProvider({ children, initialLocale }: { children: ReactN
     if (previousPath.current === pathname) return;
     previousPath.current = pathname;
     const locale = localeFromPath(pathname);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize client navigation with the external URL.
     setSiteLanguage(locale);
     document.documentElement.lang = locale;
   }, [pathname]);
@@ -60,9 +62,11 @@ export function LanguageProvider({ children, initialLocale }: { children: ReactN
     if (!hasLoadedAccountSummary) return;
     const email = signedInEmail;
     const currentRevision = ++revision.current;
+    savedPreferences.current = null;
     const controller = new AbortController();
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Reset the previous account's settings before loading the new identity.
     setPreferencesError("");
-    setResultLanguage(initialLocale);
+    setResultLanguage(localeFromPath(location.pathname));
     if (!email) {
       setPreferencesLoading(false);
       const saved = document.cookie.split("; ").find(part => part.startsWith(LOCALE_COOKIE + "="))?.split("=")[1];
@@ -75,30 +79,34 @@ export function LanguageProvider({ children, initialLocale }: { children: ReactN
       const { preferences } = await response.json();
       if (revision.current !== currentRevision || identity.current !== email) return;
       if (preferences && isLocale(preferences.siteLanguage) && isLocale(preferences.resultLanguage)) {
-        applySiteLanguage(preferences.siteLanguage);
+        savedPreferences.current = { siteLanguage: preferences.siteLanguage, resultLanguage: preferences.resultLanguage };
+        // Check the current URL when the request completes: users may have
+        // navigated to an explicit language while preferences were loading.
+        if (shouldRestoreSiteLanguage(location.pathname)) applySiteLanguage(preferences.siteLanguage);
         setResultLanguage(preferences.resultLanguage);
       }
     }).catch(error => {
       if (!controller.signal.aborted && revision.current === currentRevision) setPreferencesError(error instanceof Error ? error.message : "Could not load language preferences. Try again.");
     }).finally(() => { if (!controller.signal.aborted && revision.current === currentRevision) setPreferencesLoading(false); });
     return () => controller.abort();
-    // The account changes the defaults; navigation must not reload or overwrite them.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Reload account defaults on identity changes; navigation uses its own URL language.
   }, [signedInEmail, hasLoadedAccountSummary, retry, applySiteLanguage]);
 
-  const savePreferences = useCallback(async (preferences: LanguagePreferences) => {
+  const savePreferences = useCallback(async (updates: Partial<LanguagePreferences>) => {
     const email = identity.current;
+    const preferences = { siteLanguage, resultLanguage, ...savedPreferences.current, ...updates };
     if (email) {
       const response = await fetch("/api/account/preferences", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(preferences) });
       if (!response.ok) throw new Error("Could not save language preferences. Try again.");
       if (identity.current !== email) throw new Error("Your account changed. Please try again.");
+      savedPreferences.current = preferences;
     }
     revision.current++;
     setPreferencesLoading(false);
     setPreferencesError("");
-    applySiteLanguage(preferences.siteLanguage);
-    setResultLanguage(preferences.resultLanguage);
-  }, [applySiteLanguage]);
+    if (updates.siteLanguage !== undefined) applySiteLanguage(preferences.siteLanguage);
+    if (updates.resultLanguage !== undefined) setResultLanguage(preferences.resultLanguage);
+  }, [applySiteLanguage, siteLanguage, resultLanguage]);
   const t = useCallback((message: string, values?: Record<string, string | number>) => translate(siteLanguage, message, values), [siteLanguage]);
   const href = useCallback((path: string) => localizedPath(path, siteLanguage), [siteLanguage]);
   return <LanguageContext.Provider value={{ siteLanguage, resultLanguage, t, href, savePreferences, preferencesLoading: !hasLoadedAccountSummary || preferencesLoading, preferencesError, retryPreferences: () => setRetry(value => value + 1) }}>{children}</LanguageContext.Provider>;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isLocale, localizedPath, localeFromPath } from "./config.ts";
+import { isLocale, localizedPath, localeFromPath, shouldRestoreSiteLanguage } from "./config.ts";
 import { messages } from "./messages.ts";
 import { translate } from "./translate.ts";
 import { buildEvaluationPrompt } from "../../lib/evaluationPrompt.ts";
@@ -13,6 +13,12 @@ test("localized routes retain query strings, fragments and private endpoints", (
   assert.equal(localizedPath("/ko?evaluation_id=123", "en"), "/?evaluation_id=123");
   assert.equal(localeFromPath("/ko/pricing"), "ko");
   assert.equal(isLocale("id"), false);
+});
+test("explicit public language URLs take precedence over account and browser defaults", () => {
+  for (const path of ["/ko", "/ko/", "/ms", "/ko/rubric-checker", "/ms/pricing", "/rubric-checker", "/pricing", "/legal/privacy"])
+    assert.equal(shouldRestoreSiteLanguage(path), false, path);
+  for (const path of ["/", "/billing/manage", "/admin"])
+    assert.equal(shouldRestoreSiteLanguage(path), true, path);
 });
 test("every translation has both languages and retains all named placeholders", () => {
   const placeholders = (value: string) => [...value.matchAll(/\{(\w+)\}/g)].map(match => match[1]).sort();
