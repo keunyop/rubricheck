@@ -8,7 +8,7 @@
     { "command": "npx tsc --noEmit", "status": "passed" },
     { "command": "npx eslint app lib src proxy.ts scripts/check_i18n.mjs scripts/check_seo.mjs", "status": "passed", "errors": 0, "existingWarnings": 3 },
     { "command": "npm run test:seo", "status": "passed", "publicPages": 39 },
-    { "command": "node scripts/check_i18n.mjs", "status": "passed", "checks": 9, "browserErrors": 0 },
+    { "command": "node scripts/check_i18n.mjs", "status": "passed", "checks": 10, "browserErrors": 0 },
     { "command": "node scripts/check_ui.mjs", "status": "passed" },
     { "command": "node scripts/check_assignment_workspace.mjs", "status": "passed" },
     { "command": "node scripts/check_evaluation_recovery.mjs", "status": "passed" },
@@ -18,9 +18,9 @@
     { "command": "node scripts/check_feedback_navigation.mjs", "status": "passed", "note": "Isolated local test admin credential; inbox and submissions mocked." }
   ],
   "review": [
-    "Native language names; separate site and grading language labels in the sidebar account dialog.",
-    "Settings stay within 375px Korean and Malay mobile viewports; visible labels, focus indicators, status messages and Escape dismissal.",
-    "Result selector at upper right on desktop and full width on mobile; temporary translation explicitly distinguished from account defaults.",
+    "Site and grading language selectors sit below Billing and refunds in the sidebar account dialog, save on selection, and roll back on failure. No save button or explanatory copy.",
+    "Settings stay within 375px Korean and Malay mobile viewports; visible labels, focus indicators, error messages and Escape dismissal.",
+    "Project selector beside Assignment on the left and result language on the right share the top result row. Controls wrap on mobile without horizontal overflow; the temporary-translation explanation is removed.",
     "Switching workspace language preserves the current draft and original evaluation.",
     "Temporary translation preserves scores, rubric names, evidence, account preferences, access restrictions and the saved original.",
     "Server-rendered public copy, unique localized metadata, canonical URLs, reciprocal hreflang, internal links, structured data and sitemap verified. Unknown localized paths return 404."
@@ -31,5 +31,5 @@
     "Repository-wide npm run lint has six pre-existing no-require-imports errors in doc/growth/*.cjs; application-source lint has no errors.",
     "No deployment or production data migration was performed. No new environment variable or migration is required."
   ],
-  "screenshots": ["account-ko-desktop.png", "account-ko-mobile.png", "account-ms-mobile.png", "result-en-ms.png"]
+  "screenshots": ["account-ko-desktop.png", "account-ko-mobile.png", "account-ms-mobile.png", "result-en-ms.png", "result-mobile.png"]
 }

@@ -129,11 +129,11 @@ export function AssignmentSidebar(props: Props) {
     <dialog ref={account} className={styles.accountDialog} aria-label={t("Account menu")} onClick={event => { if (event.target === event.currentTarget) account.current?.close(); }}>
       <div className={styles.accountBody}>
         <div className={styles.accountHeading}><span className={styles.email} title={props.email}>{props.email || t("Language preferences")}</span><button className={styles.iconButton} aria-label={t("Close account menu")} onClick={() => account.current?.close()}><WorkspaceIcon name="close" /></button></div>
-        <LanguageSettings />
         <nav aria-label={t("Account")}>
           {props.canAccessAdmin && <Link href={href("/admin")} className={styles.accountItem} onClick={closeAccount}>{t("Admin")}</Link>}
           <button className={styles.accountItem} onClick={() => { closeAccount(); props.onPricing(); }}>{t("Pricing")}</button>
           <Link href={href("/billing/manage")} className={styles.accountItem} onClick={closeAccount}>{t("Billing and refunds")}</Link>
+          <LanguageSettings />
           {props.email && <button className={`${styles.accountItem} ${styles.logoutItem}`} onClick={() => { closeAccount(); props.onLogout(); }}>{t("Log out")}</button>}
         </nav>
       </div>

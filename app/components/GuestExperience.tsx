@@ -169,10 +169,11 @@ export function GuestSummary({ result: original, signedIn, busy, onUnlock }: { r
     <div className={workspaceStyles.contextBar}>
       <div className={workspaceStyles.contextTitle}><WorkspaceIcon name="file" /><span>{t("Assignment")}</span></div>
       <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">{t("Free preview")}</span>
+      <ResultLanguageSelect language={result.language} busy={translation.busy} error={translation.error} onChange={translation.change} />
     </div>
     <div className="border-b border-slate-100 pb-4">
       {result.grading_basis === "general" ? <span className="mb-2 inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{t("General criteria")}</span> : null}
-      <div className="flex flex-wrap items-start gap-3"><h2 tabIndex={-1} id="guest-evaluation-summary" className="text-xl font-semibold text-slate-900 focus:outline-none">{t("Evaluation Summary")}</h2><ResultLanguageSelect language={result.language} busy={translation.busy} error={translation.error} onChange={translation.change} /></div>
+      <h2 tabIndex={-1} id="guest-evaluation-summary" className="text-xl font-semibold text-slate-900 focus:outline-none">{t("Evaluation Summary")}</h2>
     </div>
     <SummaryCard score={formatOverallScoreDisplay(result.overall_range)} summary={result.summary} />
     <section aria-label={t("Locked evaluation criteria")} className="mt-6">

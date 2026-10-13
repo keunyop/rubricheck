@@ -37,7 +37,7 @@ await context.route("**/*", async route => {
   else if (path === "/api/entitlement") json = { plan: "free", status: "needs_restore" };
   else if (path === "/api/comparison-images") json = { images: [] };
   else if (path === "/api/trial") json = { used: false, pending: false, result: null };
-  else if (path === "/api/workspace") json = { projects: [], assignments: [] };
+  else if (path === "/api/workspace") json = { projects: [{ id: "77777777-7777-4777-8777-777777777777", name: "History essay", createdAt: 1000 }], assignments: evaluations ? [{ id, title: "My essay", projectId: null, createdAt: 1000, mode: "standard", overallRange: [70, 80] }] : [] };
   else if (path === "/api/evaluate") { evaluations++; assert.equal(request.postDataJSON().resultLanguage, "ko"); json = savedResult; }
   else if (path === "/api/evaluations/translate") {
     const { language, evaluationId } = request.postDataJSON(); assert.equal(evaluationId, id);
@@ -71,11 +71,15 @@ try {
   let dialog = page.getByRole("dialog", { name: "Account menu" });
   await dialog.getByLabel("Site language", { exact: true }).selectOption("en");
   await dialog.getByLabel("Grading result language").selectOption("ko");
-  await dialog.getByRole("button", { name: "Save languages" }).click();
-  await dialog.getByText("Language preferences saved.").waitFor();
+  await page.waitForFunction(() => [...document.querySelectorAll('dialog[open] select')].some(select => select.value === 'ko' && !select.disabled));
+  assert.equal(await dialog.getByRole("button", { name: "Save languages" }).count(), 0);
+  assert.equal(await dialog.getByText("Saved to your account for your next visit.").count(), 0);
+  const billingPosition = await dialog.getByRole("link", { name: "Billing and refunds" }).boundingBox();
+  const languagePosition = await dialog.getByLabel("Site language", { exact: true }).boundingBox();
+  assert.ok(languagePosition.y > billingPosition.y + billingPosition.height);
   assert.deepEqual(preferences, { siteLanguage: "en", resultLanguage: "ko" });
   await page.keyboard.press("Escape");
-  pass("Independent site and grading languages save through the authenticated preferences API");
+  pass("Language selectors follow Billing and refunds and save automatically without a save button or explanatory copy");
   await page.reload();
   await page.getByRole("button", { name: "Open account menu" }).click();
   dialog = page.getByRole("dialog", { name: "Account menu" });
@@ -90,6 +94,20 @@ try {
   await page.getByRole("button", { name: "Grade my assignment", exact: true }).click();
   await page.getByText(savedResult.summary).waitFor();
   assert.equal(evaluations, 1);
+  const projectSelect = page.getByLabel("Move assignment to project");
+  await projectSelect.waitFor();
+  const [projectBox, languageBox] = await page.evaluate(() => {
+    const project = document.querySelector('select[aria-label="Move assignment to project"]');
+    const language = [...document.querySelectorAll('label')].find(label => label.textContent === "Result language").control;
+    // Read both positions in the same frame while the result heading scrolls into view.
+    return [project, language].map(element => {
+      const { x, y, width, height } = element.getBoundingClientRect(); return { x, y, width, height };
+    });
+  });
+  assert.ok(Math.abs(projectBox.y + projectBox.height / 2 - languageBox.y - languageBox.height / 2) < 2);
+  assert.ok(projectBox.x < languageBox.x);
+  assert.equal(await page.getByText("This result only. Your account preferences stay the same.").count(), 0);
+  pass("Project and result language selectors share the top result row, with project on the left and language on the right");
   await page.getByLabel("Result language", { exact: true }).selectOption("ms");
   await page.getByText("Hujah jelas, tetapi bukti perlu diperkukuh.").waitFor();
   assert.equal(saves, 1);
@@ -99,6 +117,11 @@ try {
   assert.equal(stored.gradeResult.criteria[0].evidence[0], "Schools should start later.");
   assert.equal(stored.gradeResult.summary, savedResult.summary);
   await page.screenshot({ path: dir + "/result-en-ms.png", fullPage: true });
+  await page.setViewportSize({ width: 375, height: 812 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await page.getByLabel("Result language", { exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: dir + "/result-mobile.png" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
   pass("One-off result translation leaves scores, original quotes and account preferences unchanged");
   failTranslation = true;
   await page.getByLabel("Result language", { exact: true }).selectOption("en");
@@ -113,11 +136,11 @@ try {
   dialog = page.getByRole("dialog", { name: "Account menu" });
   failSave = true;
   await dialog.getByLabel("Site language", { exact: true }).selectOption("ko");
-  await dialog.getByRole("button", { name: "Save languages" }).click();
   await dialog.getByRole("alert").waitFor();
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  assert.equal(await dialog.getByLabel("Site language", { exact: true }).inputValue(), "en");
   failSave = false;
-  await dialog.getByRole("button", { name: "Save languages" }).click();
+  await dialog.getByLabel("Site language", { exact: true }).selectOption("ko");
   await page.getByRole("heading", { name: "제출 전, 채점 기준에 맞춰 과제를 점검하세요" }).waitFor();
   assert.ok((await page.locator("textarea").evaluateAll(nodes => nodes.map(node => node.value))).includes("Schools should start later. Students need sleep to learn well."));
   await page.getByText(savedResult.summary).waitFor();
@@ -143,7 +166,8 @@ try {
   await page.goto(base + "/ms");
   await page.getByRole("button", { name: "Buka bar sisi", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Tetapan bahasa", exact: true }).click();
-  await page.getByText("Log masuk untuk menyimpan kedua-dua tetapan bahasa dalam akaun anda.").waitFor();
+  await page.getByLabel("Bahasa laman", { exact: true }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Simpan bahasa", exact: true }).count(), 0);
   pass("Guests can discover language settings from the sidebar");
   await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1440, height: 1000 });

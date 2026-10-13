@@ -1,8 +1,9 @@
 {
   "checks": [
     "Three localized home pages render their language, content and SEO on the server",
-    "Independent site and grading languages save through the authenticated preferences API",
+    "Language selectors follow Billing and refunds and save automatically without a save button or explanatory copy",
     "Saved account language is restored on the next visit",
+    "Project and result language selectors share the top result row, with project on the left and language on the right",
     "One-off result translation leaves scores, original quotes and account preferences unchanged",
     "Translation failure keeps the last readable result and returning to the original makes no request",
     "Failed preference saves do not apply; successful saves translate the page without losing the session",

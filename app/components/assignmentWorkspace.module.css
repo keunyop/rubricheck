@@ -89,6 +89,7 @@
 .contextBar select { max-width: min(250px, 65vw); padding: 8px 28px 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; font-size: 13px; color: #52525b; }
 .contextTitle { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .contextTitle { max-width: 100%; }
+.resultContext { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; max-width: 100%; }
 .contextTitle button { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: min(260px, 55vw); cursor: pointer; }
 .contextTitle button:hover { color: #111827; }
 .contextActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

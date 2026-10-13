@@ -3350,6 +3350,7 @@ export default function Home() {
         {displayedResult && resultOwnerEmail === signedInEmail && workspaceView !== "project" ? (
           <section ref={evaluationCaptureRef} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
             <div className={workspaceStyles.contextBar}>
+              <div className={workspaceStyles.resultContext}>
               <div className={workspaceStyles.contextTitle}>
                 <WorkspaceIcon name={activeAssignment?.projectId ? "folder" : "file"} />
                 {activeAssignment?.projectId ? <button onClick={() => { const project = workspace.data.projects.find(project => project.id === activeAssignment.projectId); if (project) openProject(project); }}>{workspace.data.projects.find(project => project.id === activeAssignment.projectId)?.name}</button> : <span>{t("Assignment")}</span>}
@@ -3363,6 +3364,8 @@ export default function Home() {
                 }}><option value="">{t("No project")}</option>{workspace.data.projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select>}
                 {activeAssignment?.projectId && <button className={workspaceStyles.secondaryButton} disabled={workspaceBusy} onClick={() => startAssignment(activeAssignment.projectId)}>{t("New version")}</button>}
               </div>
+              </div>
+              <ResultLanguageSelect language={displayedResult.language} busy={translation.busy} error={translation.error} onChange={translation.change} unavailable={!displayedResult.evaluation_id} />
             </div>
             <div className="border-b border-slate-100 pb-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -3379,7 +3382,6 @@ export default function Home() {
                 {displayedResult.hidden_ai_alert ? (
                   <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800"> {t("Hidden AI text detected")} </span>
                 ) : null}
-                <ResultLanguageSelect language={displayedResult.language} busy={translation.busy} error={translation.error} onChange={translation.change} unavailable={!displayedResult.evaluation_id} />
               </div>
             </div>
 

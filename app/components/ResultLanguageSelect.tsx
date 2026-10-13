@@ -49,11 +49,11 @@ export function ResultLanguageSelect({ language, busy, error, onChange, unavaila
   const id = useId();
   return <div className={styles.result} data-html2canvas-ignore="true">
     <label htmlFor={id}>{t("Result language")}</label>
-    <select id={id} value={language ?? "original"} disabled={busy || unavailable} aria-describedby={id + "-help"} aria-busy={busy} onChange={event => onChange(event.target.value as Locale | "original")}>
+    <select id={id} value={language ?? "original"} disabled={busy || unavailable} aria-describedby={busy || unavailable ? id + "-help" : undefined} aria-busy={busy} onChange={event => onChange(event.target.value as Locale | "original")}>
       <option value="original">{t("Original result")}</option>
       {LOCALES.map(locale => <option key={locale} value={locale} lang={locale}>{LANGUAGE_NAMES[locale]}</option>)}
     </select>
-    <p id={id + "-help"} className={styles.help} role="status">{t(busy ? "Translating…" : unavailable ? "Save this result to translate it later." : "This result only. Your account preferences stay the same.")}</p>
+    {(busy || unavailable) && <p id={id + "-help"} className={styles.help} role="status">{t(busy ? "Translating…" : "Save this result to translate it later.")}</p>}
     {error && <p className={styles.error} role="alert">{t(error)}</p>}
   </div>;
 }
