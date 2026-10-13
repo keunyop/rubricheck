@@ -1,4 +1,6 @@
 "use client";
+import { useLanguage } from "../components/LanguageProvider";
+
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
@@ -77,6 +79,7 @@ function getEmailInitialAvatarClassName(email: string): string {
 }
 
 export function PricingClient() {
+  const { t, href } = useLanguage();
   const {
     signedInEmail,
     accountPlan,
@@ -184,12 +187,12 @@ export function PricingClient() {
   async function handleUpgradeToPro() {
     setCheckoutError("");
     if (!signedInEmail) {
-      openLoginModal("Log in before starting Pro checkout.");
+      openLoginModal(t("Log in before starting Pro checkout."));
       return;
     }
 
     if (accountPlan === "pro") {
-      setCheckoutError("This account is already on Pro. No additional checkout is needed.");
+      setCheckoutError(t("This account is already on Pro. No additional checkout is needed."));
       return;
     }
 
@@ -215,15 +218,15 @@ export function PricingClient() {
       checkoutBusy.current = false;
       const code = error instanceof Error ? error.message : "CHECKOUT_SESSION_FAILED";
       if (code === "AUTH_REQUIRED") {
-        openLoginModal("Log in before starting Pro checkout.");
+        openLoginModal(t("Log in before starting Pro checkout."));
         return;
       }
       if (code === "EVALUATION_EXPIRED") {
-        setCheckoutError("Your saved result has expired. Return home to continue before purchasing.");
+        setCheckoutError(t("Your saved result has expired. Return home to continue before purchasing."));
       } else if (code === "ALREADY_PRO_ACTIVE") {
-        setCheckoutError("This account already has an active Pro subscription.");
+        setCheckoutError(t("This account already has an active Pro subscription."));
       } else {
-        setCheckoutError("Unable to start checkout right now. Please try again.");
+        setCheckoutError(t("Unable to start checkout right now. Please try again."));
       }
     } finally {
       setIsCreatingCheckout(false);
@@ -233,12 +236,12 @@ export function PricingClient() {
   async function handleBuyCredits(packId: (typeof CREDIT_PACK_IDS)[number]) {
     setCreditCheckoutError("");
     if (!signedInEmail) {
-      openLoginModal("Log in before purchasing top-ups.");
+      openLoginModal(t("Log in before purchasing top-ups."));
       return;
     }
 
     if (accountPlan === "pro") {
-      setCreditCheckoutError("Top-up purchases are disabled while this account is on Pro.");
+      setCreditCheckoutError(t("Top-up purchases are disabled while this account is on Pro."));
       return;
     }
 
@@ -265,10 +268,10 @@ export function PricingClient() {
       checkoutBusy.current = false;
       const code = error instanceof Error ? error.message : "CREDIT_CHECKOUT_SESSION_FAILED";
       if (code === "AUTH_REQUIRED") {
-        openLoginModal("Log in before purchasing top-ups.");
+        openLoginModal(t("Log in before purchasing top-ups."));
         return;
       }
-      setCreditCheckoutError(code === "EVALUATION_EXPIRED" ? "Your saved result has expired. Return home to continue before purchasing." : "Unable to start credit checkout right now. Please try again.");
+      setCreditCheckoutError(code === "EVALUATION_EXPIRED" ? t("Your saved result has expired. Return home to continue before purchasing.") : t("Unable to start credit checkout right now. Please try again."));
     } finally {
       setIsCreatingCreditCheckout(false);
     }
@@ -280,7 +283,7 @@ export function PricingClient() {
 
     const normalizedEmail = restoreEmail.trim().toLowerCase();
     if (!isValidEmail(normalizedEmail)) {
-      setRestoreError("Please enter a valid email.");
+      setRestoreError(t("Please enter a valid email."));
       return;
     }
 
@@ -305,32 +308,32 @@ export function PricingClient() {
         setRestoreCode(data.devCode);
         setRestoreInfo(`Development code: ${data.devCode}`);
       } else {
-        setRestoreInfo(data.message ?? "Verification code sent. Check your inbox.");
+        setRestoreInfo(data.message ?? t("Verification code sent. Check your inbox."));
       }
       setRestoreError("");
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_START_FAILED";
       if (code === "EMAIL_REQUIRED") {
-        setRestoreError("Please enter a valid email.");
+        setRestoreError(t("Please enter a valid email."));
         return;
       }
       if (code === "RATE_LIMITED") {
-        setRestoreError("Too many attempts. Please wait and try again.");
+        setRestoreError(t("Too many attempts. Please wait and try again."));
         return;
       }
       if (code === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED") {
-        setRestoreError("Restore email delivery is not configured right now.");
+        setRestoreError(t("Restore email delivery is not configured right now."));
         return;
       }
       if (code === "OTP_EMAIL_SEND_FAILED") {
-        setRestoreError("Unable to send the verification email right now. Please try again shortly.");
+        setRestoreError(t("Unable to send the verification email right now. Please try again shortly."));
         return;
       }
       if (code === "SERVICE_UNAVAILABLE") {
-        setRestoreError("Restore is temporarily unavailable. Please try again shortly.");
+        setRestoreError(t("Restore is temporarily unavailable. Please try again shortly."));
         return;
       }
-      setRestoreError("Unable to start restore right now. Please try again.");
+      setRestoreError(t("Unable to start restore right now. Please try again."));
     } finally {
       setIsStartingRestore(false);
     }
@@ -344,13 +347,13 @@ export function PricingClient() {
     const normalizedCode = restoreCode.trim();
 
     if (!isValidEmail(normalizedEmail)) {
-      setRestoreError("Please enter a valid email.");
+      setRestoreError(t("Please enter a valid email."));
       setRestoreStep("email");
       return;
     }
 
     if (!/^\d{6}$/.test(normalizedCode)) {
-      setRestoreError("Enter the 6-digit code.");
+      setRestoreError(t("Enter the 6-digit code."));
       return;
     }
 
@@ -388,27 +391,27 @@ export function PricingClient() {
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_VERIFY_FAILED";
       if (code === "INVALID_CODE") {
-        setRestoreError("Invalid or expired code. Please try again.");
+        setRestoreError(t("Invalid or expired code. Please try again."));
         return;
       }
       if (code === "RATE_LIMITED") {
-        setRestoreError("Too many attempts. Please wait and try again.");
+        setRestoreError(t("Too many attempts. Please wait and try again."));
         return;
       }
       if (code === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED") {
-        setRestoreError("Restore email delivery is not configured right now.");
+        setRestoreError(t("Restore email delivery is not configured right now."));
         return;
       }
       if (code === "OTP_EMAIL_SEND_FAILED") {
-        setRestoreError("Unable to send the verification email right now. Please try again shortly.");
+        setRestoreError(t("Unable to send the verification email right now. Please try again shortly."));
         return;
       }
       if (code === "SERVICE_UNAVAILABLE") {
-        setRestoreError("Restore is temporarily unavailable. Please try again shortly.");
+        setRestoreError(t("Restore is temporarily unavailable. Please try again shortly."));
         return;
       }
 
-      setRestoreError("Unable to verify restore right now. Please try again.");
+      setRestoreError(t("Unable to verify restore right now. Please try again."));
     } finally {
       setIsVerifyingRestore(false);
     }
@@ -422,8 +425,8 @@ export function PricingClient() {
           <div className="border-b border-slate-100 pb-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3">
-                <Image src="/rubricheck-logo.svg" alt="RubriCheck logo" width={135} height={36} className="h-auto w-10 shrink-0" />
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Pricing</h1>
+                <Image src="/rubricheck-logo.svg" alt={t("RubriCheck logo")} width={135} height={36} className="h-auto w-10 shrink-0" />
+                <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{t("Pricing")}</h1>
               </div>
               <div className="inline-flex items-center gap-2">
                 {signedInEmail ? (
@@ -453,22 +456,18 @@ export function PricingClient() {
                           <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
                           {canAccessAdmin ? (
                             <Link
-                              href="/admin"
+                              href={href("/admin")}
                               role="menuitem"
                               onClick={() => setShowAccountMenu(false)}
                               className="mt-1 block w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                            >
-                              Admin
-                            </Link>
+                            > {t("Admin")} </Link>
                           ) : null}
                           <button
                             type="button"
                             role="menuitem"
                             onClick={() => void handleLogout()}
                             className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                          >
-                            Log out
-                          </button>
+                          > {t("Log out")} </button>
                         </div>
                       ) : null}
                     </div>
@@ -482,7 +481,7 @@ export function PricingClient() {
                           setShowBillingMenu((previous) => !previous);
                         }}
                         className="inline-flex items-center transition hover:opacity-90"
-                        title="Open billing options"
+                        title={t("Open billing options")}
                       >
                         <AccountStatusPill plan={accountPlan} remainingEvaluations={remainingEvaluations} />
                       </button>
@@ -492,13 +491,11 @@ export function PricingClient() {
                           className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
                         >
                           <Link
-                            href="/billing/manage"
+                            href={href("/billing/manage")}
                             role="menuitem"
                             onClick={() => setShowBillingMenu(false)}
                             className="block w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                          >
-                            Billing and refunds
-                          </Link>
+                          > {t("Billing and refunds")} </Link>
                         </div>
                       ) : null}
                     </div>
@@ -508,18 +505,14 @@ export function PricingClient() {
                     type="button"
                     onClick={() => openLoginModal()}
                     className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                  >
-                    Log in
-                  </button>
+                  > {t("Log in")} </button>
                 )}
               </div>
             </div>
-            <p className="mt-2 text-left text-sm text-slate-600 md:text-[15px]">
-              Choose Pro for full access, or one-time top-ups for Strict Mode and full evaluation feedback.
-            </p>
+            <p className="mt-2 text-left text-sm text-slate-600 md:text-[15px]"> {t("Choose Pro for full access, or one-time top-ups for Strict Mode and full evaluation feedback.")} </p>
           </div>
 
-          <div role="group" aria-label="Plan type" className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
+          <div role="group" aria-label={t("Plan type")} className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
             <button
               type="button"
               aria-pressed={activePricingTab === "pro"}
@@ -529,9 +522,7 @@ export function PricingClient() {
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
               }`}
-            >
-              Upgrade to Pro
-            </button>
+            > {t("Upgrade to Pro")} </button>
             <button
               type="button"
               onClick={() => {
@@ -548,23 +539,21 @@ export function PricingClient() {
                     ? "cursor-not-allowed text-slate-400"
                     : "text-slate-600 hover:text-slate-900"
               }`}
-              title={isTopUpsLocked ? "Evaluation top-ups are unavailable while this account is on Pro." : undefined}
-            >
-              Evaluation Top-Ups
-            </button>
+              title={isTopUpsLocked ? t("Evaluation top-ups are unavailable while this account is on Pro.") : undefined}
+            > {t("Evaluation Top-Ups")} </button>
           </div>
 
           {activePricingTab === "pro" || isTopUpsLocked ? (
             <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h2 className="text-lg font-semibold text-slate-900">Upgrade to Pro</h2>
+              <h2 className="text-lg font-semibold text-slate-900">{t("Upgrade to Pro")}</h2>
               {accountPlan === "pro" ? (
-                <p className="mt-1 text-sm text-emerald-700">Pro is already active for this account.</p>
+                <p className="mt-1 text-sm text-emerald-700">{t("Pro is already active for this account.")}</p>
               ) : (
                 <ul className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
-                  {["Unlimited evaluations", "Standard and Strict Mode", "Full improvements and criterion feedback", "Rewrite suggestions"].map(feature => <li key={feature} className="flex items-start gap-2"><span aria-hidden="true" className="font-semibold text-indigo-600">{"\u2713"}</span>{feature}</li>)}
+                  {[t("Unlimited evaluations"), t("Standard and Strict Mode"), t("Full improvements and criterion feedback"), t("Rewrite suggestions")].map(feature => <li key={feature} className="flex items-start gap-2"><span aria-hidden="true" className="font-semibold text-indigo-600">{"\u2713"}</span>{feature}</li>)}
                 </ul>
               )}
-              <div role="group" aria-label="Billing period" className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
+              <div role="group" aria-label={t("Billing period")} className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
                 <button
                   type="button"
                   aria-pressed={checkoutPlan === "monthly"}
@@ -575,9 +564,7 @@ export function PricingClient() {
                       ? "bg-slate-900 text-white shadow-sm"
                       : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
                   }`}
-                >
-                  Monthly
-                </button>
+                > {t("Monthly")} </button>
                 <button
                   type="button"
                   aria-pressed={checkoutPlan === "annual"}
@@ -588,36 +575,31 @@ export function PricingClient() {
                       ? "bg-slate-900 text-white shadow-sm"
                       : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
                   }`}
-                >
-                  Annual
-                </button>
+                > {t("Annual")} </button>
               </div>
               <div aria-live="polite" className="my-6 px-1">
                 <p className="text-4xl font-semibold tracking-tight text-slate-900">
                   {selectedCheckoutPlanDisplay.price}
                   <span className="ml-1 text-sm font-normal text-slate-500">
-                    {selectedCheckoutPlanDisplay.periodLabel}
+                    {t(selectedCheckoutPlanDisplay.periodLabel)}
                   </span>
                 </p>
                 {selectedCheckoutPlanDisplay.saveNote ? (
-                  <p className="mt-1 text-sm text-indigo-700">{selectedCheckoutPlanDisplay.saveNote}</p>
+                  <p className="mt-1 text-sm text-indigo-700">{t(selectedCheckoutPlanDisplay.saveNote)}</p>
                 ) : null}
               </div>
               {signedInEmail ? (
-                <div className="mt-3 break-words text-xs text-slate-500">
-                  Checkout account: <span className="font-semibold text-slate-900">{signedInEmail}</span>
+                <div className="mt-3 break-words text-xs text-slate-500"> {t("Checkout account:")} <span className="font-semibold text-slate-900">{signedInEmail}</span>
                 </div>
               ) : null}
               {checkoutError ? (
                 <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  {checkoutError}
+                  {t(checkoutError)}
                 </p>
               ) : null}
               {signedInEmail ? (
                 accountPlan === "pro" ? (
-                  <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
-                    Manage subscription changes from the billing and refunds page.
-                  </div>
+                  <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700"> {t("Manage subscription changes from the billing and refunds page.")} </div>
                 ) : (
                   <button
                     type="button"
@@ -625,42 +607,35 @@ export function PricingClient() {
                     disabled={isCreatingCheckout}
                     className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isCreatingCheckout ? "Redirecting..." : "Upgrade to Pro"}
+                    {isCreatingCheckout ? t("Redirecting...") : t("Upgrade to Pro")}
                   </button>
                 )
               ) : (
                 <button
                   type="button"
-                  onClick={() => openLoginModal("Log in before starting Pro checkout.")}
+                  onClick={() => openLoginModal(t("Log in before starting Pro checkout."))}
                   className="mt-3 w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-                >
-                  Log in to Upgrade
-                </button>
+                > {t("Log in to Upgrade")} </button>
               )}
             </section>
           ) : (
             <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
-              <h2 className="text-xl font-semibold text-slate-900">Evaluation Top-Ups</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                One-time purchase. Credits apply to Evaluate only and unlock Strict Mode plus full evaluation feedback. Rewrite suggestions remain Pro-only.
-              </p>
+              <h2 className="text-xl font-semibold text-slate-900">{t("Evaluation Top-Ups")}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600"> {t("One-time purchase. Credits apply to Evaluate only and unlock Strict Mode plus full evaluation feedback. Rewrite suggestions remain Pro-only.")} </p>
               {typeof creditBalance === "number" ? (
-                <p className="mt-1 text-base text-slate-600">Current credits: {creditBalance}</p>
+                <p className="mt-1 text-base text-slate-600">{t("Current credits:")} {creditBalance}</p>
               ) : null}
               {signedInEmail ? (
-                <div className="mt-3 break-words text-xs text-slate-500">
-                  Purchase account: <span className="font-semibold text-slate-900">{signedInEmail}</span>
+                <div className="mt-3 break-words text-xs text-slate-500"> {t("Purchase account:")} <span className="font-semibold text-slate-900">{signedInEmail}</span>
                 </div>
               ) : null}
               {creditCheckoutError ? (
                 <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  {creditCheckoutError}
+                  {t(creditCheckoutError)}
                 </p>
               ) : null}
               {signedInEmail ? (
-                <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
-                  Need cancellations or refunds? Use the billing and refunds page from your account controls.
-                </div>
+                <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700"> {t("Need cancellations or refunds? Use the billing and refunds page from your account controls.")} </div>
               ) : null}
               <div className="mt-4 grid gap-4 sm:grid-cols-3">
                 {CREDIT_PACK_IDS.map((packId) => (
@@ -669,18 +644,18 @@ export function PricingClient() {
                     className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/60 p-4"
                   >
                     <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
-                      {getCreditPackMarketingLabel(packId)}
+                      {t(getCreditPackMarketingLabel(packId))}
                     </p>
-                    <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{getCreditPackLabel(packId)}</p>
+                    <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{t(getCreditPackLabel(packId))}</p>
                     <p className="mt-2 text-3xl font-bold text-slate-900">{getCreditPackPriceLabel(packId)}</p>
-                    <p className="mt-2 text-sm text-slate-600">One-time payment</p>
+                    <p className="mt-2 text-sm text-slate-600">{t("One-time payment")}</p>
                     <button
                       type="button"
                       onClick={() => void handleBuyCredits(packId)}
                       disabled={isCreatingCreditCheckout}
                       className="mt-4 w-full rounded-lg bg-slate-800 px-3 py-2 text-base font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {!signedInEmail ? "Log in to Top Up" : isCreatingCreditCheckout ? "Redirecting..." : "Top up"}
+                      {!signedInEmail ? t("Log in to Top Up") : isCreatingCreditCheckout ? t("Redirecting...") : t("Top up")}
                     </button>
                   </article>
                 ))}
@@ -691,16 +666,12 @@ export function PricingClient() {
       </div>
 
       {showLoginModal ? (
-        <Modal titleId="pricing-login-title" closeLabel="Close login modal" onClose={() => setShowLoginModal(false)}>
+        <Modal titleId="pricing-login-title" closeLabel={t("Close login modal")} onClose={() => setShowLoginModal(false)}>
             <form onSubmit={event => { event.preventDefault(); if (!isStartingRestore && !isVerifyingRestore) void (restoreStep === "code" ? handleVerifyRestorePro() : handleStartRestorePro()); }}>
-            <h3 id="pricing-login-title" className="text-lg font-semibold text-slate-900">
-              Log in
-            </h3>
-            <p className="mt-2 text-sm text-slate-600">
-              We will email you a sign-in code.
-            </p>
+            <h3 id="pricing-login-title" className="text-lg font-semibold text-slate-900"> {t("Log in")} </h3>
+            <p className="mt-2 text-sm text-slate-600"> {t("We will email you a sign-in code.")} </p>
             <label htmlFor="pricing-restore-email" className="mt-4 block">
-              <span className="text-xs font-semibold text-slate-700">Email</span>
+              <span className="text-xs font-semibold text-slate-700">{t("Email")}</span>
               <input
                 id="pricing-restore-email"
                 autoFocus
@@ -720,7 +691,7 @@ export function PricingClient() {
             </label>
             {restoreStep === "code" ? (
               <label htmlFor="pricing-restore-code" className="mt-3 block">
-                <span className="text-xs font-semibold text-slate-700">Verification code</span>
+                <span className="text-xs font-semibold text-slate-700">{t("Verification code")}</span>
                 <input
                   id="pricing-restore-code"
                   autoFocus
@@ -743,12 +714,12 @@ export function PricingClient() {
             ) : null}
             {restoreInfo ? (
               <p role="status" className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
-                {restoreInfo}
+                {t(restoreInfo)}
               </p>
             ) : null}
             {restoreError ? (
               <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                {restoreError}
+                {t(restoreError)}
               </p>
             ) : null}
             <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -764,15 +735,13 @@ export function PricingClient() {
                     }}
                     disabled={isStartingRestore || isVerifyingRestore}
                     className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Back
-                  </button>
+                  > {t("Back")} </button>
                   <button
                     type="submit"
                     disabled={isStartingRestore || isVerifyingRestore || !restoreCode.trim()}
                     className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isVerifyingRestore ? "Verifying..." : "Verify & Log in"}
+                    {isVerifyingRestore ? t("Verifying...") : t("Verify & Log in")}
                   </button>
                 </>
               ) : (
@@ -781,7 +750,7 @@ export function PricingClient() {
                   disabled={isStartingRestore || isVerifyingRestore || !restoreEmail.trim()}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isStartingRestore ? "Sending..." : "Send code"}
+                  {isStartingRestore ? t("Sending...") : t("Send code")}
                 </button>
               )}
             </div>
@@ -791,15 +760,15 @@ export function PricingClient() {
 
       <footer className="mx-auto mt-8 w-full max-w-4xl px-1 py-2">
         <div className="flex flex-col gap-3 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
-          <p>AI-generated estimate only. Not an official grade. RubriCheck.</p>
+          <p>{t("AI-generated estimate only. Not an official grade. RubriCheck.")}</p>
           <div className="flex flex-wrap items-center gap-3">
             {FOOTER_LEGAL_LINKS.map((link) => (
               <a
                 key={link.href}
-                href={link.href}
+                href={href(link.href)}
                 className="font-medium text-slate-600 transition hover:text-slate-900"
               >
-                {link.label}
+                {t(link.label)}
               </a>
             ))}
             <FeedbackButton email={signedInEmail} />

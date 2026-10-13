@@ -1,24 +1,31 @@
+import { localizeSeoGuide } from "../../src/i18n/seoGuides";
+import { getTranslator, getLocale } from "../../src/i18n/server";
+import { localizedPath } from "../../src/i18n/config";
 import Link from "next/link";
 import type { SeoLandingPageContent } from "../../src/config/seoPages";
 import { FREE_TRIAL_LIMIT } from "../../src/config/plans";
 import { buildBreadcrumbSchema, buildWebPageSchema } from "../../src/lib/seo";
 import { JsonLd } from "./JsonLd";
 
-export function SeoLandingPage({ page }: { page: SeoLandingPageContent }) {
+export async function SeoLandingPage({ page }: { page: SeoLandingPageContent }) {
+  const t = await getTranslator();
+  const locale = await getLocale();
+  page = localizeSeoGuide(page, locale);
+  const href = (path: string) => localizedPath(path, locale);
   const breadcrumbItems = [
-    { name: "Home", path: "/" },
-    { name: page.h1, path: page.path },
+    { name: t("Home"), path: href("/") },
+    { name: page.h1, path: href(page.path) },
   ];
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_55%,#ffffff_100%)] px-4 py-10 text-slate-900">
-      <JsonLd data={buildWebPageSchema({ title: page.title, description: page.description, path: page.path })} />
+      <JsonLd data={buildWebPageSchema({ title: page.title, description: page.description, path: page.path, locale })} />
       <JsonLd data={buildBreadcrumbSchema(breadcrumbItems)} />
       <div className="mx-auto w-full max-w-5xl space-y-8">
         <section className="rounded-3xl border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)] md:p-8">
-          <nav aria-label="Breadcrumb" className="text-sm text-slate-600">
+          <nav aria-label={t("Breadcrumb")} className="text-sm text-slate-600">
             <ol className="flex flex-wrap items-center gap-2">
-              <li><Link href="/" className="underline underline-offset-4">Home</Link></li>
+              <li><Link href={href("/")} className="underline underline-offset-4">{t("Home")}</Link></li>
               <li aria-hidden="true">/</li>
               <li aria-current="page">{page.h1}</li>
             </ol>
@@ -29,16 +36,16 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageContent }) {
             <p className="mt-4 text-base leading-7 text-slate-700 md:text-lg">{page.intro}</p>
           </div>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <Link href={page.ctaHref} className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{page.ctaLabel}</Link>
-            <Link href={`/?start=general&from=${page.slug}#rubric-checker`} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Check without a rubric</Link>
-            <Link href={`/?start=library&from=${page.slug}#rubric-checker`} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Use a saved rubric</Link>
+            <Link href={href(page.ctaHref)} className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{page.ctaLabel}</Link>
+            <Link href={href(`/?start=general&from=${page.slug}#rubric-checker`)} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Check without a rubric")}</Link>
+            <Link href={href(`/?start=library&from=${page.slug}#rubric-checker`)} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Use a saved rubric")}</Link>
           </div>
           <p className="mt-4 text-sm leading-6 text-slate-600">
-            Try a free preview, or sign up for {FREE_TRIAL_LIMIT} free checks.
+            {t("Try a free preview, or sign up for {count} free checks.", { count: FREE_TRIAL_LIMIT })}
           </p>
         </section>
 
-        <section aria-label="Review guide" className="grid gap-4 md:grid-cols-2">
+        <section aria-label={t("Review guide")} className="grid gap-4 md:grid-cols-2">
           {page.sections.map((section) => (
             <article key={section.title} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold">{section.title}</h2>
@@ -71,7 +78,7 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageContent }) {
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-          <h2 className="text-2xl font-semibold">Frequently asked questions</h2>
+          <h2 className="text-2xl font-semibold">{t("Frequently asked questions")}</h2>
           <div className="mt-5 space-y-3">
             {page.faqItems.map((item) => (
               <details key={item.question} className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
@@ -83,11 +90,11 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageContent }) {
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-          <h2 className="text-2xl font-semibold">More ways to review your draft</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-700">Find guidance for your assignment type or learn how to apply the feedback.</p>
+          <h2 className="text-2xl font-semibold">{t("More ways to review your draft")}</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-700">{t("Find guidance for your assignment type or learn how to apply the feedback.")}</p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {page.relatedLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-md">
+              <Link key={link.href} href={href(link.href)} className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-md">
                 <h3 className="text-base font-semibold">{link.label}</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">{link.description}</p>
               </Link>
@@ -95,14 +102,14 @@ export function SeoLandingPage({ page }: { page: SeoLandingPageContent }) {
           </div>
         </section>
         <div className="flex flex-wrap justify-center gap-3">
-          <Link href={page.ctaHref} className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white">{page.ctaLabel}</Link>
-          <Link href={`/?start=general&from=${page.slug}#rubric-checker`} className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Check without a rubric</Link>
+          <Link href={href(page.ctaHref)} className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white">{page.ctaLabel}</Link>
+          <Link href={href(`/?start=general&from=${page.slug}#rubric-checker`)} className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Check without a rubric")}</Link>
         </div>
         <footer className="flex flex-wrap gap-x-5 gap-y-3 px-2 text-sm text-slate-600">
-          <Link href="/">RubriCheck</Link>
-          <Link href="/pricing">Pricing</Link>
-          <Link href="/legal/privacy">Privacy</Link>
-          <Link href="/legal/ai-disclaimer">AI feedback limitations</Link>
+          <Link href={href("/")}>RubriCheck</Link>
+          <Link href={href("/pricing")}>{t("Pricing")}</Link>
+          <Link href={href("/legal/privacy")}>{t("Privacy")}</Link>
+          <Link href={href("/legal/ai-disclaimer")}>{t("AI feedback limitations")}</Link>
         </footer>
       </div>
     </main>

@@ -1,5 +1,6 @@
 import type { Evaluation, GradingMode, Rubric } from "./schema";
 import type { HiddenAiDocumentAlert } from "./hiddenAiAlert.ts";
+import type { Locale } from "../src/i18n/config";
 import {
   canAccessDetailedFeedback,
   canAccessRewriteSuggestions,
@@ -23,6 +24,7 @@ type FinalCriterion = {
 };
 
 export type FinalEvaluation = {
+  language?: import("../src/i18n/config").Locale;
   title: string;
   grading_basis?: "general";
   access_tier: FeedbackAccessTier;
@@ -63,8 +65,10 @@ function readExampleRevisions(score: EvaluationCriterionScore): string[] | undef
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function buildFallbackExampleRevision(criterionName: string, feedback: string): string {
+function buildFallbackExampleRevision(criterionName: string, feedback: string, language: Locale): string {
   const cleanedFeedback = feedback.replace(/\s+/g, " ").trim();
+  if (language === "ko") return (cleanedFeedback ? `${criterionName} 개선 방향: ${cleanedFeedback}` : `${criterionName} 항목이 채점 기준에 더 잘 부합하도록 수정하세요.`).slice(0, 300);
+  if (language === "ms") return (cleanedFeedback ? `Baiki ${criterionName}: ${cleanedFeedback}` : `Semak bahagian ${criterionName} supaya lebih menepati rubrik.`).slice(0, 300);
   if (!cleanedFeedback) {
     return `Revise the ${criterionName} section to align more directly with rubric expectations.`;
   }
@@ -137,6 +141,7 @@ function buildStandardCriteria(
   rubric: Rubric,
   scoreByName: Map<string, EvaluationCriterionScore>,
   tier: FeedbackAccessTier,
+  language: Locale,
 ): FinalCriterion[] {
   const criteria: FinalCriterion[] = [];
   const rubricNameSet = new Set<string>();
@@ -181,7 +186,7 @@ function buildStandardCriteria(
     const detailedBreakdown = readDetailedBreakdown(matchedScore);
     const exampleRevisions = canAccessRewriteSuggestions(tier)
       ? readExampleRevisions(matchedScore) ??
-        [buildFallbackExampleRevision(rubricCriterion.name, matchedScore.feedback)]
+        [buildFallbackExampleRevision(rubricCriterion.name, matchedScore.feedback, language)]
       : undefined;
 
     criteria.push({
@@ -198,6 +203,7 @@ function buildStrictCriteria(
   rubric: Rubric,
   scoreByName: Map<string, EvaluationCriterionScore>,
   tier: FeedbackAccessTier,
+  language: Locale,
 ): FinalCriterion[] {
   const criteria: FinalCriterion[] = [];
   const rubricNameSet = new Set<string>();
@@ -246,7 +252,7 @@ function buildStrictCriteria(
     const detailedBreakdown = readDetailedBreakdown(matchedScore);
     const exampleRevisions = canAccessRewriteSuggestions(tier)
       ? readExampleRevisions(matchedScore) ??
-        [buildFallbackExampleRevision(rubricCriterion.name, matchedScore.feedback)]
+        [buildFallbackExampleRevision(rubricCriterion.name, matchedScore.feedback, language)]
       : undefined;
 
     criteria.push({
@@ -272,13 +278,14 @@ export function buildFinalEvaluation(
   evaluation: Evaluation,
   mode: GradingMode,
   tier: FeedbackAccessTier,
+  language: Locale = "en",
 ): FinalEvaluation {
   const scoreByName = buildScoreByName(evaluation);
 
   const criteria =
     mode === "strict"
-      ? buildStrictCriteria(rubric, scoreByName, tier)
-      : buildStandardCriteria(rubric, scoreByName, tier);
+      ? buildStrictCriteria(rubric, scoreByName, tier, language)
+      : buildStandardCriteria(rubric, scoreByName, tier, language);
 
   if (criteria.length !== evaluation.criteria_scores.length) {
     throw new Error("EVALUATION_FAILED");

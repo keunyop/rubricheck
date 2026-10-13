@@ -19,6 +19,7 @@ await context.route("**/api/**", async route => {
   const req = route.request(), path = new URL(req.url()).pathname;
   let json = {}, status = 200;
   if (path === "/api/account/summary") json = { signedIn, email: signedIn ? "student@example.com" : null, plan: "free", remainingEvaluations: 3, creditsBalance: 0 };
+  else if (path === "/api/account/preferences") json = { preferences: null };
   else if (path === "/api/entitlement") json = { plan: "free", status: "needs_restore" };
   else if (path === "/api/comparison-images") json = { images: [] };
   else if (path === "/api/trial" && req.method() === "GET") json = { used, pending: false, result: used && !signedIn ? preview : null };

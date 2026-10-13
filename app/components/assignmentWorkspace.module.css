@@ -112,3 +112,5 @@
   .dialogBody { padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) { .content { transition: none; } }
+
+.accountDialog { width: min(390px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }

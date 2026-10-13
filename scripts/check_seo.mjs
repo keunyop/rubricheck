@@ -22,7 +22,7 @@ let serverError;
 server.on("error", (error) => { serverError = error; });
 
 const attributes = (tag) => Object.fromEntries(
-  [...tag.matchAll(/([\w:-]+)="([^"]*)"/g)].map((match) => [match[1], match[2].replaceAll("&amp;", "&")]),
+  [...tag.matchAll(/([\w:-]+)="([^"]*)"/g)].map((match) => [match[1].toLowerCase(), match[2].replaceAll("&amp;", "&")]),
 );
 const tags = (html, tag) => [...html.matchAll(new RegExp("<" + tag + "\\b[^>]*>", "g"))].map((match) => attributes(match[0]));
 const meta = (html, name) => tags(html, "meta").find((tag) => tag.name === name || tag.property === name)?.content;
@@ -51,7 +51,7 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.ok(urls.length >= 8, "Sitemap includes the public product and guide pages");
+  assert.equal(urls.length, 39, "Sitemap includes all 13 public pages in three languages");
   assert.equal(new Set(urls.map(String)).size, urls.length, "No duplicate sitemap URLs");
   assert.doesNotMatch(sitemap, /<loc>[^<]*\/(?:api|admin|billing)(?:\/|<)/);
   const titles = new Set();
@@ -59,6 +59,9 @@ try {
   const pages = new Map();
 
   for (const url of urls) {
+    const locale = /^\/(ko|ms)(\/|$)/.exec(url.pathname)?.[1] ?? "en";
+    const prefix = locale === "en" ? "" : "/" + locale;
+    const homePath = prefix || "/";
     assert.equal(url.origin, publicOrigin);
     assert.equal(url.search, "");
     assert.equal(url.hash, "");
@@ -67,7 +70,13 @@ try {
     assert.doesNotMatch(response.headers.get("x-robots-tag") || "", /noindex/);
     const html = await response.text();
     pages.set(url.pathname, html);
-    assert.match(html, /<html[^>]+lang="en"/);
+    assert.ok(html.includes('<html lang="' + locale + '"'), url.pathname + " server language");
+    const alternates = tags(html, "link").filter(tag => tag.rel === "alternate" && tag.hreflang);
+    for (const language of ["en", "ko", "ms", "ko-KR", "ms-MY", "x-default"]) {
+      const alternate = alternates.find(tag => tag.hreflang === language);
+      assert.ok(alternate, url.pathname + " has " + language + " alternate");
+      assert.ok(urls.some(item => item.href === new URL(alternate.href).href), "Alternate is an indexable sitemap URL");
+    }
     assert.equal([...html.matchAll(/<h1\b/g)].length, 1, url.pathname + " has one rendered H1");
     assert.equal(canonical(html).length, 1, url.pathname + " has one canonical");
     assert.equal(new URL(canonical(html)[0].href).href, url.href);
@@ -87,15 +96,15 @@ try {
 
     const schemas = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/g)].map((match) => JSON.parse(match[1]));
     const apps = schemas.filter((schema) => schema["@type"] === "SoftwareApplication");
-    assert.equal(apps.length, url.pathname === "/" ? 1 : 0, "One application entity on its actual page");
+    assert.equal(apps.length, url.pathname === homePath ? 1 : 0, "One application entity on its actual page");
     const ids = schemas.map((schema) => schema["@id"]).filter(Boolean);
     assert.equal(new Set(ids).size, ids.length, "No repeated structured-data entity definitions");
     const breadcrumb = schemas.find((schema) => schema["@type"] === "BreadcrumbList");
     if (breadcrumb) {
-      assert.match(html, /aria-label="Breadcrumb"/, "Breadcrumbs are visible as well as marked up");
+      assert.ok(html.includes('aria-label="' + ({ en: "Breadcrumb", ko: "현재 위치", ms: "Jejak navigasi" })[locale] + '"'), "Breadcrumbs are visible as well as marked up");
       assert.equal(breadcrumb.itemListElement.length, 2);
       breadcrumb.itemListElement.forEach((item, index) => assert.equal(item.position, index + 1));
-      assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + "/");
+      assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + homePath);
       assert.equal(breadcrumb.itemListElement.at(-1).item, url.href);
       assert.match(html, /<table\b/, "Guide includes a rendered worked example");
     }
@@ -106,8 +115,10 @@ try {
   const home = pages.get("/");
   assert.match(home, /id="rubric-checker"/);
   for (const path of pages.keys()) {
-    if (path !== "/" && !path.startsWith("/legal/") && path !== "/pricing") {
-      assert.ok(tags(home, "a").some((tag) => tag.href === path), "Homepage links to " + path);
+    const prefix = /^\/(ko|ms)(?=\/|$)/.exec(path)?.[0] ?? "";
+    const barePath = path.slice(prefix.length) || "/";
+    if (barePath !== "/" && !barePath.startsWith("/legal/") && barePath !== "/pricing") {
+      assert.ok(tags(pages.get(prefix || "/"), "a").some((tag) => tag.href === path), "Localized homepage links to " + path);
     }
   }
   for (const [path, html] of pages) {
@@ -153,6 +164,8 @@ try {
   }
   const missing = await get("/__seo_page_that_does_not_exist__");
   assert.equal(missing.status, 404, "Unknown URLs return a real 404");
+  for (const path of ["/ko/unknown-page", "/ms/api/grade", "/fr"]) assert.equal((await get(path)).status, 404);
+  assert.equal((await get("/en/pricing")).status, 308, "English alias redirects to its canonical URL");
 
   console.log("SEO checks passed for " + urls.length + " public pages: rendered content, unique metadata, canonical URLs, internal links, structured data, sitemap, robots, noindex, redirects, 404, and 1200x630 OG image.");
 } catch (error) {

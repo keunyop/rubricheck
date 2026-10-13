@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { CANONICAL_HOST } from "./src/lib/seo";
+import { localeFromPath, stripLocale } from "./src/i18n/config";
 
 function isCanonicalDomainRequest(host: string): boolean {
   return host === CANONICAL_HOST || host === `www.${CANONICAL_HOST}`;
@@ -17,24 +18,26 @@ export function proxy(request: NextRequest) {
     request.nextUrl.host;
   const normalizedHost = forwardedHost.split(":")[0].toLowerCase();
 
-  if (!isCanonicalDomainRequest(normalizedHost)) {
-    return NextResponse.next();
-  }
 
   const forwardedProto = request.headers.get("x-forwarded-proto");
   const needsHttpsRedirect = forwardedProto === "http";
   const needsHostRedirect = normalizedHost !== CANONICAL_HOST;
 
-  if (!needsHttpsRedirect && !needsHostRedirect) {
-    return NextResponse.next();
+  if (isCanonicalDomainRequest(normalizedHost) && (needsHttpsRedirect || needsHostRedirect)) {
+    const url = request.nextUrl.clone(); url.protocol = "https"; url.hostname = CANONICAL_HOST; url.port = "";
+    return NextResponse.redirect(url, 301);
+  }
+  const locale = localeFromPath(request.nextUrl.pathname);
+  const pathname = stripLocale(request.nextUrl.pathname);
+  const privatePath = /^\/(api|admin|billing|_next)(\/|$)/.test(pathname);
+  const headers = new Headers(request.headers);
+  headers.set("x-rubricheck-locale", privatePath ? "en" : locale);
+  if (/^\/en(\/|$)/.test(request.nextUrl.pathname)) {
+    const url = request.nextUrl.clone(); url.pathname = pathname; url.host = request.headers.get("host") ?? url.host;
+    return NextResponse.redirect(url, 308);
   }
 
-  const redirectUrl = request.nextUrl.clone();
-  redirectUrl.protocol = "https";
-  redirectUrl.hostname = CANONICAL_HOST;
-  redirectUrl.port = "";
-
-  return NextResponse.redirect(redirectUrl, 301);
+  return NextResponse.next({ request: { headers } });
 }
 
 export const config = {

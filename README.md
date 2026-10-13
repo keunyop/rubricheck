@@ -226,3 +226,31 @@ Run `npm run test:all` and `npm run test:actual-results:browser` for regression 
 ## Admin subscriber pagination
 
 Before deploying the paginated admin dashboard, apply [supabase/admin_dashboard.sql](supabase/admin_dashboard.sql). See [deployment and verification](doc/admin-subscriber-pagination.md).
+
+## Languages
+
+English (`en`), Korean (`ko`) and Malay for Malaysia (`ms`) are available in the
+sidebar account menu. Site language and the language used for new grading feedback
+are saved independently to the authenticated account. Changing the language at the
+top right of an existing result translates its visible feedback without changing
+the original scores, saved result, usage balance or account preferences.
+
+The existing Upstash Redis and OpenAI configuration is sufficient; there is no new
+environment variable or database migration. Account defaults use
+`rubricheck:preferences:<hashed-email>` without an expiry. Result translations are
+cached per owner, original result and language for 24 hours, with up to 30 uncached
+translation attempts per owner per hour. Include the preference key in account
+data deletion procedures; transient translation keys expire automatically.
+
+Public pages use the English canonical path, `/ko` and `/ms`, with server-rendered
+translations, localized metadata, reciprocal hreflang links and sitemap entries.
+Add languages in `src/i18n`; English messages are the fallback. Grading evidence
+quotes and user-supplied rubric names retain their original wording.
+
+Validation: `npm run test:all`, `npm run build`, `npm run test:seo`, and
+`npm run test:i18n:browser` against a local server. The browser test uses mocked
+account and model responses and saves screenshots in `doc/verification/i18n`.
+See [verification results](doc/verification/i18n/verification.json) and
+[language-flow checks](doc/verification/i18n/results.json). Live model translation
+quality and production account persistence require a deployment smoke test; the
+automated runs isolate external services with fixtures and module mocks.

@@ -1,4 +1,5 @@
 import { callEvaluationModel } from "./openai";
+import type { Locale } from "../src/i18n/config";
 import {
   buildEvaluationPrompt,
   STRICT_JSON_SYSTEM_INSTRUCTION,
@@ -40,6 +41,7 @@ export async function evaluateAssignment(
   mode: GradingMode = GradingModeSchema.enum.standard,
   options?: {
     detailLevel?: EvaluationDetailLevel;
+    language?: Locale;
   },
 ): Promise<Evaluation> {
   const prompt = buildEvaluationPrompt(
@@ -47,6 +49,7 @@ export async function evaluateAssignment(
     assignmentText,
     mode,
     options?.detailLevel ?? "diagnostic",
+    options?.language ?? "en",
   );
 
   try {

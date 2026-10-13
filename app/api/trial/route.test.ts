@@ -139,7 +139,7 @@ test("guest previews enforce access, one use, retries and account ownership with
       const response = await evaluate(request());
       assert.equal(response.status, 200);
       const data = await response.json();
-      assert.deepEqual(Object.keys(data).sort(), ["guest_preview", "overall_range", "summary", "title"]);
+      assert.deepEqual(Object.keys(data).sort(), ["guest_preview", "language", "overall_range", "summary", "title"]);
       assert.equal(JSON.stringify(data).includes("Private"), false);
       assert.equal(modelCalls, 1); assert.equal(archived, 0);
       assert.deepEqual((await (await status(request())).json()).result, data);

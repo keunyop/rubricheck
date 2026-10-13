@@ -27,8 +27,8 @@ export async function POST(request: Request) {
     if (!record) return errorResponse(context, 410, "EVALUATION_EXPIRED", "The saved evaluation has expired.");
     // Completing the linked free result is included in the purchase: no new usage or credit reservation.
     const result = await upgradeEvaluation(id, email, async (original) => {
-      const evaluation = await evaluateAssignment(original.rubric, original.assignmentText, original.mode, { detailLevel: "detailed" });
-      const detailed = buildFinalEvaluation(original.rubric, evaluation, original.mode, purchase.mode === "pro" ? "pro" : "topup");
+      const evaluation = await evaluateAssignment(original.rubric, original.assignmentText, original.mode, { detailLevel: "detailed", language: original.result.language ?? "en" });
+      const detailed = buildFinalEvaluation(original.rubric, evaluation, original.mode, purchase.mode === "pro" ? "pro" : "topup", original.result.language ?? "en");
       return mergeDetailedEvaluation(original.result, detailed);
     });
     try { await archiveAssignment(email, result, record.mode); }

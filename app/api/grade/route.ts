@@ -1,4 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
+import { LOCALES, type Locale } from "../../../src/i18n/config";
+import { getLanguagePreferences } from "../../../src/lib/languagePreferences";
 import { generalRubric, ASSIGNMENT_INSTRUCTIONS_LIMIT } from "../../../lib/generalRubric";
 import { editSavedRubric, getSavedRubric, saveRubric, validRubricId } from "../../../src/lib/rubricLibrary";
 import { trialIdentity, reserveTrial, releaseTrial, completeTrial, setTrialCookie, TRIAL_TEXT_LIMIT, type TrialReservation } from "../../../src/lib/guestTrial";
@@ -35,6 +37,7 @@ const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_FIELD_UPLOAD_BYTES = 30 * 1024 * 1024;
 const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg"]);
 const GradeRequestSchema = z.object({
+  resultLanguage: z.enum(LOCALES).optional(),
   mode: GradingModeSchema.default("standard"),
   rubricSource: z.enum(["provided", "general", "saved"]).default("provided"),
   rubricId: z.string().refine(validRubricId).optional(),
@@ -240,6 +243,7 @@ export async function POST(request: Request) {
 
     const contentType = request.headers.get("content-type") ?? "";
     let mode: GradingMode = "standard";
+    let resultLanguage: Locale | undefined;
     let rubricSource: "provided" | "general" | "saved" = "provided";
     let rubricId: string | undefined;
     let assignmentInstructions = "";
@@ -263,6 +267,7 @@ export async function POST(request: Request) {
       }
 
       mode = parsedRequest.data.mode;
+      resultLanguage = parsedRequest.data.resultLanguage;
       rubricSource = parsedRequest.data.rubricSource;
       rubricId = parsedRequest.data.rubricId;
       assignmentInstructions = parsedRequest.data.assignmentInstructions;
@@ -273,6 +278,7 @@ export async function POST(request: Request) {
       const modeInput = formData.get("mode");
       const parsedRequest = GradeRequestSchema.safeParse({
         mode: typeof modeInput === "string" ? modeInput : undefined,
+        resultLanguage: formData.get("resultLanguage") ?? undefined,
         rubricSource: formData.get("rubricSource") ?? undefined,
         rubricId: formData.get("rubricId") ?? undefined,
         assignmentInstructions: formData.get("assignmentInstructions") ?? undefined,
@@ -285,6 +291,7 @@ export async function POST(request: Request) {
       }
 
       mode = parsedRequest.data.mode;
+      resultLanguage = parsedRequest.data.resultLanguage;
       rubricSource = parsedRequest.data.rubricSource;
       rubricId = parsedRequest.data.rubricId;
       assignmentInstructions = parsedRequest.data.assignmentInstructions;
@@ -293,6 +300,12 @@ export async function POST(request: Request) {
       rubricTextInput = getTextInput(formData, "rubricText");
       assignmentTextInput = getTextInput(formData, "assignmentText");
     }
+
+    if (!resultLanguage && signedInEmail) {
+      try { resultLanguage = (await getLanguagePreferences(signedInEmail))?.resultLanguage; }
+      catch { /* Preserve grading availability for existing clients during a preference-store outage. */ }
+    }
+    resultLanguage ??= "en";
 
     if ((rubricSource === "saved") !== Boolean(rubricId) ||
         (rubricSource !== "provided" && (rubricTextInput || rubricFiles.length)) ||
@@ -412,7 +425,7 @@ export async function POST(request: Request) {
       stage = "reservation";
       // Scope retry keys to the parsed inputs and mode, never trust a caller's key alone.
       const requestKey = createHash("sha256").update(JSON.stringify([
-        request.headers.get("idempotency-key") || randomUUID(), mode, rubricText, assignmentText,
+        request.headers.get("idempotency-key") || randomUUID(), mode, rubricText, assignmentText, resultLanguage,
         ...(rubricSource === "provided" ? [] : [rubricSource, rubricId ?? null]),
       ])).digest("hex");
       usage = await checkUsageLimit(request, "evaluate", undefined, requestKey);
@@ -485,9 +498,11 @@ export async function POST(request: Request) {
       stage = "ai_evaluation";
       const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode, {
         detailLevel: feedbackTier === "free" ? "diagnostic" : "detailed",
+        language: resultLanguage,
       });
       const finalEvaluation = {
-        ...buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier),
+        ...buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier, resultLanguage),
+        language: resultLanguage,
         ...(rubricSource === "general" ? { grading_basis: "general" as const } : {}),
         title: assignmentTitle(assignmentText, assignmentFiles.map(file => file.name)),
       };

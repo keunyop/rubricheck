@@ -28,6 +28,7 @@ await context.route("**/api/**", async route => {
   const request = route.request(), path = new URL(request.url()).pathname;
   let status = 200, json = {};
   if (path === "/api/account/summary") json = { signedIn: Boolean(email), email, plan: "free", remainingEvaluations: 3, creditsBalance: 0 };
+  else if (path === "/api/account/preferences") json = { preferences: null };
   else if (path === "/api/entitlement") json = { plan: "free", status: "needs_restore" };
   else if (path === "/api/trial") json = { used: false, pending: false, result: null };
   else if (path === "/api/comparison-images") json = { images: [] };

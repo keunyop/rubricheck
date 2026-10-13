@@ -1,3 +1,5 @@
+import type { Locale } from "../i18n/config";
+import { translate } from "../i18n/translate";
 import type { FinalEvaluation } from "../../lib/gradeFinalization";
 
 export const SCORE_RANGE_NOTICE = "AI-estimated output range, not a statistically calibrated confidence interval.";
@@ -10,16 +12,17 @@ export function formatOverallScoreDisplay([low, high]: [number, number]): string
 export function explainScoreCalculation(result: {
   overall_range: [number, number];
   score_calculation?: FinalEvaluation["score_calculation"];
-}): string {
+}, locale: Locale = "en"): string {
+  const t = (text: string) => translate(locale, text);
   const calculation = result.score_calculation;
   if (calculation?.version !== "rubric-sum-v2") {
-    return "Saved result from an earlier scoring method. It may include a mode adjustment or a narrowed range; compare revisions only with results using the same scoring method.";
+    return t("Saved result from an earlier scoring method. It may include a mode adjustment or a narrowed range; compare revisions only with results using the same scoring method.");
   }
   if (!Array.isArray(calculation.criteria_range_sum) || calculation.criteria_range_sum.length !== 2 ||
       !calculation.criteria_range_sum.every(Number.isFinite) ||
       !Number.isFinite(calculation.rubric_total) || calculation.rubric_total <= 0) {
-    return "Calculation details are unavailable for this saved result.";
+    return t("Calculation details are unavailable for this saved result.");
   }
   const [low, high] = calculation.criteria_range_sum;
-  return `Criterion range totals ${low}-${high}, divided by the rubric total ${calculation.rubric_total} x 100 and rounded, give ${formatOverallScoreDisplay(result.overall_range)} / 100. No mode bonus or penalty is added. Individual point scores are separate model estimates; this total uses the range endpoints.`;
+  return translate(locale, "Criterion range totals {low}-{high}, divided by the rubric total {total} x 100 and rounded, give {range} / 100. No mode bonus or penalty is added. Individual point scores are separate model estimates; this total uses the range endpoints.", { low, high, total: calculation.rubric_total, range: formatOverallScoreDisplay(result.overall_range) });
 }

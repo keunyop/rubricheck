@@ -3,6 +3,8 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AccountSummaryProvider } from "./components/AccountSummaryProvider";
+import { LanguageProvider } from "./components/LanguageProvider";
+import { getLocale } from "../src/i18n/server";
 import { JsonLd } from "./components/JsonLd";
 import {
   SITE_URL,
@@ -99,13 +101,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <script
           async
@@ -127,7 +130,7 @@ export default function RootLayout({
       >
         <JsonLd data={buildWebSiteSchema()} />
         <JsonLd data={buildOrganizationSchema()} />
-        <AccountSummaryProvider>{children}</AccountSummaryProvider>
+        <AccountSummaryProvider><LanguageProvider initialLocale={locale}>{children}</LanguageProvider></AccountSummaryProvider>
         <Analytics />
         <SpeedInsights />
       </body>

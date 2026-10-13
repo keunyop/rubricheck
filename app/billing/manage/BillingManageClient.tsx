@@ -1,4 +1,6 @@
 "use client";
+import { useLanguage } from "../../components/LanguageProvider";
+
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -32,13 +34,13 @@ type BillingStatusResponse = {
   error?: string;
 };
 
-function formatCurrencyAmount(amount: number, currency: string | null): string {
+function formatCurrencyAmount(amount: number, currency: string | null, locale = "en"): string {
   if (!currency) {
     return `$${(amount / 100).toFixed(2)}`;
   }
 
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency.toUpperCase(),
     }).format(amount / 100);
@@ -47,13 +49,13 @@ function formatCurrencyAmount(amount: number, currency: string | null): string {
   }
 }
 
-function formatDateFromEpoch(seconds: number | null): string | null {
+function formatDateFromEpoch(seconds: number | null, locale = "en"): string | null {
   if (!seconds || !Number.isFinite(seconds)) {
     return null;
   }
 
   try {
-    return new Intl.DateTimeFormat("en-US", {
+    return new Intl.DateTimeFormat(locale, {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -64,6 +66,7 @@ function formatDateFromEpoch(seconds: number | null): string | null {
 }
 
 export function BillingManageClient() {
+  const { t, href, siteLanguage } = useLanguage();
   const { signedInEmail, accountPlan, remainingEvaluations, creditBalance, refreshAccountSummary } = useAccountSummary();
   const [billingPortalError, setBillingPortalError] = useState("");
   const [isOpeningBillingPortal, setIsOpeningBillingPortal] = useState(false);
@@ -90,8 +93,8 @@ export function BillingManageClient() {
   const hasProAccess = accountPlan === "pro";
   const hasManageableSubscription = billingStatus === "active" || billingStatus === "canceling";
   const shouldShowSubscriptionSection = hasProAccess || hasManageableSubscription;
-  const displayPlan = hasProAccess ? "Pro" : (creditBalance ?? 0) > 0 ? "Top-up" : "Free";
-  const billingStatusDateLabel = formatDateFromEpoch(billingStatusPeriodEnd);
+  const displayPlan = hasProAccess ? "Pro" : (creditBalance ?? 0) > 0 ? t("Top-up") : "Free";
+  const billingStatusDateLabel = formatDateFromEpoch(billingStatusPeriodEnd, siteLanguage);
 
   useEffect(() => {
     if (!signedInEmail) {
@@ -233,7 +236,7 @@ export function BillingManageClient() {
 
       window.location.assign(data.url);
     } catch {
-      setBillingPortalError("Unable to open subscription management right now. Please try again.");
+      setBillingPortalError(t("Unable to open subscription management right now. Please try again."));
     } finally {
       setIsOpeningBillingPortal(false);
     }
@@ -247,7 +250,7 @@ export function BillingManageClient() {
     }
 
     if (creditRefundSummary.refundableCredits <= 0 || creditRefundSummary.refundableAmount <= 0) {
-      setCreditRefundError("There are no unused purchased credits to refund.");
+      setCreditRefundError(t("There are no unused purchased credits to refund."));
       return;
     }
 
@@ -275,7 +278,7 @@ export function BillingManageClient() {
       setCreditRefundNotice(
         typeof data.message === "string" && data.message.trim()
           ? data.message
-          : "Unused purchased credits were refunded.",
+          : t("Unused purchased credits were refunded."),
       );
       setCreditRefundSummary((previous) => ({
         ...previous,
@@ -286,11 +289,11 @@ export function BillingManageClient() {
     } catch (error) {
       const code = error instanceof Error ? error.message : "CREDIT_REFUND_FAILED";
       if (code === "NO_REFUNDABLE_TOPUPS") {
-        setCreditRefundError("There are no unused purchased credits to refund.");
+        setCreditRefundError(t("There are no unused purchased credits to refund."));
       } else if (code === "CREDIT_REFUND_UNSUPPORTED") {
-        setCreditRefundError("Top-up refunds are not available in this environment.");
+        setCreditRefundError(t("Top-up refunds are not available in this environment."));
       } else {
-        setCreditRefundError("Unable to refund unused top-ups right now. Please try again.");
+        setCreditRefundError(t("Unable to refund unused top-ups right now. Please try again."));
       }
     } finally {
       setIsRefundingCredits(false);
@@ -302,38 +305,32 @@ export function BillingManageClient() {
       <section className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <SubpageBackHomeLink />
         <div className="mt-4">
-          <h1 className="text-2xl font-semibold text-slate-900">Billing and refunds</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Manage your subscription and refund unused purchased top-up credits from one place.
-          </p>
+          <h1 className="text-2xl font-semibold text-slate-900">{t("Billing and refunds")}</h1>
+          <p className="mt-2 text-sm text-slate-600"> {t("Manage your subscription and refund unused purchased top-up credits from one place.")} </p>
         </div>
 
         {!signedInEmail ? (
-          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            Log in first, then open this page from the account controls.
-            <div className="mt-3">
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"> {t("Log in first, then open this page from the account controls.")} <div className="mt-3">
               <Link
-                href="/pricing"
+                href={href("/pricing")}
                 className="inline-flex rounded-lg border border-amber-300 bg-white px-3 py-2 font-semibold text-amber-800 transition hover:bg-amber-100"
-              >
-                Go to pricing
-              </Link>
+              > {t("Go to pricing")} </Link>
             </div>
           </div>
         ) : (
           <div className="mt-6 space-y-6">
             <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-              <h2 className="text-lg font-semibold text-slate-900">Subscription</h2>
+              <h2 className="text-lg font-semibold text-slate-900">{t("Subscription")}</h2>
               <p className="mt-2 text-sm text-slate-600">
-                Account: <span className="font-semibold text-slate-900">{signedInEmail}</span>
+                {t("Account:")} <span className="font-semibold text-slate-900">{signedInEmail}</span>
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Plan</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{displayPlan}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("Plan")}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">{t(displayPlan)}</p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Evaluations left</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("Evaluations left")}</p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
                     {hasProAccess
                       ? "Unlimited"
@@ -346,28 +343,24 @@ export function BillingManageClient() {
               {shouldShowSubscriptionSection ? (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscription status</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("Subscription status")}</p>
                     {billingStatus === "canceling" ? (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
-                        Cancellation scheduled
-                      </span>
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800"> {t("Cancellation scheduled")} </span>
                     ) : null}
                   </div>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
                     {billingStatus === "canceling"
                       ? billingStatusDateLabel
-                        ? `Canceled, active until ${billingStatusDateLabel}`
-                        : "Canceled, active until the current billing period ends"
+                        ? t("Canceled, active until {date}", { date: billingStatusDateLabel })
+                        : t("Canceled, active until the current billing period ends")
                       : billingStatus === "active"
                         ? "Active"
                         : hasProAccess
-                          ? "Pro access is still syncing"
-                          : "No active subscription"}
+                          ? t("Pro access is still syncing")
+                          : t("No active subscription")}
                   </p>
                   {!hasProAccess && hasManageableSubscription ? (
-                    <p className="mt-2 text-sm text-slate-600">
-                      A Stripe subscription was found for this email, but this account is still showing Free access in RubriCheck.
-                    </p>
+                    <p className="mt-2 text-sm text-slate-600"> {t("A Stripe subscription was found for this email, but this account is still showing Free access in RubriCheck.")} </p>
                   ) : null}
                 </div>
               ) : null}
@@ -380,12 +373,12 @@ export function BillingManageClient() {
                 <>
                   <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                     {!hasManageableSubscription
-                      ? "Subscription details are still syncing. Please refresh shortly if you recently changed billing."
+                      ? t("Subscription details are still syncing. Please refresh shortly if you recently changed billing.")
                       : billingStatus === "canceling"
                       ? billingStatusDateLabel
-                        ? `Renewal is canceled. Pro access remains active until ${billingStatusDateLabel}.`
-                        : "Renewal is canceled. Pro access remains active until the current billing period ends."
-                      : "Canceling stops the next renewal. Pro access remains active until the current billing period ends."}
+                        ? t("Renewal is canceled. Pro access remains active until {date}.", { date: billingStatusDateLabel })
+                        : t("Renewal is canceled. Pro access remains active until the current billing period ends.")
+                      : t("Canceling stops the next renewal. Pro access remains active until the current billing period ends.")}
                   </p>
                   {billingPortalError ? (
                     <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -398,20 +391,18 @@ export function BillingManageClient() {
                     disabled={isOpeningBillingPortal || !hasManageableSubscription}
                     className="mt-4 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isOpeningBillingPortal ? "Opening billing..." : "Manage or cancel subscription"}
+                    {isOpeningBillingPortal ? t("Opening billing...") : t("Manage or cancel subscription")}
                   </button>
                 </>
               ) : (
-                <p className="mt-3 text-sm text-slate-600">This account does not currently have an active Pro subscription.</p>
+                <p className="mt-3 text-sm text-slate-600">{t("This account does not currently have an active Pro subscription.")}</p>
               )}
             </section>
 
             {accountPlan === "pro" ? null : (
               <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-                <h2 className="text-lg font-semibold text-slate-900">Unused top-up refund</h2>
-                <p className="mt-2 text-sm text-slate-600">
-                  Only unused purchased credits can be refunded. The first 3 free evaluations are never refundable.
-                </p>
+                <h2 className="text-lg font-semibold text-slate-900">{t("Unused top-up refund")}</h2>
+                <p className="mt-2 text-sm text-slate-600"> {t("Only unused purchased credits can be refunded. The first 3 free evaluations are never refundable.")} </p>
                 {creditRefundError ? (
                   <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                     {creditRefundError}
@@ -419,20 +410,17 @@ export function BillingManageClient() {
                 ) : null}
                 {creditRefundNotice ? (
                   <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-                    {creditRefundNotice}
+                    {t(creditRefundNotice)}
                   </p>
                 ) : null}
                 <p className="mt-3 text-sm text-slate-700">
                   {isLoadingCreditRefundSummary
-                    ? "Checking refundable top-ups..."
+                    ? t("Checking refundable top-ups...")
                     : creditRefundSummary.supported
                         ? creditRefundSummary.refundableCredits > 0
-                          ? `${creditRefundSummary.refundableCredits} purchased credits are refundable for ${formatCurrencyAmount(
-                              creditRefundSummary.refundableAmount,
-                              creditRefundSummary.currency,
-                            )}.`
-                          : "No unused purchased credits are currently refundable."
-                        : "Top-up refunds are not configured in this environment."}
+                          ? t("{count} purchased credits are refundable for {amount}.", { count: creditRefundSummary.refundableCredits, amount: formatCurrencyAmount(creditRefundSummary.refundableAmount, creditRefundSummary.currency, siteLanguage) })
+                          : t("No unused purchased credits are currently refundable.")
+                        : t("Top-up refunds are not configured in this environment.")}
                 </p>
                 <button
                   type="button"
@@ -446,7 +434,7 @@ export function BillingManageClient() {
                   }
                   className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isRefundingCredits ? "Refunding..." : "Refund unused top-ups"}
+                  {isRefundingCredits ? t("Refunding...") : t("Refund unused top-ups")}
                 </button>
               </section>
             )}
@@ -457,7 +445,7 @@ export function BillingManageClient() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <button
               type="button"
-              aria-label="Close subscription confirmation"
+              aria-label={t("Close subscription confirmation")}
               onClick={() => setShowBillingPortalConfirm(false)}
               className="absolute inset-0 bg-slate-950/45"
             />
@@ -467,28 +455,22 @@ export function BillingManageClient() {
               aria-labelledby="billing-portal-confirm-title"
               className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
             >
-              <h2 id="billing-portal-confirm-title" className="text-lg font-semibold text-slate-900">
-                Open Stripe billing?
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                You will be redirected to Stripe to manage or cancel your subscription. Continue?
-              </p>
+              <h2 id="billing-portal-confirm-title" className="text-lg font-semibold text-slate-900"> {t("Open Stripe billing?")} </h2>
+              <p className="mt-2 text-sm text-slate-600"> {t("You will be redirected to Stripe to manage or cancel your subscription. Continue?")} </p>
               <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setShowBillingPortalConfirm(false)}
                   disabled={isOpeningBillingPortal}
                   className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Cancel
-                </button>
+                > {t("Cancel")} </button>
                 <button
                   type="button"
                   onClick={() => void handleOpenBillingPortal()}
                   disabled={isOpeningBillingPortal}
                   className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isOpeningBillingPortal ? "Opening billing..." : "Continue"}
+                  {isOpeningBillingPortal ? t("Opening billing...") : t("Continue")}
                 </button>
               </div>
             </section>
@@ -498,7 +480,7 @@ export function BillingManageClient() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <button
               type="button"
-              aria-label="Close top-up refund confirmation"
+              aria-label={t("Close top-up refund confirmation")}
               onClick={() => setShowCreditRefundConfirm(false)}
               className="absolute inset-0 bg-slate-950/45"
             />
@@ -508,14 +490,9 @@ export function BillingManageClient() {
               aria-labelledby="credit-refund-confirm-title"
               className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
             >
-              <h2 id="credit-refund-confirm-title" className="text-lg font-semibold text-slate-900">
-                Refund unused top-ups?
-              </h2>
+              <h2 id="credit-refund-confirm-title" className="text-lg font-semibold text-slate-900"> {t("Refund unused top-ups?")} </h2>
               <p className="mt-2 text-sm text-slate-600">
-                {`This will refund ${creditRefundSummary.refundableCredits} unused purchased credits for ${formatCurrencyAmount(
-                  creditRefundSummary.refundableAmount,
-                  creditRefundSummary.currency,
-                )}. Continue?`}
+                {t("This will refund {count} unused purchased credits for {amount}. Continue?", { count: creditRefundSummary.refundableCredits, amount: formatCurrencyAmount(creditRefundSummary.refundableAmount, creditRefundSummary.currency, siteLanguage) })}
               </p>
               <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
@@ -523,16 +500,14 @@ export function BillingManageClient() {
                   onClick={() => setShowCreditRefundConfirm(false)}
                   disabled={isRefundingCredits}
                   className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Cancel
-                </button>
+                > {t("Cancel")} </button>
                 <button
                   type="button"
                   onClick={() => void handleRefundTopUps()}
                   disabled={isRefundingCredits}
                   className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isRefundingCredits ? "Refunding..." : "Continue"}
+                  {isRefundingCredits ? t("Refunding...") : t("Continue")}
                 </button>
               </div>
             </section>

@@ -7,16 +7,20 @@ let account: string | null = "student@example.com";
 let structures = 0, saves = 0, touches = 0, reserves = 0, trials = 0;
 let failLibrary = false, failEvaluation = false;
 let selected: Rubric | undefined;
+let selectedLanguage: string | undefined;
+let savedLanguage = "ko";
 const settlements: boolean[] = [];
 const custom = { criteria: [{ name: "Custom focus", max_score: 60, description: "Focus" }, { name: "Sources", max_score: 40, description: "Sources" }] };
 const savedId = "a".repeat(64);
 mock.module("../../../src/lib/creditSession.ts", { namedExports: { getCreditEmailFromCookie: () => account } });
+mock.module("../../../src/lib/languagePreferences.ts", { namedExports: { getLanguagePreferences: async () => ({ siteLanguage: "en", resultLanguage: savedLanguage }) } });
 mock.module("../../../lib/rubricStructuring.ts", { namedExports: {
   hashNormalizedEmail: () => "hash", structureRubric: async () => { structures++; return custom; },
 } });
 mock.module("../../../lib/evaluation.ts", { namedExports: {
-  evaluateAssignment: async (rubric: Rubric) => {
+  evaluateAssignment: async (rubric: Rubric, _text: string, _mode: string, options: { language: string }) => {
     selected = rubric;
+    selectedLanguage = options.language;
     if (failEvaluation) throw Error("EVALUATION_FAILED");
     return { summary: "The draft has a clear focus.", top_improvements: ["Explain examples", "Support claims", "Clarify wording"],
       criteria_scores: rubric.criteria.map(row => ({ name: row.name, score: Math.floor(row.max_score * 0.8), estimated_range: [Math.floor(row.max_score * 0.7), Math.floor(row.max_score * 0.9)], rationale: "Relevant discussion.", feedback: "Add supporting detail." })) };
@@ -74,10 +78,12 @@ test("rubric sources use existing evaluation, access, and billing paths", async 
   await t.test("multipart general grading accepts assignment-only uploads", async () => {
     const form = new FormData();
     form.set("rubricSource", "general");
+    form.set("resultLanguage", "ms");
     form.set("assignmentInstructions", "Discuss sleep and learning.");
     form.set("assignment", new File(["Sufficient sleep supports student learning and concentration. Schools should consider later start times because rested students can focus better on their lessons."], "essay.txt", { type: "text/plain" }));
     assert.equal((await POST(new Request("https://example.com", { method: "POST", body: form }))).status, 200);
     assert.match(selected!.criteria[0].description, /Discuss sleep/);
+    assert.equal(selectedLanguage, "ms");
   });
   await t.test("missing, mixed, malformed sources and excessive instructions cannot reserve usage", async () => {
     const before = reserves;
@@ -121,6 +127,18 @@ test("rubric sources use existing evaluation, access, and billing paths", async 
     assert.equal((await POST(request({ rubricSource: "general" }))).status, 500);
     assert.equal(settlements.at(-1), false); assert.equal(saves, 1);
     failEvaluation = false;
+  });
+  await t.test("grading uses saved defaults or an explicit language and rejects unsupported languages before billing", async () => {
+    savedLanguage = "ko";
+    const restored = await POST(request({ rubricSource: "general" }));
+    assert.equal((await restored.json()).language, "ko");
+    assert.equal(selectedLanguage, "ko");
+    const explicit = await POST(request({ rubricSource: "general", resultLanguage: "en" }));
+    assert.equal((await explicit.json()).language, "en");
+    assert.equal(selectedLanguage, "en");
+    const before = reserves;
+    assert.equal((await POST(request({ rubricSource: "general", resultLanguage: "id" }))).status, 400);
+    assert.equal(reserves, before);
   });
   await t.test("Strict access remains locked; guests can preview general grading without account charges", async () => {
     const before = reserves;

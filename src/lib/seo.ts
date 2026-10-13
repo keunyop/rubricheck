@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { FREE_TRIAL_LIMIT } from "../config/plans";
+import { localizedPath, LOCALES, type Locale } from "../i18n/config";
+import { translate } from "../i18n/translate";
 
 export const SITE_NAME = "RubriCheck";
 export const SITE_URL = "https://rubricheck.com";
@@ -17,6 +19,7 @@ export type BreadcrumbItem = {
 };
 
 type BuildMetadataInput = {
+  locale?: Locale;
   title: string;
   description: string;
   path: string;
@@ -24,12 +27,14 @@ type BuildMetadataInput = {
 };
 
 type BuildWebPageSchemaInput = {
+  locale?: Locale;
   title: string;
   description: string;
   path: string;
 };
 
 type BuildSoftwareApplicationSchemaInput = {
+  locale?: Locale;
   description: string;
   path?: string;
   name?: string;
@@ -52,24 +57,29 @@ export function buildMetadata({
   description,
   path,
   keywords = [],
+  locale = "en",
 }: BuildMetadataInput): Metadata {
-  const canonicalPath = normalizePath(path);
+  const canonicalPath = localizedPath(normalizePath(path), locale);
+  title = translate(locale, title);
+  description = translate(locale, description);
   const imageUrl = absoluteUrl(DEFAULT_OG_IMAGE_PATH);
 
   return {
     title,
-    description,
-    keywords,
+    description: translate(locale, description),
+    keywords: keywords.map(keyword => translate(locale, keyword)),
     alternates: {
       canonical: absoluteUrl(canonicalPath),
+      languages: languageAlternates(path),
     },
     openGraph: {
       type: "website",
-      locale: "en_US",
+      locale: { en: "en_US", ko: "ko_KR", ms: "ms_MY" }[locale],
+      alternateLocale: LOCALES.filter(value => value !== locale).map(value => ({ en: "en_US", ko: "ko_KR", ms: "ms_MY" })[value]),
       url: absoluteUrl(canonicalPath),
       siteName: SITE_NAME,
       title,
-      description,
+      description: translate(locale, description),
       images: [
         {
           url: imageUrl,
@@ -82,7 +92,7 @@ export function buildMetadata({
     twitter: {
       card: "summary_large_image",
       title,
-      description,
+      description: translate(locale, description),
       images: [imageUrl],
     },
   };
@@ -130,7 +140,7 @@ export function buildWebSiteSchema() {
     publisher: { "@id": absoluteUrl("/#organization") },
     name: SITE_NAME,
     url: SITE_URL,
-    inLanguage: "en-US",
+    inLanguage: ["en", "ko-KR", "ms-MY"],
   };
 }
 
@@ -138,6 +148,7 @@ export function buildSoftwareApplicationSchema({
   description,
   path = "/",
   name = SITE_NAME,
+  locale = "en",
 }: BuildSoftwareApplicationSchemaInput) {
   return {
     "@context": "https://schema.org",
@@ -147,13 +158,13 @@ export function buildSoftwareApplicationSchema({
     name,
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
-    url: absoluteUrl(path),
-    description,
-    inLanguage: "en-US",
+    url: absoluteUrl(localizedPath(path, locale)),
+    description: translate(locale, description),
+    inLanguage: locale,
     offers: {
       "@type": "Offer",
-      name: `Free trial: ${FREE_TRIAL_LIMIT} evaluations`,
-      url: absoluteUrl("/pricing"),
+      name: translate(locale, "Free trial: {count} evaluations", { count: FREE_TRIAL_LIMIT }),
+      url: absoluteUrl(localizedPath("/pricing", locale)),
       price: "0",
       priceCurrency: "USD",
     },
@@ -164,22 +175,24 @@ export function buildWebPageSchema({
   title,
   description,
   path,
+  locale = "en",
 }: BuildWebPageSchemaInput) {
+  path = localizedPath(path, locale);
   return {
     "@context": "https://schema.org",
     "@type": "WebPage",
     "@id": `${absoluteUrl(path)}#webpage`,
     about: { "@id": absoluteUrl("/#software") },
-    name: title,
-    url: absoluteUrl(path),
-    description,
+    name: translate(locale, title),
+    url: absoluteUrl(localizedPath(path, locale)),
+    description: translate(locale, description),
     isPartOf: {
       "@type": "WebSite",
       "@id": absoluteUrl("/#website"),
       name: SITE_NAME,
       url: SITE_URL,
     },
-    inLanguage: "en-US",
+    inLanguage: locale,
   };
 }
 
@@ -194,4 +207,8 @@ export function buildBreadcrumbSchema(items: BreadcrumbItem[]) {
       item: absoluteUrl(item.path),
     })),
   };
+}
+
+export function languageAlternates(path: string) {
+  return { en: absoluteUrl(localizedPath(path, "en")), ko: absoluteUrl(localizedPath(path, "ko")), "ko-KR": absoluteUrl(localizedPath(path, "ko")), ms: absoluteUrl(localizedPath(path, "ms")), "ms-MY": absoluteUrl(localizedPath(path, "ms")), "x-default": absoluteUrl(localizedPath(path, "en")) };
 }

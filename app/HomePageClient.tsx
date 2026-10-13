@@ -14,6 +14,10 @@ import {
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useLanguage } from "./components/LanguageProvider";
+import { translate } from "../src/i18n/translate";
+import type { Locale } from "../src/i18n/config";
+import { ResultLanguageSelect, useResultTranslation } from "./components/ResultLanguageSelect";
 import { useAccountSummary } from "./components/AccountSummaryProvider";
 import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ProBadge } from "./components/ProBadge";
@@ -95,6 +99,7 @@ type CriteriaResult = {
 };
 
 type GradeResult = {
+  language?: import("../src/i18n/config").Locale;
   evaluation_id?: string;
   title: string;
   access_tier: AccountFeatureTier;
@@ -494,7 +499,8 @@ function drawShareLogoMark(ctx: CanvasRenderingContext2D, x: number, y: number):
   }
 }
 
-function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
+function buildShareFallbackCanvas(result: GradeResult, locale: Locale = "en"): HTMLCanvasElement {
+  const t = (message: string, values?: Record<string, string | number>) => translate(locale, message, values);
   const width = 1320;
   const outerPadding = 40;
   const panelInset = 28;
@@ -531,13 +537,13 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
   const lockedImprovementCount = getLockedTopImprovementsCount(result);
   const lockedImprovementsNote =
     lockedImprovementCount > 0
-      ? wrapCanvasText(ctx, `${lockedImprovementCount} more improvement priorities are locked.`, summaryWidth - 8)
+      ? wrapCanvasText(ctx, t("{count} more improvement priorities are locked.", { count: lockedImprovementCount }), summaryWidth - 8)
       : [];
 
   const criteriaCards = criteriaItems.map((item) => {
     ctx.font = "700 24px system-ui, -apple-system, Segoe UI, sans-serif";
     const estimatedRangeText = formatEstimatedRangeDisplay(item.estimated_range, "~");
-    const titleText = `${item.name} (${estimatedRangeText} / ${item.max_score})`;
+    const titleText = `${result.grading_basis === "general" ? t(item.name) : item.name} (${estimatedRangeText} / ${item.max_score})`;
     const titleLines = wrapCanvasText(ctx, titleText, criteriaTextWidth);
 
     ctx.font = "400 21px system-ui, -apple-system, Segoe UI, sans-serif";
@@ -560,12 +566,14 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
     return { titleLines, feedbackLines, detailLineGroups, height };
   });
 
+  ctx.font = "600 18px system-ui, -apple-system, Segoe UI, sans-serif";
+  const rangeNoticeLines = wrapCanvasText(ctx, t("AI estimate - not a calibrated confidence interval"), summaryWidth);
   const summaryHeight = getWrappedTextHeight(summaryLines, bodyLineHeight);
   const improvementsHeight = improvementLines.reduce(
     (total, lines) => total + Math.max(bodyLineHeight, getWrappedTextHeight(lines, detailLineHeight)) + 16,
     0,
   ) + (lockedImprovementsNote.length > 0 ? getWrappedTextHeight(lockedImprovementsNote, 22) + 18 : 0);
-  const leftColumnHeight = 316 + summaryHeight + improvementsHeight + sectionGap * 2 + leftBottomPadding;
+  const leftColumnHeight = 316 + getWrappedTextHeight(rangeNoticeLines, 23) + summaryHeight + improvementsHeight + sectionGap * 2 + leftBottomPadding;
   const rightColumnHeight =
     124 + criteriaCards.reduce((total, card) => total + card.height, 0) + Math.max(0, criteriaCards.length - 1) * 16;
   const height = Math.max(760, outerPadding * 2 + Math.max(leftColumnHeight, rightColumnHeight));
@@ -626,12 +634,12 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
   leftCursorY += 96;
   ctx.fillStyle = "rgba(224,242,254,0.78)";
   ctx.font = "600 18px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("AI estimate - not a calibrated confidence interval", leftTextX, leftCursorY);
+  leftCursorY = drawWrappedText(ctx, rangeNoticeLines, leftTextX, leftCursorY, 23);
 
   leftCursorY += 46;
   ctx.fillStyle = "rgba(255,255,255,0.72)";
   ctx.font = "700 16px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("Summary", leftTextX, leftCursorY);
+  ctx.fillText(t("Summary"), leftTextX, leftCursorY);
 
   leftCursorY += 28;
   ctx.fillStyle = "#e2e8f0";
@@ -641,7 +649,7 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
   leftCursorY += sectionGap;
   ctx.fillStyle = "rgba(255,255,255,0.72)";
   ctx.font = "700 16px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("Top improvements", leftTextX, leftCursorY);
+  ctx.fillText(t("Top improvements"), leftTextX, leftCursorY);
 
   leftCursorY += 28;
   ctx.fillStyle = "#e2e8f0";
@@ -670,14 +678,14 @@ function buildShareFallbackCanvas(result: GradeResult): HTMLCanvasElement {
 
   ctx.fillStyle = "#0f172a";
   ctx.font = "700 28px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText("Criteria", rightTextX, rightCursorY);
+  ctx.fillText(t("Criteria"), rightTextX, rightCursorY);
 
   rightCursorY += 16;
   ctx.fillStyle = "#475569";
   ctx.font = "500 17px system-ui, -apple-system, Segoe UI, sans-serif";
   rightCursorY = drawWrappedText(
     ctx,
-    wrapCanvasText(ctx, "A compact summary designed for sharing before you revise and resubmit.", rightPanelWidth - 84),
+    wrapCanvasText(ctx, t("A compact summary designed for sharing before you revise and resubmit."), rightPanelWidth - 84),
     rightTextX,
     rightCursorY + 22,
     22,
@@ -815,6 +823,9 @@ function drawImageContained(
 }
 
 export default function Home() {
+  const { t, href, siteLanguage, resultLanguage, preferencesLoading } = useLanguage();
+  const languageRef = useRef(siteLanguage);
+  languageRef.current = siteLanguage;
   const evaluationAttemptRef = useRef<{ inputs: unknown[]; key: string } | null>(null);
   const rubricInputRef = useRef<HTMLInputElement | null>(null);
   const rubricCameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -850,6 +861,8 @@ export default function Home() {
 
   const [loadingStep, setLoadingStep] = useState<LoadingStep>("idle");
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
+  const translation = useResultTranslation(gradeResult, gradeResult?.evaluation_id);
+  const displayedResult = translation.result;
   const [sampleSelected, setSampleSelected] = useState(false);
   const [trialPreview, setTrialPreview] = useState<TrialPreview | null>(null);
   const [trialUsed, setTrialUsed] = useState(false);
@@ -972,23 +985,23 @@ export default function Home() {
   function ensureEvaluationAccess(selectedMode: GradingMode): boolean {
 
     if (!hasLoadedAccountSummary) {
-      setError("Checking login status. Please try again.");
+      setError(t("Checking login status. Please try again."));
       setErrorCode("");
       return false;
     }
 
     if (!signedInEmail && selectedMode === "standard") {
-      if (!resultReady) { setError("Checking preview availability. Please try again."); return false; }
+      if (!resultReady) { setError(t("Checking preview availability. Please try again.")); return false; }
       if (trialUsed) {
-        openLoginModal("Your free preview has been used. Sign up for 3 free checks · No card required.");
+        openLoginModal(t("Your free preview has been used. Sign up for 3 free checks · No card required."));
         return false;
       }
       return true;
     }
     if (!signedInEmail) {
-      setError("Log in before requesting an evaluation.");
+      setError(t("Log in before requesting an evaluation."));
       setErrorCode("AUTH_REQUIRED");
-      maybeOpenLoginModal("Log in before requesting an evaluation.");
+      maybeOpenLoginModal(t("Log in before requesting an evaluation."));
       return false;
     }
 
@@ -997,10 +1010,10 @@ export default function Home() {
 
   function openOperationsLimitMessage(): string {
     if (SHOW_ACCOUNT_AND_PRICING) {
-      return "Check pricing options for Pro and one-time top-ups.";
+      return t("Check pricing options for Pro and one-time top-ups.");
     }
 
-    return "Free trial limit reached for this device.";
+    return t("Free trial limit reached for this device.");
   }
 
   function shouldShowPricingCta(): boolean {
@@ -1340,7 +1353,7 @@ export default function Home() {
             setDraftRestoreNotice(
               data.mode === "credits"
                 ? data.creditsAdded && data.creditsAdded > 0
-                  ? `Top-up applied. ${data.creditsAdded} evaluation credits were added to your account.`
+                  ? translate(languageRef.current, "Top-up applied. {count} evaluation credits were added to your account.", { count: data.creditsAdded })
                   : "Top-up is now available on this account."
                 : "Pro is now active on this device.",
             );
@@ -1560,7 +1573,7 @@ export default function Home() {
       await draftFilesSave.current.catch(() => {});
       if (rubricFiles.length || assignmentFiles.length) await saveDraftFiles(draftFileKey.current, rubricFiles, assignmentFiles);
     } catch {
-      setDraftRestoreNotice("Your browser could not save these inputs. Keep this page open and open Pricing in a new tab.");
+      setDraftRestoreNotice(t("Your browser could not save these inputs. Keep this page open and open Pricing in a new tab."));
       return;
     }
     setShowLoginModal(false);
@@ -1568,7 +1581,7 @@ export default function Home() {
     setShowAccountMenu(false);
     setShowBillingMenu(false);
     const id = gradeResult?.evaluation_id;
-    window.location.assign(id ? "/pricing?evaluation_id=" + encodeURIComponent(id) : "/pricing");
+    window.location.assign(href(id ? "/pricing?evaluation_id=" + encodeURIComponent(id) : "/pricing"));
   }
 
   function toggleRewriteSection(criteriaKey: string) {
@@ -1646,7 +1659,7 @@ export default function Home() {
     }
 
     if (!evaluationCaptureRef.current) {
-      const fallbackCanvas = buildShareFallbackCanvas(gradeResult);
+      const fallbackCanvas = buildShareFallbackCanvas(displayedResult ?? gradeResult, siteLanguage);
       return fallbackCanvas.toDataURL("image/png");
     }
 
@@ -1667,7 +1680,7 @@ export default function Home() {
       // Fallback rendering below.
     }
 
-    const fallbackCanvas = buildShareFallbackCanvas(gradeResult);
+    const fallbackCanvas = buildShareFallbackCanvas(displayedResult ?? gradeResult, siteLanguage);
     return fallbackCanvas.toDataURL("image/png");
   }
 
@@ -1868,7 +1881,7 @@ export default function Home() {
     setShareFeedbackWithReset("idle");
 
     try {
-      const canvas = buildShareFallbackCanvas(gradeResult);
+      const canvas = buildShareFallbackCanvas(displayedResult ?? gradeResult, siteLanguage);
       const imageBlob = await canvasToBlob(canvas);
       if (!imageBlob || imageBlob.size === 0) {
         throw new Error("IMAGE_BLOB_EMPTY");
@@ -1998,77 +2011,77 @@ export default function Home() {
     const message = data.code ?? data.error;
 
     if (message === "TRIAL_PENDING" || message === "TRIAL_INPUT_TOO_LONG" || message === "TRIAL_UNAVAILABLE") {
-      return data.message || "The preview is temporarily unavailable. Please retry shortly.";
+      return data.message || t("The preview is temporarily unavailable. Please retry shortly.");
     }
 
     if (message === "EVALUATION_PENDING") {
-      return "Your evaluation is still running. Please wait a moment and retry.";
+      return t("Your evaluation is still running. Please wait a moment and retry.");
     }
     if (message === "EVALUATION_ALREADY_COMPLETED") {
-      return "This evaluation already completed and was only counted once. Check your saved result, or submit again to start a new evaluation.";
+      return t("This evaluation already completed and was only counted once. Check your saved result, or submit again to start a new evaluation.");
     }
     if (message === "OPENAI_TIMEOUT") {
-      return "The AI review is taking longer than expected. Please retry.";
+      return t("The AI review is taking longer than expected. Please retry.");
     }
 
     if (message === "REDIS_UNAVAILABLE") {
-      return "We are temporarily verifying limits in safe mode. Please retry shortly.";
+      return t("We are temporarily verifying limits in safe mode. Please retry shortly.");
     }
 
     if (message === "SERVICE_UNAVAILABLE") {
-      return "Service is temporarily unavailable. Please try again shortly.";
+      return t("Service is temporarily unavailable. Please try again shortly.");
     }
 
     if (message === "MISSING_INPUT") {
-      return "Please provide both a rubric and an assignment.";
+      return t("Please provide both a rubric and an assignment.");
     }
 
     if (message === "FILE_PARSE_FAILED" || message === "TEXT_EXTRACTION_FAILED") {
-      const target = data.field === "rubric" ? "Rubric" : "Assignment";
-      return `Text extraction failed for ${target}. Try a clearer photo, upload another format, or paste text.`;
+      const target = data.field === "rubric" ? t("Rubric") : t("Assignment");
+      return t("Text extraction failed for {target}. Try a clearer photo, upload another format, or paste text.", { target });
     }
 
     if (message === "OCR_UNAVAILABLE") {
-      return "Image OCR is temporarily unavailable. Please retry or paste text directly.";
+      return t("Image OCR is temporarily unavailable. Please retry or paste text directly.");
     }
 
     if (message === "UNSUPPORTED_FILE_TYPE") {
-      return "Unsupported file type. Please upload PDF, DOCX, TXT, PNG, JPG, or JPEG.";
+      return t("Unsupported file type. Please upload PDF, DOCX, TXT, PNG, JPG, or JPEG.");
     }
 
     if (message === "FILE_TOO_LARGE") {
-      return "File is too large. Max size is 10MB per file.";
+      return t("File is too large. Max size is 10MB per file.");
     }
 
     if (message === "FILE_TOTAL_TOO_LARGE") {
-      return "Total upload is too large. Keep each section under 30MB.";
+      return t("Total upload is too large. Keep each section under 30MB.");
     }
 
     if (message === "MULTI_FILE_IMAGES_ONLY") {
-      return "Multiple files are supported for photos only. Upload one PDF/DOCX/TXT file or multiple images.";
+      return t("Multiple files are supported for photos only. Upload one PDF/DOCX/TXT file or multiple images.");
     }
 
     if (message === "RUBRIC_NOT_FOUND") {
-      return "This saved rubric is no longer available. Choose another rubric from My rubrics.";
+      return t("This saved rubric is no longer available. Choose another rubric from My rubrics.");
     }
 
     if (message === "RUBRIC_LIBRARY_UNAVAILABLE") {
-      return "Could not open your saved rubric. Please try again.";
+      return t("Could not open your saved rubric. Please try again.");
     }
 
     if (message === "INVALID_MODE") {
-      return "Invalid grading mode. Please select Standard or Strict Mode.";
+      return t("Invalid grading mode. Please select Standard or Strict Mode.");
     }
 
     if (message === "INVALID_JSON" || message === "INVALID_INPUT") {
-      return "Please provide valid rubric and assignment inputs.";
+      return t("Please provide valid rubric and assignment inputs.");
     }
 
     if (message === "FREE_LIMIT_REACHED") {
-      return "You've used the 3 free trial evaluations for this account. Upgrade to Pro or buy credits to continue.";
+      return t("You've used the 3 free trial evaluations for this account. Upgrade to Pro or buy credits to continue.");
     }
 
-    return "Something went wrong. Please try again.";
+    return t("Something went wrong. Please try again.");
   }
 
   function isGradeResult(value: unknown, mode: GradingMode): value is GradeResult {
@@ -2160,6 +2173,7 @@ export default function Home() {
   }
 
   async function submitGrade(selectedMode: GradingMode) {
+    if (preferencesLoading) return;
     if (evaluationInFlightRef.current) return;
     if (isLoading || !draftReady || isResumingCheckout) {
       return;
@@ -2201,7 +2215,7 @@ export default function Home() {
       assignmentMode === "file" ? assignmentFiles.length > 0 : assignmentText.trim().length > 0;
 
     if (!rubricProvided || !assignmentProvided) {
-      setError(rubricMode === "general" ? "Please provide an assignment." : "Please provide both a rubric and an assignment.");
+      setError(rubricMode === "general" ? t("Please provide an assignment.") : t("Please provide both a rubric and an assignment."));
       return;
     }
 
@@ -2228,7 +2242,7 @@ export default function Home() {
     try {
       setLoadingStep("uploading");
       // Preserve the key after failures; changed inputs or a completed result start a new attempt.
-      const inputs = [draftProjectId, selectedMode, rubricMode, savedRubric?.id, assignmentInstructions.trim(), assignmentMode, rubricText.trim(), assignmentText.trim(), ...rubricFiles, ...assignmentFiles];
+      const inputs = [draftProjectId, selectedMode, resultLanguage, rubricMode, savedRubric?.id, assignmentInstructions.trim(), assignmentMode, rubricText.trim(), assignmentText.trim(), ...rubricFiles, ...assignmentFiles];
       const previous = evaluationAttemptRef.current;
       if (!previous || previous.inputs.length !== inputs.length || inputs.some((value, index) => value !== previous.inputs[index])) {
         evaluationAttemptRef.current = { inputs, key: crypto.randomUUID() };
@@ -2251,6 +2265,7 @@ export default function Home() {
             ...(rubricMode === "general" ? { assignmentInstructions: assignmentInstructions.trim() } : {}),
             assignmentText: assignmentText.trim(),
             mode: selectedMode,
+            resultLanguage,
           }),
         });
       } else {
@@ -2261,7 +2276,7 @@ export default function Home() {
 
         if (rubricMode === "file") {
           if (rubricFiles.length === 0) {
-            setError("Please provide both a rubric and an assignment.");
+            setError(t("Please provide both a rubric and an assignment."));
             return;
           }
           for (const file of rubricFiles) {
@@ -2273,7 +2288,7 @@ export default function Home() {
 
         if (assignmentMode === "file") {
           if (assignmentFiles.length === 0) {
-            setError("Please provide both a rubric and an assignment.");
+            setError(t("Please provide both a rubric and an assignment."));
             return;
           }
           for (const file of assignmentFiles) {
@@ -2284,6 +2299,7 @@ export default function Home() {
         }
 
         formData.append("mode", selectedMode);
+        formData.append("resultLanguage", resultLanguage);
 
         requestPromise = fetch("/api/evaluate", {
           method: "POST",
@@ -2327,11 +2343,11 @@ export default function Home() {
       if ((apiCode || apiError) === "TRIAL_LIMIT_REACHED") {
         setTrialUsed(true);
         setTrialRestoreAttempt(value => value + 1);
-        openLoginModal("Your free preview has been used. Sign up for 3 free checks · No card required.");
+        openLoginModal(t("Your free preview has been used. Sign up for 3 free checks · No card required."));
         return;
       }
       if ((apiCode || apiError) === "SIGN_IN_REQUIRED" || (apiCode || apiError) === "AUTH_REQUIRED") {
-        openLoginModal("Log in to grade your assignment.");
+        openLoginModal(t("Log in to grade your assignment."));
         setError("");
         setErrorCode("");
         return;
@@ -2388,7 +2404,7 @@ export default function Home() {
       }
 
       if (!isGradeResult(data, selectedMode)) {
-        setError("Something went wrong. Please try again.");
+        setError(t("Something went wrong. Please try again."));
         return;
       }
 
@@ -2398,13 +2414,13 @@ export default function Home() {
       setGradeResult(data);
       setResultMode(selectedMode);
       if (response.headers.get("x-history-unavailable") === "1") {
-        setWorkspaceNotice("Your result is ready, but could not be added to Recents. Keep this page open and try again.");
+        setWorkspaceNotice(t("Your result is ready, but could not be added to Recents. Keep this page open and try again."));
       }
       if (response.headers.get("x-recovery-unavailable") === "1") {
-        setDraftRestoreNotice("Your result is ready, but server recovery is temporarily unavailable. Keep your inputs for a later evaluation.");
+        setDraftRestoreNotice(t("Your result is ready, but server recovery is temporarily unavailable. Keep your inputs for a later evaluation."));
       }
       if (response.headers.get("x-rubric-library-unavailable") === "1") {
-        setDraftRestoreNotice("Your result is ready, but the rubric could not be saved to My rubrics. Keep your original rubric for reuse.");
+        setDraftRestoreNotice(t("Your result is ready, but the rubric could not be saved to My rubrics. Keep your original rubric for reuse."));
       }
       const elapsedMs = performance.now() - startedAt;
       const requestId = response.headers.get("x-request-id") ?? "unknown";
@@ -2415,7 +2431,7 @@ export default function Home() {
       });
     } catch (error) {
       console.error("EVALUATION_REQUEST_FAILED", error);
-      setError("Something went wrong. Please try again.");
+      setError(t("Something went wrong. Please try again."));
     } finally {
       evaluationInFlightRef.current = false;
       for (const timer of stepTimers) {
@@ -2490,7 +2506,7 @@ export default function Home() {
 
     const normalizedEmail = restoreEmail.trim().toLowerCase();
     if (!isValidEmail(normalizedEmail)) {
-      setRestoreError("Please enter a valid email.");
+      setRestoreError(t("Please enter a valid email."));
       return;
     }
 
@@ -2515,29 +2531,29 @@ export default function Home() {
         setRestoreCode(data.devCode);
         setRestoreInfo(`Development code: ${data.devCode}`);
       } else {
-        setRestoreInfo(data.message ?? "If that email can receive recovery codes, a code has been sent.");
+        setRestoreInfo(data.message ?? t("If that email can receive recovery codes, a code has been sent."));
       }
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_START_FAILED";
       if (code === "RATE_LIMITED") {
-        setRestoreError("Too many requests. Please wait and try again.");
+        setRestoreError(t("Too many requests. Please wait and try again."));
         return;
       }
       if (code === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED") {
-        setRestoreError("Restore email delivery is not configured right now.");
+        setRestoreError(t("Restore email delivery is not configured right now."));
         return;
       }
       if (code === "OTP_EMAIL_SEND_FAILED") {
-        setRestoreError("Unable to send the verification email right now. Please try again shortly.");
+        setRestoreError(t("Unable to send the verification email right now. Please try again shortly."));
         return;
       }
 
       if (code === "SERVICE_UNAVAILABLE") {
-        setRestoreError("Restore is temporarily unavailable. Please try again shortly.");
+        setRestoreError(t("Restore is temporarily unavailable. Please try again shortly."));
         return;
       }
 
-      setRestoreError("Unable to start restore right now. Please try again.");
+      setRestoreError(t("Unable to start restore right now. Please try again."));
     } finally {
       setIsStartingRestore(false);
     }
@@ -2551,13 +2567,13 @@ export default function Home() {
     const normalizedCode = restoreCode.trim();
 
     if (!isValidEmail(normalizedEmail)) {
-      setRestoreError("Please enter a valid email.");
+      setRestoreError(t("Please enter a valid email."));
       setRestoreStep("email");
       return;
     }
 
     if (!/^\d{6}$/.test(normalizedCode)) {
-      setRestoreError("Enter the 6-digit code.");
+      setRestoreError(t("Enter the 6-digit code."));
       return;
     }
 
@@ -2583,7 +2599,7 @@ export default function Home() {
       if (data.ok === true && data.plan === "pro" && data.status === "active") {
         setHasProAccess(true);
         setEntitlementStatus("active");
-        setProRestoreNotice("Logged in on this device.");
+        setProRestoreNotice(t("Logged in on this device."));
         setRestoreCode("");
         setRestoreStep("email");
         setShowLoginModal(false);
@@ -2593,7 +2609,7 @@ export default function Home() {
 
       setHasProAccess(false);
       setEntitlementStatus("needs_restore");
-      setProRestoreNotice("Logged in on this device.");
+      setProRestoreNotice(t("Logged in on this device."));
       setRestoreCode("");
       setRestoreStep("email");
       setShowLoginModal(false);
@@ -2601,27 +2617,27 @@ export default function Home() {
     } catch (error) {
       const code = error instanceof Error ? error.message : "ENTITLEMENT_RESTORE_VERIFY_FAILED";
       if (code === "INVALID_CODE") {
-        setRestoreError("Invalid or expired code. Please try again.");
+        setRestoreError(t("Invalid or expired code. Please try again."));
         return;
       }
       if (code === "RATE_LIMITED") {
-        setRestoreError("Too many attempts. Please wait and try again.");
+        setRestoreError(t("Too many attempts. Please wait and try again."));
         return;
       }
       if (code === "OTP_EMAIL_PROVIDER_NOT_CONFIGURED") {
-        setRestoreError("Restore email delivery is not configured right now.");
+        setRestoreError(t("Restore email delivery is not configured right now."));
         return;
       }
       if (code === "OTP_EMAIL_SEND_FAILED") {
-        setRestoreError("Unable to send the verification email right now. Please try again shortly.");
+        setRestoreError(t("Unable to send the verification email right now. Please try again shortly."));
         return;
       }
       if (code === "SERVICE_UNAVAILABLE") {
-        setRestoreError("Restore is temporarily unavailable. Please try again shortly.");
+        setRestoreError(t("Restore is temporarily unavailable. Please try again shortly."));
         return;
       }
 
-      setRestoreError("Unable to verify restore right now. Please try again.");
+      setRestoreError(t("Unable to verify restore right now. Please try again."));
     } finally {
       setIsVerifyingRestore(false);
     }
@@ -2674,7 +2690,7 @@ export default function Home() {
     try {
       const response = await fetch("/api/workspace/assignments/" + encodeURIComponent(item.id), { cache: "no-store" });
       const data = await response.json();
-      if (!response.ok || !isGradeResult(data.result, data.mode)) throw new Error(data.message || "Could not open this assignment.");
+      if (!response.ok || !isGradeResult(data.result, data.mode)) throw new Error(data.message || t("Could not open this assignment."));
       if (request !== openRequestRef.current || currentAccountRef.current !== account) return;
       setResultOwnerEmail(account);
       setGradeResult(data.result); setResultMode(data.mode);
@@ -2684,7 +2700,7 @@ export default function Home() {
       updateWorkspaceUrl(item.id);
       window.scrollTo({ top: 0, behavior: "instant" });
     } catch (error) {
-      if (request === openRequestRef.current && currentAccountRef.current === account) setWorkspaceNotice(error instanceof Error ? error.message : "Could not open this assignment.");
+      if (request === openRequestRef.current && currentAccountRef.current === account) setWorkspaceNotice(error instanceof Error ? error.message : t("Could not open this assignment."));
     } finally { if (request === openRequestRef.current) setOpeningAssignment(false); }
   }
 
@@ -2706,8 +2722,8 @@ export default function Home() {
       }} /> : null}
     <main id="main-content" tabIndex={-1} className={styles.page}>
       <div className="mx-auto w-full max-w-6xl space-y-6">
-        {workspaceNotice && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{workspaceNotice}</p>}
-        {openingAssignment && <p role="status" className="text-sm text-slate-500">Opening assignment...</p>}
+        {workspaceNotice && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{t(workspaceNotice)}</p>}
+        {openingAssignment && <p role="status" className="text-sm text-slate-500">{t("Opening assignment...")}</p>}
         {workspaceView === "compose" && activeProject ? <div className={workspaceStyles.contextBar}><div className={workspaceStyles.contextTitle}><WorkspaceIcon name="folder" /><button onClick={() => openProject(activeProject)}>{activeProject.name}</button><span>/ New version</span></div></div> : null}
         <section className={workspaceView === "compose" ? styles.workspace : "relative rounded-xl border border-slate-200 bg-white px-5 py-4"}>
           <div className={workspaceView === "compose" ? styles.header : styles.headerCompact}>
@@ -2720,12 +2736,10 @@ export default function Home() {
                 {canShowAccountActions() ? (
                   <>
                     <Link
-                      href={gradeResult?.evaluation_id ? "/pricing?evaluation_id=" + encodeURIComponent(gradeResult.evaluation_id) : "/pricing"}
+                      href={href(gradeResult?.evaluation_id ? "/pricing?evaluation_id=" + encodeURIComponent(gradeResult.evaluation_id) : "/pricing")}
                       onClick={(event: import("react").MouseEvent<HTMLAnchorElement>) => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); void goToPricingPage(); } }}
                       className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                    >
-                      Pricing
-                    </Link>
+                    > {t("Pricing")} </Link>
                     {signedInEmail ? (
                       <>
                         <div ref={accountMenuRef} className="relative">
@@ -2753,22 +2767,18 @@ export default function Home() {
                               <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
                               {canAccessAdmin ? (
                                 <Link
-                                  href="/admin"
+                                  href={href("/admin")}
                                   role="menuitem"
                                   onClick={() => setShowAccountMenu(false)}
                                   className="mt-1 block w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                                >
-                                  Admin
-                                </Link>
+                                > {t("Admin")} </Link>
                               ) : null}
                               <button
                                 type="button"
                                 role="menuitem"
                                 onClick={() => void handleLogout()}
                                 className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                              >
-                                Log out
-                              </button>
+                              > {t("Log out")} </button>
                             </div>
                           ) : null}
                         </div>
@@ -2782,7 +2792,7 @@ export default function Home() {
                               setShowBillingMenu((previous) => !previous);
                             }}
                             className="inline-flex items-center transition hover:opacity-90"
-                            title="Open billing options"
+                            title={t("Open billing options")}
                           >
                             <AccountStatusPill plan={accountPlan} remainingEvaluations={remainingEvaluations} />
                           </button>
@@ -2792,13 +2802,11 @@ export default function Home() {
                               className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
                             >
                               <Link
-                                href="/billing/manage"
+                                href={href("/billing/manage")}
                                 role="menuitem"
                                 onClick={() => setShowBillingMenu(false)}
                                 className="block w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                              >
-                                Billing and refunds
-                              </Link>
+                              > {t("Billing and refunds")} </Link>
                             </div>
                           ) : null}
                         </div>
@@ -2808,17 +2816,15 @@ export default function Home() {
                         type="button"
                         onClick={() => maybeOpenLoginModal()}
                         className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
-                      >
-                        Log in
-                      </button>
+                      > {t("Log in")} </button>
                     )}
                   </>
                 ) : null}
               </div>
             </div>
-            <h1 hidden={workspaceView !== "compose"} className={styles.title}>{ACTIVE_LANDING_COPY.headline}</h1>
+            <h1 hidden={workspaceView !== "compose"} className={styles.title}>{t(ACTIVE_LANDING_COPY.headline)}</h1>
             <p hidden={workspaceView !== "compose"} className={styles.subtitle}>
-              {ACTIVE_LANDING_COPY.subtitle}
+              {t(ACTIVE_LANDING_COPY.subtitle)}
             </p>
           </div>
 
@@ -2832,26 +2838,26 @@ export default function Home() {
             <div className={styles.inputGrid}>
               <section aria-labelledby="rubric-input-title" className={styles.inputCard}>
                 <div className={styles.inputHeading}>
-                  <div className={styles.inputTitle}><span className={styles.step} aria-hidden="true">1</span><h2 id="rubric-input-title" className="text-base font-semibold text-slate-900">Rubric</h2></div>
-                  <button type="button" disabled={isLoading} onClick={() => signedInEmail ? setShowRubricLibrary(true) : maybeOpenLoginModal("Log in to open your saved rubrics.")} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"><WorkspaceIcon name="folder" />My rubrics</button>
+                  <div className={styles.inputTitle}><span className={styles.step} aria-hidden="true">1</span><h2 id="rubric-input-title" className="text-base font-semibold text-slate-900">{t("Rubric")}</h2></div>
+                  <button type="button" disabled={isLoading} onClick={() => signedInEmail ? setShowRubricLibrary(true) : maybeOpenLoginModal(t("Log in to open your saved rubrics."))} className="inline-flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-50"><WorkspaceIcon name="folder" />{t("My rubrics")}</button>
                 </div>
-                <div role="group" aria-label="Rubric input method" className={styles.modes}>
-                  <TabButton active={rubricMode === "file"} onClick={() => switchRubricMode("file")}>File</TabButton>
-                  <TabButton active={rubricMode === "text"} onClick={() => switchRubricMode("text")}>Text</TabButton>
-                  <TabButton active={rubricMode === "general"} onClick={() => switchRubricMode("general")}>No rubric</TabButton>
+                <div role="group" aria-label={t("Rubric input method")} className={styles.modes}>
+                  <TabButton active={rubricMode === "file"} onClick={() => switchRubricMode("file")}>{t("File")}</TabButton>
+                  <TabButton active={rubricMode === "text"} onClick={() => switchRubricMode("text")}>{t("Text")}</TabButton>
+                  <TabButton active={rubricMode === "general"} onClick={() => switchRubricMode("general")}>{t("No rubric")}</TabButton>
                 </div>
 
                 {rubricMode === "general" ? (
                   <div className="space-y-4">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <h3 className="text-sm font-semibold text-slate-800">General criteria</h3>
+                      <h3 className="text-sm font-semibold text-slate-800">{t("General criteria")}</h3>
                       <ul className="mt-3 space-y-2 text-xs text-slate-600">
                         {generalRubric().criteria.map(criterion => <li key={criterion.name} className="flex justify-between gap-3"><span>{criterion.name}</span><span>{criterion.max_score}%</span></li>)}
                       </ul>
                     </div>
-                    <label className="block text-xs font-medium text-slate-600">Assignment instructions <span className="font-normal text-slate-400">(optional)</span>
+                    <label className="block text-xs font-medium text-slate-600">{t("Assignment instructions")} <span className="font-normal text-slate-400">{t("(optional)")}</span>
                       <textarea rows={5} value={assignmentInstructions} maxLength={ASSIGNMENT_INSTRUCTIONS_LIMIT} onChange={event => setAssignmentInstructions(event.target.value)}
-                        placeholder="Paste the assignment question or instructions"
+                        placeholder={t("Paste the assignment question or instructions")}
                         className="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
                     </label>
                   </div>
@@ -2859,7 +2865,7 @@ export default function Home() {
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <h3 className="break-words text-sm font-semibold text-slate-800">{savedRubric.name}</h3>
                     <RubricDownloads rubric={savedRubric} />
-                    <details className="mt-4 text-xs text-slate-600"><summary className="cursor-pointer">View rubric text</summary>
+                    <details className="mt-4 text-xs text-slate-600"><summary className="cursor-pointer">{t("View rubric text")}</summary>
                       <p className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words leading-6">{savedRubric.text}</p>
                     </details>
                   </div>
@@ -2906,23 +2912,18 @@ export default function Home() {
                       data-dragging={rubricDragOver}
                     >
                       <WorkspaceIcon name="file" />
-                      <p>Drag and drop a file here</p>
-                      <p className={styles.formats}>PDF, DOCX, TXT or images · Up to 10 MB each</p>
+                      <p>{t("Drag and drop a file here")}</p>
+                      <p className={styles.formats}>{t("PDF, DOCX, TXT or images · Up to 10 MB each")}</p>
                       <div className={styles.fileActions}>
-                        <button type="button" onClick={() => rubricInputRef.current?.click()} className={styles.fileButton}>
-                          Choose File
-                        </button>
-                        <button type="button" onClick={() => rubricCameraInputRef.current?.click()} className={styles.cameraButton}>
-                          Take Photo
-                        </button>
+                        <button type="button" onClick={() => rubricInputRef.current?.click()} className={styles.fileButton}> {t("Choose File")} </button>
+                        <button type="button" onClick={() => rubricCameraInputRef.current?.click()} className={styles.cameraButton}> {t("Take Photo")} </button>
                       </div>
                     </div>
                     {rubricFiles.length > 0 ? (
                       <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
                         <div className="min-w-0">
                           <p className="truncate text-sm text-slate-700">
-                            {rubricFiles.length} file{rubricFiles.length > 1 ? "s" : ""} selected (
-                            {formatFileSize(rubricFiles.reduce((sum, file) => sum + file.size, 0))})
+                            {t("{count} files selected ({size})", { count: rubricFiles.length, size: formatFileSize(rubricFiles.reduce((sum, file) => sum + file.size, 0)) })}
                           </p>
                           <p className="truncate text-xs text-slate-500">
                             {rubricFiles.map((file) => file.name).join(", ")}
@@ -2932,9 +2933,7 @@ export default function Home() {
                           type="button"
                           onClick={() => clearFile("rubric")}
                           className="ml-3 text-xs font-semibold text-slate-500 hover:text-slate-800"
-                        >
-                          Remove
-                        </button>
+                        > {t("Remove")} </button>
                       </div>
                     ) : null}
                   </div>
@@ -2944,7 +2943,7 @@ export default function Home() {
                     aria-labelledby="rubric-input-title"
                     value={rubricText}
                     onChange={(event) => setRubricText(event.target.value)}
-                    placeholder="Paste rubric text here"
+                    placeholder={t("Paste rubric text here")}
                     className={styles.textarea}
                   />
                 )}
@@ -2952,12 +2951,12 @@ export default function Home() {
 
               <section aria-labelledby="assignment-input-title" className={styles.inputCard}>
                 <div className={styles.inputHeading}>
-                  <div className={styles.inputTitle}><span className={styles.step} aria-hidden="true">2</span><h2 id="assignment-input-title" className="text-base font-semibold text-slate-900">Assignment</h2></div>
+                  <div className={styles.inputTitle}><span className={styles.step} aria-hidden="true">2</span><h2 id="assignment-input-title" className="text-base font-semibold text-slate-900">{t("Assignment")}</h2></div>
 
                 </div>
-                <div role="group" aria-label="Assignment input method" className={styles.modes}>
-                  <TabButton active={assignmentMode === "file"} onClick={() => switchAssignmentMode("file")}>File</TabButton>
-                  <TabButton active={assignmentMode === "text"} onClick={() => switchAssignmentMode("text")}>Text</TabButton>
+                <div role="group" aria-label={t("Assignment input method")} className={styles.modes}>
+                  <TabButton active={assignmentMode === "file"} onClick={() => switchAssignmentMode("file")}>{t("File")}</TabButton>
+                  <TabButton active={assignmentMode === "text"} onClick={() => switchAssignmentMode("text")}>{t("Text")}</TabButton>
                 </div>
 
                 {assignmentMode === "file" ? (
@@ -3003,23 +3002,18 @@ export default function Home() {
                       data-dragging={assignmentDragOver}
                     >
                       <WorkspaceIcon name="file" />
-                      <p>Drag and drop a file here</p>
-                      <p className={styles.formats}>PDF, DOCX, TXT or images · Up to 10 MB each</p>
+                      <p>{t("Drag and drop a file here")}</p>
+                      <p className={styles.formats}>{t("PDF, DOCX, TXT or images · Up to 10 MB each")}</p>
                       <div className={styles.fileActions}>
-                        <button type="button" onClick={() => assignmentInputRef.current?.click()} className={styles.fileButton}>
-                          Choose File
-                        </button>
-                        <button type="button" onClick={() => assignmentCameraInputRef.current?.click()} className={styles.cameraButton}>
-                          Take Photo
-                        </button>
+                        <button type="button" onClick={() => assignmentInputRef.current?.click()} className={styles.fileButton}> {t("Choose File")} </button>
+                        <button type="button" onClick={() => assignmentCameraInputRef.current?.click()} className={styles.cameraButton}> {t("Take Photo")} </button>
                       </div>
                     </div>
                     {assignmentFiles.length > 0 ? (
                       <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
                         <div className="min-w-0">
                           <p className="truncate text-sm text-slate-700">
-                            {assignmentFiles.length} file{assignmentFiles.length > 1 ? "s" : ""} selected (
-                            {formatFileSize(assignmentFiles.reduce((sum, file) => sum + file.size, 0))})
+                            {t("{count} files selected ({size})", { count: assignmentFiles.length, size: formatFileSize(assignmentFiles.reduce((sum, file) => sum + file.size, 0)) })}
                           </p>
                           <p className="truncate text-xs text-slate-500">
                             {assignmentFiles.map((file) => file.name).join(", ")}
@@ -3029,9 +3023,7 @@ export default function Home() {
                           type="button"
                           onClick={() => clearFile("assignment")}
                           className="ml-3 text-xs font-semibold text-slate-500 hover:text-slate-800"
-                        >
-                          Remove
-                        </button>
+                        > {t("Remove")} </button>
                       </div>
                     ) : null}
                   </div>
@@ -3041,7 +3033,7 @@ export default function Home() {
                     aria-labelledby="assignment-input-title"
                     value={assignmentText}
                     onChange={(event) => setAssignmentText(event.target.value)}
-                    placeholder="Paste assignment text here"
+                    placeholder={t("Paste assignment text here")}
                     className={styles.textarea}
                   />
                 )}
@@ -3049,69 +3041,65 @@ export default function Home() {
             </div>
 
             {showRedisWarning ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                We&apos;re running in a temporary reliability mode while usage services reconnect.
-              </div>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"> {t("We're running in a temporary reliability mode while usage services reconnect.")} </div>
             ) : null}
             {errorCode === "OPENAI_TIMEOUT" ? (
               <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                <p>{error}</p>
+                <p>{t(error)}</p>
                 {openAiTimeoutCount >= 2 ? (
-                  <p className="mt-1 text-xs">Service is busy right now. Please wait a bit, then retry.</p>
+                  <p className="mt-1 text-xs">{t("Service is busy right now. Please wait a bit, then retry.")}</p>
                 ) : null}
                 <button
                   type="button"
                   onClick={() => void submitGrade(gradingMode)}
                   className="mt-3 rounded-lg bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white"
-                >
-                  Retry
-                </button>
+                > {t("Retry")} </button>
               </div>
             ) : null}
             {errorCode === "FILE_PARSE_FAILED" ? (
               <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-                <p>{error}</p>
+                <p>{t(error)}</p>
                 <ul className="mt-2 list-disc pl-5 text-xs">
-                  <li>Try again.</li>
-                  <li>Upload another format (DOCX/TXT).</li>
-                  <li>Switch to Paste Text.</li>
-                  <li>If it&apos;s a scanned PDF, run OCR first.</li>
+                  <li>{t("Try again.")}</li>
+                  <li>{t("Upload another format (DOCX/TXT).")}</li>
+                  <li>{t("Switch to Paste Text.")}</li>
+                  <li>{t("If it's a scanned PDF, run OCR first.")}</li>
                 </ul>
               </div>
             ) : null}
             {error && errorCode !== "OPENAI_TIMEOUT" && errorCode !== "FILE_PARSE_FAILED" ? (
               <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
+                {t(error)}
               </div>
             ) : null}
             {draftRestoreNotice ? (
               <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 px-4 py-3 text-sm text-indigo-800">
-                {draftRestoreNotice}
+                {t(draftRestoreNotice)}
               </div>
             ) : null}
 
             <div className={styles.submitRow}>
               <button
                 type="submit"
-                disabled={isLoading || !draftReady || isResumingCheckout}
+                disabled={isLoading || !draftReady || isResumingCheckout || preferencesLoading}
                 className={styles.submit}
                 aria-busy={isLoading}
               >
-                {!signedInEmail ? trialUsed ? "Sign up for 3 free checks" : "Get my free summary" : "Grade my assignment"}
+                {!signedInEmail ? trialUsed ? t("Sign up for 3 free checks") : t("Get my free summary") : t("Grade my assignment")}
               </button>
               {signedInEmail ? <button
                 type="button"
                 onClick={handleStrictSubmit}
-                disabled={isLoading || !draftReady || isResumingCheckout}
+                disabled={isLoading || !draftReady || isResumingCheckout || preferencesLoading}
                 className="min-h-12 shrink-0 rounded-xl border border-slate-300 bg-white px-5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <span>Strict Mode</span>
+                <span>{t("Strict Mode")}</span>
               </button> : null}
             </div>
             {isLoading ? (
               <div role="status" className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 md:text-sm">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-                <span className="leading-5">{loadingMessage}</span>
+                <span className="leading-5">{t(loadingMessage)}</span>
               </div>
             ) : null}
             </fieldset>
@@ -3127,17 +3115,13 @@ export default function Home() {
         ) : null}
 
         {showDailyLimitAlert ? (
-          <Modal titleId="daily-limit-title" closeLabel="Close daily limit warning" onClose={() => setShowDailyLimitAlert(false)} alert>
-              <div className="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
-                Warning
-              </div>
-              <h2 id="daily-limit-title" className="mt-3 text-lg font-semibold text-slate-900">
-                Free trial limit reached
-              </h2>
+          <Modal titleId="daily-limit-title" closeLabel={t("Close daily limit warning")} onClose={() => setShowDailyLimitAlert(false)} alert>
+              <div className="inline-flex rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800"> {t("Warning")} </div>
+              <h2 id="daily-limit-title" className="mt-3 text-lg font-semibold text-slate-900"> {t("Free trial limit reached")} </h2>
               <p className="mt-2 text-sm text-slate-600">
                 {SHOW_ACCOUNT_AND_PRICING
-                  ? `You used ${dailyLimitValue ?? FREE_TRIAL_EVALUATIONS} free evaluations for this account.`
-                  : `You used ${dailyLimitValue ?? FREE_TRIAL_EVALUATIONS} free evaluations for this device.`}
+                  ? t("You used {count} free evaluations for this account.", { count: dailyLimitValue ?? FREE_TRIAL_EVALUATIONS })
+                  : t("You used {count} free evaluations for this device.", { count: dailyLimitValue ?? FREE_TRIAL_EVALUATIONS })}
               </p>
               <p className="mt-1 text-sm text-slate-600">
                 {openOperationsLimitMessage()}
@@ -3147,51 +3131,35 @@ export default function Home() {
                   type="button"
                   onClick={() => setShowDailyLimitAlert(false)}
                   className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300"
-                >
-                  Close
-                </button>
+                > {t("Close")} </button>
                 {shouldShowPricingCta() ? (
                   <Link
-                    href={gradeResult?.evaluation_id ? "/pricing?evaluation_id=" + encodeURIComponent(gradeResult.evaluation_id) : "/pricing"}
+                    href={href(gradeResult?.evaluation_id ? "/pricing?evaluation_id=" + encodeURIComponent(gradeResult.evaluation_id) : "/pricing")}
                       onClick={(event: import("react").MouseEvent<HTMLAnchorElement>) => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); void goToPricingPage(); } }}
                     className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
-                  >
-                    Go to Pricing
-                  </Link>
+                  > {t("Go to Pricing")} </Link>
                 ) : null}
               </div>
           </Modal>
         ) : null}
 
         {showStrictModeUpgradeModal ? (
-          <Modal titleId="strict-mode-upgrade-title" closeLabel="Close Strict Mode upgrade prompt" onClose={() => setShowStrictModeUpgradeModal(false)}>
-              <div className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">
-                Strict Mode
-              </div>
-              <h2 id="strict-mode-upgrade-title" className="mt-3 text-lg font-semibold text-slate-900">
-                Strict Mode is locked
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Strict Mode is available with Pro or purchased top-ups.
-              </p>
-              <p className="mt-1 text-sm text-slate-600">
-                Go to pricing to upgrade or buy credits?
-              </p>
+          <Modal titleId="strict-mode-upgrade-title" closeLabel={t("Close Strict Mode upgrade prompt")} onClose={() => setShowStrictModeUpgradeModal(false)}>
+              <div className="inline-flex rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700"> {t("Strict Mode")} </div>
+              <h2 id="strict-mode-upgrade-title" className="mt-3 text-lg font-semibold text-slate-900"> {t("Strict Mode is locked")} </h2>
+              <p className="mt-2 text-sm text-slate-600"> {t("Strict Mode is available with Pro or purchased top-ups.")} </p>
+              <p className="mt-1 text-sm text-slate-600"> {t("Go to pricing to upgrade or buy credits?")} </p>
               <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setShowStrictModeUpgradeModal(false)}
                   className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300"
-                >
-                  Cancel
-                </button>
+                > {t("Cancel")} </button>
                 <button
                   type="button"
                   onClick={goToPricingPage}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
-                >
-                  Go to Pricing
-                </button>
+                > {t("Go to Pricing")} </button>
               </div>
           </Modal>
         ) : null}
@@ -3331,9 +3299,7 @@ export default function Home() {
                     onClick={closeAdminCombineModal}
                     disabled={isAdminCombining}
                     className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Cancel
-                  </button>
+                  > {t("Cancel")} </button>
                   <button
                     type="submit"
                     disabled={isAdminCombining}
@@ -3361,9 +3327,7 @@ export default function Home() {
                 aria-label="Close preview"
                 onClick={() => setSelectedComparisonImage(null)}
                 className="absolute right-3 top-3 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700"
-              >
-                Close
-              </button>
+              > {t("Close")} </button>
               <div className="flex max-h-[84vh] items-center justify-center p-2 pt-8">
                 <Image
                   src={selectedComparisonImage.src}
@@ -3380,24 +3344,24 @@ export default function Home() {
 
         {trialPreview && (!sampleSelected || signedInEmail) && workspaceView !== "project" ? (
           <GuestSummary result={trialPreview} signedIn={Boolean(signedInEmail)} busy={!resultReady}
-            onUnlock={() => signedInEmail ? setTrialRestoreAttempt(value => value + 1) : openLoginModal("Sign up to see feedback for each criterion. 3 free checks · No card required.")} />
+            onUnlock={() => signedInEmail ? setTrialRestoreAttempt(value => value + 1) : openLoginModal(t("Sign up to see feedback for each criterion. 3 free checks · No card required."))} />
         ) : null}
 
-        {gradeResult && resultOwnerEmail === signedInEmail && workspaceView !== "project" ? (
+        {displayedResult && resultOwnerEmail === signedInEmail && workspaceView !== "project" ? (
           <section ref={evaluationCaptureRef} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
             <div className={workspaceStyles.contextBar}>
               <div className={workspaceStyles.contextTitle}>
                 <WorkspaceIcon name={activeAssignment?.projectId ? "folder" : "file"} />
-                {activeAssignment?.projectId ? <button onClick={() => { const project = workspace.data.projects.find(project => project.id === activeAssignment.projectId); if (project) openProject(project); }}>{workspace.data.projects.find(project => project.id === activeAssignment.projectId)?.name}</button> : <span>Assignment</span>}
+                {activeAssignment?.projectId ? <button onClick={() => { const project = workspace.data.projects.find(project => project.id === activeAssignment.projectId); if (project) openProject(project); }}>{workspace.data.projects.find(project => project.id === activeAssignment.projectId)?.name}</button> : <span>{t("Assignment")}</span>}
                 {activeAssignment?.projectId && <span> / V{projectVersions(workspace.data.assignments, activeAssignment.projectId).findIndex(item => item.id === activeAssignment.id) + 1}</span>}
               </div>
               <div className={workspaceStyles.contextActions}>
-                {activeAssignment && <select aria-label="Move assignment to project" value={activeAssignment.projectId ?? ""} disabled={workspaceBusy} onChange={async event => {
+                {activeAssignment && <select aria-label={t("Move assignment to project")} value={activeAssignment.projectId ?? ""} disabled={workspaceBusy} onChange={async event => {
                   const projectId = event.target.value || null;
                   try { await workspace.mutate({ action: "moveAssignment", id: activeAssignment.id, projectId }); setActiveProjectId(projectId); }
-                  catch (error) { setWorkspaceNotice(error instanceof Error ? error.message : "Could not move assignment."); }
-                }}><option value="">No project</option>{workspace.data.projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select>}
-                {activeAssignment?.projectId && <button className={workspaceStyles.secondaryButton} disabled={workspaceBusy} onClick={() => startAssignment(activeAssignment.projectId)}>New version</button>}
+                  catch (error) { setWorkspaceNotice(error instanceof Error ? error.message : t("Could not move assignment.")); }
+                }}><option value="">{t("No project")}</option>{workspace.data.projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select>}
+                {activeAssignment?.projectId && <button className={workspaceStyles.secondaryButton} disabled={workspaceBusy} onClick={() => startAssignment(activeAssignment.projectId)}>{t("New version")}</button>}
               </div>
             </div>
             <div className="border-b border-slate-100 pb-4">
@@ -3406,43 +3370,36 @@ export default function Home() {
                   ref={evaluationHeadingRef}
                   tabIndex={-1}
                   className="text-xl font-semibold text-slate-900 focus:outline-none"
-                >
-                  Evaluation Summary
-                </h2>
-                {gradeResult.grading_basis === "general" ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">General criteria</span> : null}
+                > {t("Evaluation Summary")} </h2>
+                {displayedResult.grading_basis === "general" ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{t("General criteria")}</span> : null}
                 {resultMode === "strict" ? (
                   <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">
-                    {"\u{1F525}"} Strict Mode
-                  </span>
+                    {"\u{1F525}"} {t("Strict Mode")} </span>
                 ) : null}
-                {gradeResult.hidden_ai_alert ? (
-                  <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                    Hidden AI text detected
-                  </span>
+                {displayedResult.hidden_ai_alert ? (
+                  <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800"> {t("Hidden AI text detected")} </span>
                 ) : null}
+                <ResultLanguageSelect language={displayedResult.language} busy={translation.busy} error={translation.error} onChange={translation.change} unavailable={!displayedResult.evaluation_id} />
               </div>
             </div>
 
             <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 md:p-5">
               <div>
-                {gradeResult.hidden_ai_alert ? (
+                {displayedResult.hidden_ai_alert ? (
                   <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                     <p className="text-sm font-semibold text-amber-900">
-                      {formatHiddenAiAlertSources(gradeResult.hidden_ai_alert.sources)} warning
-                    </p>
+                      {formatHiddenAiAlertSources(displayedResult.hidden_ai_alert.sources)} {t("warning")} </p>
                     <p className="mt-1 text-sm leading-6 text-amber-800">
-                      {gradeResult.hidden_ai_alert.message}
+                      {displayedResult.hidden_ai_alert.message}
                     </p>
                   </div>
                 ) : null}
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Estimated Score Range
-                      </p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500"> {t("Estimated Score Range")} </p>
                       <p className="mt-2 text-3xl font-semibold tracking-tight text-indigo-700 md:text-4xl">
-                        {formatOverallScoreDisplay(gradeResult.overall_range)}{" "}
+                        {formatOverallScoreDisplay(displayedResult.overall_range)}{" "}
                         <span className="text-xl md:text-2xl">/ 100</span>
                       </p>
                     </div>
@@ -3453,12 +3410,12 @@ export default function Home() {
                       className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm"
                     >
                       {isSharingImage
-                        ? "Sharing..."
+                        ? t("Sharing...")
                         : shareFeedback === "copied"
-                            ? "Image copied"
+                            ? t("Image copied")
                             : shareFeedback === "downloaded"
-                            ? "Downloaded"
-                            : "Share"}
+                            ? t("Downloaded")
+                            : t("Share")}
                     </button>
                   </div>
                   {shareFeedback !== "idle" && shareFeedback !== "copied" ? (
@@ -3469,46 +3426,44 @@ export default function Home() {
                       }`}
                     >
                       {shareFeedback === "downloaded"
-                            ? "Your browser blocked image clipboard access, so a PNG was downloaded instead."
-                            : "Could not generate the results image. Please try again."}
+                            ? t("Your browser blocked image clipboard access, so a PNG was downloaded instead.")
+                            : t("Could not generate the results image. Please try again.")}
                     </p>
                   ) : null}
                   <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
-                    {SCORE_RANGE_NOTICE}
+                    {t(SCORE_RANGE_NOTICE)}
                   </p>
                   <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
-                    {explainScoreCalculation(gradeResult)}
+                    {explainScoreCalculation(displayedResult, siteLanguage)}
                   </p>
                   <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">
-                    {SCORE_COMPARISON_NOTICE}
+                    {t(SCORE_COMPARISON_NOTICE)}
                   </p>
                 </div>
-                <p className="mt-4 text-sm leading-6 text-slate-700 md:text-[15px]">{gradeResult.summary}</p>
+                <p className="mt-4 text-sm leading-6 text-slate-700 md:text-[15px]">{displayedResult.summary}</p>
               </div>
 
               <div className="mt-4">
-                <h3 className="text-sm font-semibold text-slate-900">Top Improvements</h3>
+                <h3 className="text-sm font-semibold text-slate-900">{t("Top Improvements")}</h3>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
-                  {getVisibleTopImprovements(gradeResult).map((item, index) => (
+                  {getVisibleTopImprovements(displayedResult).map((item, index) => (
                     <li key={`${index}-${item}`}>{item}</li>
                   ))}
-                  {Array.from({ length: getLockedTopImprovementsCount(gradeResult) }).map((_, index) => (
+                  {Array.from({ length: getLockedTopImprovementsCount(displayedResult) }).map((_, index) => (
                     <li key={`locked-improvement-${index}`} className="list-none pl-0">
                       <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2">
-                        <p aria-hidden="true" className="select-none text-slate-400 blur-[4px]">
-                          Unlock another prioritized improvement with Pro or purchased credits.
-                        </p>
+                        <p aria-hidden="true" className="select-none text-slate-400 blur-[4px]"> {t("Unlock another prioritized improvement with Pro or purchased credits.")} </p>
                       </div>
                     </li>
                   ))}
                 </ul>
-                {getLockedTopImprovementsCount(gradeResult) > 0 ? (
-                  <p className="mt-2 text-xs font-medium text-indigo-700">{LOCKED_TOP_IMPROVEMENTS_NOTICE}</p>
+                {getLockedTopImprovementsCount(displayedResult) > 0 ? (
+                  <p className="mt-2 text-xs font-medium text-indigo-700">{t(LOCKED_TOP_IMPROVEMENTS_NOTICE)}</p>
                 ) : null}
               </div>
             </div>
 
-            {signedInEmail && gradeResult.evaluation_id && <ActualResultPanel key={signedInEmail + ":" + gradeResult.evaluation_id} evaluationId={gradeResult.evaluation_id} />}
+            {signedInEmail && displayedResult.evaluation_id && <ActualResultPanel key={signedInEmail + ":" + displayedResult.evaluation_id} evaluationId={displayedResult.evaluation_id} />}
 
             {SHOW_PRO_FEATURES && !hasProAccess ? (
               <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 md:p-5">
@@ -3518,24 +3473,20 @@ export default function Home() {
                       type="button"
                       onClick={() => openLoginModal()}
                       className="inline-flex w-full items-center justify-center rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-colors hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
-                    >
-                      Log in
-                    </button>
+                    > {t("Log in")} </button>
                   ) : null}
                   <button
                     type="button"
                     onClick={goToPricingPage}
                     className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 sm:w-auto"
-                  >
-                    Upgrade to Pro
-                  </button>
+                  > {t("Upgrade to Pro")} </button>
                 </div>
                 <p className="mt-2 text-xs leading-5 text-indigo-900/80 md:text-sm">
                   {signedInEmail
-                    ? "You're logged in on this device. Upgrade to Pro to unlock rewrite suggestions."
+                    ? t("You're logged in on this device. Upgrade to Pro to unlock rewrite suggestions.")
                     : entitlementStatus === "needs_restore"
-                      ? "Already subscribed? Log in with email verification, or upgrade to Pro."
-                      : "Pro unlocks rewrite suggestions focused on improving your score."}
+                      ? t("Already subscribed? Log in with email verification, or upgrade to Pro.")
+                      : t("Pro unlocks rewrite suggestions focused on improving your score.")}
                 </p>
                 {proRestoreNotice ? (
                   <p className="mt-2 text-xs font-medium text-emerald-700 md:text-sm">{proRestoreNotice}</p>
@@ -3553,19 +3504,19 @@ export default function Home() {
                 </colgroup>
                 <thead className="bg-slate-50 text-slate-700">
                   <tr>
-                    <th className="px-4 py-3 font-semibold">Criteria</th>
-                    <th className="px-4 py-3 font-semibold">Max</th>
-                    <th className="px-4 py-3 font-semibold">Estimated</th>
-                    <th className="px-4 py-3 font-semibold">Feedback</th>
+                    <th className="px-4 py-3 font-semibold">{t("Criteria")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("Max")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("Estimated")}</th>
+                    <th className="px-4 py-3 font-semibold">{t("Feedback")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white text-slate-800">
-                  {gradeResult.criteria.map((item, index) => {
-                    const criteriaKey = `criteria-${index}-${item.name}`;
+                  {displayedResult.criteria.map((item, index) => {
+                    const criteriaKey = `criteria-${index}-${displayedResult.grading_basis === "general" ? t(item.name) : item.name}`;
                     const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
                     const rationaleText = getCriterionPrimaryFeedbackText(item);
                     const evidenceList = item.evidence ?? [];
-                    const resultAccessTier = gradeResult.access_tier;
+                    const resultAccessTier = displayedResult.access_tier;
                     const canShowDetailedBreakdown = SHOW_PRO_FEATURES && canAccessDetailedFeedback(resultAccessTier);
                     const canShowRewriteSuggestions = SHOW_PRO_FEATURES && canAccessRewriteSuggestions(resultAccessTier);
                     const rewriteSuggestions =
@@ -3587,7 +3538,7 @@ export default function Home() {
 
                     return (
                       <tr key={criteriaKey}>
-                        <td className="whitespace-normal break-words px-4 py-3 align-top font-medium">{item.name}</td>
+                        <td className="whitespace-normal break-words px-4 py-3 align-top font-medium">{displayedResult.grading_basis === "general" ? t(item.name) : item.name}</td>
                         <td className="px-4 py-3 align-top">{item.max_score}</td>
                         <td className="px-4 py-3 align-top">
                           <span className="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-sm font-medium text-indigo-700">
@@ -3606,11 +3557,9 @@ export default function Home() {
                           {showDetailedBreakdownLockNotice ? (
                             <div className="mt-2 space-y-2">
                               <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2">
-                                <p aria-hidden="true" className="select-none text-xs text-slate-400 blur-[4px]">
-                                  Detailed criterion feedback is hidden on Free. Unlock the full explanation and supporting notes.
-                                </p>
+                                <p aria-hidden="true" className="select-none text-xs text-slate-400 blur-[4px]"> {t("Detailed criterion feedback is hidden on Free. Unlock the full explanation and supporting notes.")} </p>
                               </div>
-                              <p className="text-xs font-medium text-indigo-700">{LOCKED_DETAILED_FEEDBACK_NOTICE}</p>
+                              <p className="text-xs font-medium text-indigo-700">{t(LOCKED_DETAILED_FEEDBACK_NOTICE)}</p>
                             </div>
                           ) : null}
                           {canShowDetailedBreakdown && evidenceList.length > 0 ? (
@@ -3628,7 +3577,7 @@ export default function Home() {
                                 className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70"
                               >
                                 <span className="inline-flex items-center gap-2">
-                                  <span>Rewrite suggestions</span>
+                                  <span>{t("Rewrite suggestions")}</span>
                                   <ProBadge className="shrink-0" />
                                 </span>
                                 <span className="text-xs font-medium text-slate-500">
@@ -3645,16 +3594,14 @@ export default function Home() {
                                         ))}
                                       </ul>
                                     ) : (
-                                      <p className="text-sm text-slate-600">
-                                        Rewrite suggestions are not available for this criterion yet. Run Evaluate again to refresh this section.
-                                      </p>
+                                      <p className="text-sm text-slate-600"> {t("Rewrite suggestions are not available for this criterion yet. Run Evaluate again to refresh this section.")} </p>
                                     )
                                   ) : (
                                     <>
                                       <p className="text-sm text-slate-600">
                                         {hasProAccess
-                                          ? "Rewrite suggestions were not generated for this evaluation. Run Evaluate again with Pro active to refresh this section."
-                                          : "Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock."}
+                                          ? t("Rewrite suggestions were not generated for this evaluation. Run Evaluate again with Pro active to refresh this section.")
+                                          : t("Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock.")}
                                       </p>
                                       {!hasProAccess ? (
                                         <div className="mt-3 flex flex-wrap gap-2">
@@ -3663,17 +3610,13 @@ export default function Home() {
                                               type="button"
                                               onClick={() => openLoginModal()}
                                               className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                            >
-                                              Log in
-                                            </button>
+                                            > {t("Log in")} </button>
                                           ) : null}
                                           <button
                                             type="button"
                                             onClick={goToPricingPage}
                                             className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                          >
-                                            Upgrade to Pro
-                                          </button>
+                                          > {t("Upgrade to Pro")} </button>
                                         </div>
                                       ) : null}
                                     </>
@@ -3691,12 +3634,12 @@ export default function Home() {
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-3 md:hidden">
-              {gradeResult.criteria.map((item, index) => {
-                const criteriaKey = `criteria-${index}-${item.name}`;
+              {displayedResult.criteria.map((item, index) => {
+                const criteriaKey = `criteria-${index}-${displayedResult.grading_basis === "general" ? t(item.name) : item.name}`;
                 const isRewriteOpen = Boolean(expandedRewriteSections[criteriaKey]);
                 const rationaleText = getCriterionPrimaryFeedbackText(item);
                 const evidenceList = item.evidence ?? [];
-                const resultAccessTier = gradeResult.access_tier;
+                const resultAccessTier = displayedResult.access_tier;
                 const canShowDetailedBreakdown = SHOW_PRO_FEATURES && canAccessDetailedFeedback(resultAccessTier);
                 const canShowRewriteSuggestions = SHOW_PRO_FEATURES && canAccessRewriteSuggestions(resultAccessTier);
                 const rewriteSuggestions =
@@ -3718,17 +3661,16 @@ export default function Home() {
 
                 return (
                   <article
-                    key={`${item.name}-mobile-${index}`}
+                    key={`${displayedResult.grading_basis === "general" ? t(item.name) : item.name}-mobile-${index}`}
                     className="rounded-xl border border-slate-200 bg-slate-50 p-4"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h4 className="text-sm font-semibold text-slate-900">{item.name}</h4>
+                      <h4 className="text-sm font-semibold text-slate-900">{displayedResult.grading_basis === "general" ? t(item.name) : item.name}</h4>
                       <span className="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-sm font-medium text-indigo-700">
                         {formatEstimatedRangeDisplay(item.estimated_range, "-")}
                       </span>
                     </div>
-                    <p className="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Max score: {item.max_score}
+                    <p className="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500"> {t("Max score:")} {item.max_score}
                     </p>
                     <p className="mt-2 whitespace-normal break-words text-sm text-slate-700">
                       {rationaleText}
@@ -3743,11 +3685,9 @@ export default function Home() {
                     {showDetailedBreakdownLockNotice ? (
                       <div className="mt-2 space-y-2">
                         <div className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-2">
-                          <p aria-hidden="true" className="select-none text-xs text-slate-400 blur-[4px]">
-                            Detailed criterion feedback is hidden on Free. Unlock the full explanation and supporting notes.
-                          </p>
+                          <p aria-hidden="true" className="select-none text-xs text-slate-400 blur-[4px]"> {t("Detailed criterion feedback is hidden on Free. Unlock the full explanation and supporting notes.")} </p>
                         </div>
-                        <p className="text-xs font-medium text-indigo-700">{LOCKED_DETAILED_FEEDBACK_NOTICE}</p>
+                        <p className="text-xs font-medium text-indigo-700">{t(LOCKED_DETAILED_FEEDBACK_NOTICE)}</p>
                       </div>
                     ) : null}
                     {canShowDetailedBreakdown && evidenceList.length > 0 ? (
@@ -3766,7 +3706,7 @@ export default function Home() {
                           className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-semibold text-slate-800 transition hover:bg-slate-100/70"
                         >
                           <span className="inline-flex items-center gap-2">
-                            <span>Rewrite suggestions</span>
+                            <span>{t("Rewrite suggestions")}</span>
                             <ProBadge className="shrink-0" />
                           </span>
                           <span className="text-xs font-medium text-slate-500">
@@ -3783,16 +3723,14 @@ export default function Home() {
                                   ))}
                                 </ul>
                               ) : (
-                                <p className="text-sm text-slate-600">
-                                  Rewrite suggestions are not available for this criterion yet. Run Evaluate again to refresh this section.
-                                </p>
+                                <p className="text-sm text-slate-600"> {t("Rewrite suggestions are not available for this criterion yet. Run Evaluate again to refresh this section.")} </p>
                               )
                             ) : (
                               <>
                                 <p className="text-sm text-slate-600">
                                   {hasProAccess
-                                    ? "Rewrite suggestions were not generated for this evaluation. Run Evaluate again with Pro active to refresh this section."
-                                    : "Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock."}
+                                    ? t("Rewrite suggestions were not generated for this evaluation. Run Evaluate again with Pro active to refresh this section.")
+                                    : t("Rewrite suggestions are a Pro feature to help you earn a better score. Log in or upgrade to unlock.")}
                                 </p>
                                 {!hasProAccess ? (
                                   <div className="mt-3 flex flex-wrap gap-2">
@@ -3801,17 +3739,13 @@ export default function Home() {
                                         type="button"
                                         onClick={() => openLoginModal()}
                                         className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                      >
-                                        Log in
-                                      </button>
+                                      > {t("Log in")} </button>
                                     ) : null}
                                     <button
                                       type="button"
                                       onClick={goToPricingPage}
                                       className="inline-flex rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-50"
-                                    >
-                                      Upgrade to Pro
-                                    </button>
+                                    > {t("Upgrade to Pro")} </button>
                                   </div>
                                 ) : null}
                               </>
@@ -3828,16 +3762,14 @@ export default function Home() {
         ) : null}
 
         {SHOW_ACCOUNT_AND_PRICING && showLoginModal ? (
-          <Modal titleId="main-login-title" closeLabel="Close login modal" onClose={() => setShowLoginModal(false)}>
+          <Modal titleId="main-login-title" closeLabel={t("Close login modal")} onClose={() => setShowLoginModal(false)}>
             <form onSubmit={event => { event.preventDefault(); if (!isStartingRestore && !isVerifyingRestore) void (restoreStep === "code" ? handleVerifyRestorePro() : handleStartRestorePro()); }}>
             <h3 id="main-login-title" className="text-lg font-semibold text-slate-900">
-              {trialPreview || trialUsed ? "Sign up or log in" : "Log in"}
+              {trialPreview || trialUsed ? t("Sign up or log in") : t("Log in")}
             </h3>
-            <p className="mt-2 text-sm text-slate-600">
-              We will email you a sign-in code.
-            </p>
+            <p className="mt-2 text-sm text-slate-600"> {t("We will email you a sign-in code.")} </p>
               <label htmlFor="main-restore-email" className="mt-4 block">
-                <span className="text-xs font-semibold text-slate-700">Email</span>
+                <span className="text-xs font-semibold text-slate-700">{t("Email")}</span>
                 <input
                   id="main-restore-email"
                   autoFocus
@@ -3857,7 +3789,7 @@ export default function Home() {
               </label>
               {restoreStep === "code" ? (
                 <label htmlFor="main-restore-code" className="mt-3 block">
-                  <span className="text-xs font-semibold text-slate-700">Verification code</span>
+                  <span className="text-xs font-semibold text-slate-700">{t("Verification code")}</span>
                   <input
                     id="main-restore-code"
                     autoFocus
@@ -3880,12 +3812,12 @@ export default function Home() {
               ) : null}
               {restoreInfo ? (
                 <p role="status" className="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
-                  {restoreInfo}
+                  {t(restoreInfo)}
                 </p>
               ) : null}
               {restoreError ? (
                 <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  {restoreError}
+                  {t(restoreError)}
                 </p>
               ) : null}
               <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -3901,15 +3833,13 @@ export default function Home() {
                       }}
                       disabled={isStartingRestore || isVerifyingRestore}
                       className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Back
-                    </button>
+                    > {t("Back")} </button>
                     <button
                       type="submit"
                       disabled={isStartingRestore || isVerifyingRestore || !restoreCode.trim()}
                       className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {isVerifyingRestore ? "Verifying..." : "Verify & Log in"}
+                      {isVerifyingRestore ? t("Verifying...") : t("Verify & Log in")}
                     </button>
                   </>
                 ) : (
@@ -3918,7 +3848,7 @@ export default function Home() {
                     disabled={isStartingRestore || isVerifyingRestore || !restoreEmail.trim()}
                     className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isStartingRestore ? "Sending..." : "Send code"}
+                    {isStartingRestore ? t("Sending...") : t("Send code")}
                   </button>
                 )}
               </div>
@@ -3930,15 +3860,15 @@ export default function Home() {
 
         <footer className="mt-10 px-1 py-2">
           <div className="flex flex-col gap-3 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
-            <p>AI-generated estimate only. Not an official grade. RubriCheck.</p>
+            <p>{t("AI-generated estimate only. Not an official grade. RubriCheck.")}</p>
             <div className="flex flex-wrap items-center gap-3">
               {FOOTER_LEGAL_LINKS.map((link) => (
                 <a
                   key={link.href}
-                  href={link.href}
+                  href={href(link.href)}
                   className="font-medium text-slate-600 transition hover:text-slate-900"
                 >
-                  {link.label}
+                  {t(link.label)}
                 </a>
               ))}
               <FeedbackButton email={signedInEmail} />
