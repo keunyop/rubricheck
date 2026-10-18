@@ -78,6 +78,17 @@ function getEmailInitialAvatarClassName(email: string): string {
   return EMAIL_AVATAR_CLASS_NAME;
 }
 
+function PricingAmount({ label }: { label: string }) {
+  const [currency, amount] = label.split(" ");
+
+  return (
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+      <span className="text-sm font-medium tracking-normal">{currency}</span>{" "}
+      <span>{amount}</span>
+    </span>
+  );
+}
+
 export function PricingClient() {
   const { t, href } = useLanguage();
   const {
@@ -594,7 +605,7 @@ export function PricingClient() {
               ) : null}
               <div aria-live="polite" className="my-6 px-1">
                 <p className="flex flex-wrap items-baseline gap-x-1 gap-y-1 text-4xl font-semibold tracking-tight text-slate-900">
-                  {selectedCheckoutPlanDisplay.price}
+                  <PricingAmount label={selectedCheckoutPlanDisplay.price} />
                   <span className="whitespace-nowrap text-sm font-normal text-slate-500">
                     {t(selectedCheckoutPlanDisplay.periodLabel)}
                   </span>
@@ -663,7 +674,7 @@ export function PricingClient() {
                       {t(getCreditPackMarketingLabel(packId))}
                     </p>
                     <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{t(getCreditPackLabel(packId))}</p>
-                    <p className="mt-2 text-3xl font-bold text-slate-900">{getCreditPackPriceLabel(packId)}</p>
+                    <p className="mt-2 text-3xl font-bold text-slate-900"><PricingAmount label={getCreditPackPriceLabel(packId)} /></p>
                     <p className="mt-2 text-sm text-slate-600">{t("One-time payment")}</p>
                     <button
                       type="button"
