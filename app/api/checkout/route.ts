@@ -4,6 +4,7 @@ import {
   getLookupKeyForProCheckoutPlan,
   includesProLookupKey,
   isProCheckoutPlanAvailable,
+  PRO_LIFETIME_STRIPE_PRICE_ID,
   resolveProCheckoutPlan,
 } from "../../../src/config/proCheckout";
 import { createRequestContext, errorResponse, successJson } from "../../../src/lib/apiError";
@@ -199,11 +200,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const lookupKey = getLookupKeyForProCheckoutPlan(requestedPlan);
-    const priceResult = await getStripeClient().prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
-    const stripePriceId = priceResult.data[0]?.id;
+    const price = requestedPlan === "lifetime"
+      ? await getStripeClient().prices.retrieve(PRO_LIFETIME_STRIPE_PRICE_ID, { expand: ["product"] })
+      : (await getStripeClient().prices.list({ lookup_keys: [getLookupKeyForProCheckoutPlan(requestedPlan)], active: true, limit: 1 })).data[0];
+    const stripePriceId = price?.id;
     if (!stripePriceId) return respond(errorResponse(context, 500, "STRIPE_PRICE_NOT_FOUND", "Checkout price is unavailable."), "error");
-    if (requestedPlan === "lifetime" && !isLifetimePrice(priceResult.data[0])) {
+    if (requestedPlan === "lifetime" && (!price.active || !isLifetimePrice(price) ||
+      (typeof price.product !== "string" && (!("active" in price.product) || !price.product.active)))) {
       return respond(errorResponse(context, 503, "LIFETIME_PRICE_INVALID", "Lifetime checkout price is not configured correctly."), "error");
     }
 

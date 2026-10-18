@@ -5,6 +5,7 @@ import { resolveLifetimeCheckout } from "./proLifetime.ts";
 import { isLifetimeEntitlement, LIFETIME_PERIOD_END } from "./proLifetimePolicy.ts";
 import { isActiveProEntitlement } from "./entitlementRestoreShared.ts";
 import { buildProCheckoutSessionParams } from "./proCheckoutSession.ts";
+import { PRO_LIFETIME_STRIPE_PRICE_ID } from "../config/proCheckout.ts";
 
 test("lifetime checkout is one-time and isolates access from recurring subscription events", () => {
   for (const plan of ["monthly", "annual", "lifetime"] as const) {
@@ -18,24 +19,24 @@ test("lifetime checkout is one-time and isolates access from recurring subscript
   }
 });
 
-function fixture(options: { price?: Record<string, unknown>; session?: Record<string, unknown>; refunded?: boolean; pending?: boolean; multiple?: boolean } = {}) {
-  const price = { lookup_key: "pro_lifetime", unit_amount: 9999, currency: "usd", type: "one_time", ...options.price };
+function fixture(options: { price?: Record<string, unknown>; session?: Record<string, unknown>; intent?: Record<string, unknown>; refunded?: boolean; pending?: boolean; multiple?: boolean } = {}) {
+  const price = { lookup_key: "pro_lifetime", unit_amount: 9999, currency: "cad", type: "one_time", ...options.price };
   let intentReads = 0;
   const stripe = {
     checkout: { sessions: { listLineItems: async () => ({ has_more: false, data: [{ quantity: 1, price }, ...(options.multiple ? [{ quantity: 1, price }] : [])] }) } },
     paymentIntents: { retrieve: async () => {
       intentReads++;
-      return { status: options.pending ? "processing" : "succeeded", currency: "usd", amount_received: 9999,
-        latest_charge: { refunded: options.refunded ?? false } };
+      return { status: options.pending ? "processing" : "succeeded", currency: "cad", amount_received: 9999,
+        latest_charge: { refunded: options.refunded ?? false }, ...options.intent };
     } },
   } as unknown as Stripe;
   const session = { id: "cs_lifetime", mode: "payment", status: "complete", payment_status: "paid", customer: "cus_lifetime",
-    customer_details: { email: "Student@Example.com" }, payment_intent: "pi_lifetime", currency: "usd", amount_subtotal: 9999,
+    customer_details: { email: "Student@Example.com" }, payment_intent: "pi_lifetime", currency: "cad", amount_subtotal: 9999,
     metadata: { pro_plan: "lifetime" }, ...options.session } as unknown as Stripe.Checkout.Session;
   return { stripe, session, intentReads: () => intentReads };
 }
 
-test("paid lifetime checkout grants non-expiring Pro without trusting plan metadata", async () => {
+test("paid CAD lifetime checkout grants non-expiring Pro without trusting plan metadata", async () => {
   const f = fixture({ session: { metadata: {} } });
   const purchase = await resolveLifetimeCheckout(f.stripe, f.session);
   assert.equal(purchase?.email, "student@example.com");
@@ -45,10 +46,18 @@ test("paid lifetime checkout grants non-expiring Pro without trusting plan metad
   assert.equal(isActiveProEntitlement(purchase?.entitlement ?? null, 4102444800), true);
 });
 
+test("the configured Stripe price grants lifetime access even without a lookup key", async () => {
+  const f = fixture({ price: { id: PRO_LIFETIME_STRIPE_PRICE_ID, lookup_key: null } });
+  const purchase = await resolveLifetimeCheckout(f.stripe, f.session);
+  assert.equal(purchase?.entitlement.currentPeriodEnd, LIFETIME_PERIOD_END);
+  const unrelated = fixture({ price: { id: "price_unrelated", lookup_key: null } });
+  assert.equal(await resolveLifetimeCheckout(unrelated.stripe, unrelated.session), null);
+});
+
 test("unpaid, incomplete, recurring and incorrectly priced checkouts cannot grant lifetime access", async () => {
   const cases = [
     { session: { payment_status: "unpaid" } }, { session: { status: "open" } }, { session: { mode: "subscription" } },
-    { price: { unit_amount: 999 } }, { price: { currency: "cad" } }, { price: { type: "recurring" } },
+    { price: { unit_amount: 999 } }, { price: { currency: "usd" } }, { price: { type: "recurring" } },
     { price: { lookup_key: "credits_topup_10" } }, { multiple: true },
   ];
   for (const options of cases) {
@@ -73,4 +82,11 @@ test("mismatched subtotal and unsettled payments fail before entitlement persist
   await assert.rejects(resolveLifetimeCheckout(wrongAmount.stripe, wrongAmount.session), /LIFETIME_AMOUNT_INVALID/);
   const pending = fixture({ pending: true });
   await assert.rejects(resolveLifetimeCheckout(pending.stripe, pending.session), /LIFETIME_PAYMENT_NOT_SETTLED/);
+});
+
+test("a USD checkout session or PaymentIntent cannot grant the CAD lifetime plan", async () => {
+  const session = fixture({ session: { currency: "usd" } });
+  await assert.rejects(resolveLifetimeCheckout(session.stripe, session.session), /LIFETIME_AMOUNT_INVALID/);
+  const intent = fixture({ intent: { currency: "usd" } });
+  await assert.rejects(resolveLifetimeCheckout(intent.stripe, intent.session), /LIFETIME_PAYMENT_NOT_SETTLED/);
 });

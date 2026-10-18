@@ -130,11 +130,12 @@ As a portfolio project, RubriCheck shows experience across both product thinking
 
 - Website: https://rubricheck.com
 
-## Pro Lifetime (prepared, sales disabled)
+## Pro Lifetime
 
-Pro Lifetime is a USD $99.99 one-time purchase for ongoing Pro access. The price is
-visible as coming soon; both the pricing control and checkout API are disabled
-until Stripe setup is verified. See [Stripe setup and activation](doc/pro-lifetime-stripe-setup.md).
+Pro Lifetime is a CAD $99.99 one-time purchase for ongoing Pro access. The pricing
+control and checkout API are enabled and use the configured Stripe Price ID.
+Checkout validates the amount, currency, one-time pricing, and active status before
+opening a payment session. See [Stripe setup and activation](doc/pro-lifetime-stripe-setup.md).
 
 ## My rubrics and general criteria
 

@@ -593,9 +593,9 @@ export function PricingClient() {
                 </p>
               ) : null}
               <div aria-live="polite" className="my-6 px-1">
-                <p className="text-4xl font-semibold tracking-tight text-slate-900">
+                <p className="flex flex-wrap items-baseline gap-x-1 gap-y-1 text-4xl font-semibold tracking-tight text-slate-900">
                   {selectedCheckoutPlanDisplay.price}
-                  <span className="ml-1 text-sm font-normal text-slate-500">
+                  <span className="whitespace-nowrap text-sm font-normal text-slate-500">
                     {t(selectedCheckoutPlanDisplay.periodLabel)}
                   </span>
                 </p>

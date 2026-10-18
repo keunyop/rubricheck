@@ -2,7 +2,7 @@ import type Stripe from "stripe";
 import { getAccountEntitlementByEmail, hasAccountEntitlementStore, upsertAccountEntitlement } from "./accountEntitlements";
 import { setCachedStripeLookupByEmail, setCustomerIdByEmail, setEntitlementForCustomer, type EntitlementRecord } from "./entitlement";
 import { isLifetimeEntitlement, isLifetimeLineItems, LIFETIME_PERIOD_END } from "./proLifetimePolicy";
-import { PRO_LIFETIME_PRICE_CENTS } from "../config/proCheckout";
+import { PRO_LIFETIME_CURRENCY, PRO_LIFETIME_PRICE_CENTS } from "../config/proCheckout";
 
 export type LifetimeCheckout = {
   customerId: string;
@@ -16,7 +16,7 @@ export async function resolveLifetimeCheckout(stripe: Stripe, session: Stripe.Ch
   if (session.mode !== "payment" || session.status !== "complete" || session.payment_status !== "paid") return null;
   const items = await stripe.checkout.sessions.listLineItems(session.id, { limit: 2, expand: ["data.price"] });
   if (items.has_more || !isLifetimeLineItems(items.data)) return null;
-  if (session.currency !== "usd" || session.amount_subtotal !== PRO_LIFETIME_PRICE_CENTS) {
+  if (session.currency !== PRO_LIFETIME_CURRENCY || session.amount_subtotal !== PRO_LIFETIME_PRICE_CENTS) {
     throw new Error("LIFETIME_AMOUNT_INVALID");
   }
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
@@ -25,7 +25,7 @@ export async function resolveLifetimeCheckout(stripe: Stripe, session: Stripe.Ch
   if (!customerId || !email || !paymentIntentId) throw new Error("LIFETIME_PURCHASE_INCOMPLETE");
   const intent = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ["latest_charge"] });
   const charge = intent.latest_charge;
-  if (intent.status !== "succeeded" || intent.currency !== "usd" || intent.amount_received < PRO_LIFETIME_PRICE_CENTS ||
+  if (intent.status !== "succeeded" || intent.currency !== PRO_LIFETIME_CURRENCY || intent.amount_received < PRO_LIFETIME_PRICE_CENTS ||
     !charge || typeof charge === "string") throw new Error("LIFETIME_PAYMENT_NOT_SETTLED");
   const active = !charge.refunded;
   return {

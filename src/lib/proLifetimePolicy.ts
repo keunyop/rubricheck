@@ -1,5 +1,5 @@
 import type Stripe from "stripe";
-import { PRO_LIFETIME_LOOKUP_KEY, PRO_LIFETIME_PRICE_CENTS } from "../config/proCheckout.ts";
+import { PRO_LIFETIME_CURRENCY, PRO_LIFETIME_LOOKUP_KEY, PRO_LIFETIME_PRICE_CENTS, PRO_LIFETIME_STRIPE_PRICE_ID } from "../config/proCheckout.ts";
 
 // The existing entitlement stores require a finite epoch. Reserve this value for
 // non-expiring Pro access; never expose it as a renewal or expiry date in the UI.
@@ -10,8 +10,8 @@ export function isLifetimeEntitlement(value: { status: string; currentPeriodEnd:
 }
 
 export function isLifetimePrice(price: Stripe.Price): boolean {
-  return price.lookup_key === PRO_LIFETIME_LOOKUP_KEY && price.type === "one_time" &&
-    price.currency === "usd" && price.unit_amount === PRO_LIFETIME_PRICE_CENTS;
+  return (price.id === PRO_LIFETIME_STRIPE_PRICE_ID || price.lookup_key === PRO_LIFETIME_LOOKUP_KEY) && price.type === "one_time" &&
+    price.currency === PRO_LIFETIME_CURRENCY && price.unit_amount === PRO_LIFETIME_PRICE_CENTS;
 }
 
 export function isLifetimeLineItems(items: Stripe.LineItem[]): boolean {

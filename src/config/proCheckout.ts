@@ -2,8 +2,10 @@ export const PRO_MONTHLY_LOOKUP_KEY = "pro_monthly";
 export const PRO_ANNUAL_LOOKUP_KEY = "pro_annual";
 export const PRO_LIFETIME_LOOKUP_KEY = "pro_lifetime";
 export const PRO_LIFETIME_PRICE_CENTS = 9999;
-// Enable only after the Stripe one-time price and webhook configuration are verified.
-export const PRO_LIFETIME_CHECKOUT_ENABLED = false;
+export const PRO_LIFETIME_CURRENCY = "cad";
+export const PRO_LIFETIME_STRIPE_PRICE_ID = "price_1URj6hBUXk6e3lrdOBfYg02a";
+// Stripe revalidates the configured one-time price before opening checkout.
+export const PRO_LIFETIME_CHECKOUT_ENABLED = true;
 
 export const PRO_CHECKOUT_PLANS = ["monthly", "annual", "lifetime"] as const;
 
@@ -49,7 +51,7 @@ export const PRO_CHECKOUT_DISPLAY: Record<
     saveNote: buildAnnualSaveNote(PRO_MONTHLY_PRICE_CENTS, PRO_ANNUAL_PRICE_CENTS),
   },
   lifetime: {
-    price: formatPriceLabel(PRO_LIFETIME_PRICE_CENTS),
+    price: `${PRO_LIFETIME_CURRENCY.toUpperCase()} ${formatPriceLabel(PRO_LIFETIME_PRICE_CENTS)}`,
     periodLabel: "One-time payment",
   },
 };
