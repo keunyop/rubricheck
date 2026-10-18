@@ -13,7 +13,7 @@ import { SubpageBackHomeLink } from "../components/SubpageBackHomeLink";
 
 import { isKnownAdminEmail } from "../../src/config/admin";
 import { CREDIT_PACK_IDS, getCreditPackLabel, getCreditPackMarketingLabel, getCreditPackPriceLabel } from "../../src/config/creditPacks";
-import { PRO_CHECKOUT_DISPLAY, type ProCheckoutPlan } from "../../src/config/proCheckout";
+import { PRO_CHECKOUT_DISPLAY, isProCheckoutPlanAvailable, type ProCheckoutPlan } from "../../src/config/proCheckout";
 
 type CheckoutResponse = {
   url?: string;
@@ -186,6 +186,7 @@ export function PricingClient() {
 
   async function handleUpgradeToPro() {
     setCheckoutError("");
+    if (!isProCheckoutPlanAvailable(checkoutPlan)) return;
     if (!signedInEmail) {
       openLoginModal(t("Log in before starting Pro checkout."));
       return;
@@ -553,7 +554,7 @@ export function PricingClient() {
                   {[t("Unlimited evaluations"), t("Standard and Strict Mode"), t("Full improvements and criterion feedback"), t("Rewrite suggestions")].map(feature => <li key={feature} className="flex items-start gap-2"><span aria-hidden="true" className="font-semibold text-indigo-600">{"\u2713"}</span>{feature}</li>)}
                 </ul>
               )}
-              <div role="group" aria-label={t("Billing period")} className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
+              <div role="group" aria-label={t("Billing period")} className="mt-6 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:grid-cols-3">
                 <button
                   type="button"
                   aria-pressed={checkoutPlan === "monthly"}
@@ -576,7 +577,21 @@ export function PricingClient() {
                       : "bg-transparent text-slate-700 hover:bg-white hover:text-slate-900"
                   }`}
                 > {t("Annual")} </button>
+                <button
+                  type="button"
+                  aria-pressed={checkoutPlan === "lifetime"}
+                  aria-describedby={!isProCheckoutPlanAvailable("lifetime") ? "lifetime-plan-preview" : undefined}
+                  onClick={() => setCheckoutPlan("lifetime")}
+                  disabled={isCreatingCheckout || accountPlan === "pro" || !isProCheckoutPlanAvailable("lifetime")}
+                  className={`col-span-2 min-h-10 rounded-md px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:text-slate-400 sm:col-span-1 ${checkoutPlan === "lifetime" ? "bg-slate-900 text-white shadow-sm" : "text-slate-700 hover:bg-white"}`}
+                > {t("Pro Lifetime")} </button>
               </div>
+              {!isProCheckoutPlanAvailable("lifetime") ? (
+                <p id="lifetime-plan-preview" className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
+                  <span className="font-semibold">{t("Pro Lifetime")} · {PRO_CHECKOUT_DISPLAY.lifetime.price}</span>
+                  <span className="ml-2">{t("One-time payment")} · {t("Coming soon")}</span>
+                </p>
+              ) : null}
               <div aria-live="polite" className="my-6 px-1">
                 <p className="text-4xl font-semibold tracking-tight text-slate-900">
                   {selectedCheckoutPlanDisplay.price}
@@ -587,6 +602,7 @@ export function PricingClient() {
                 {selectedCheckoutPlanDisplay.saveNote ? (
                   <p className="mt-1 text-sm text-indigo-700">{t(selectedCheckoutPlanDisplay.saveNote)}</p>
                 ) : null}
+                {checkoutPlan === "lifetime" ? <p className="mt-2 text-sm text-slate-600">{t("Pay once for ongoing Pro access. No recurring charges.")}</p> : null}
               </div>
               {signedInEmail ? (
                 <div className="mt-3 break-words text-xs text-slate-500"> {t("Checkout account:")} <span className="font-semibold text-slate-900">{signedInEmail}</span>

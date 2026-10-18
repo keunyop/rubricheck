@@ -1,8 +1,9 @@
-import { findEvaluationCheckout, createEvaluationCheckout, evaluationCheckoutFields, validateCheckoutEvaluation } from "../../../src/lib/evaluationCheckout";
+import { findEvaluationCheckout, createEvaluationCheckout, validateCheckoutEvaluation } from "../../../src/lib/evaluationCheckout";
 import Stripe from "stripe";
 import {
   getLookupKeyForProCheckoutPlan,
   includesProLookupKey,
+  isProCheckoutPlanAvailable,
   resolveProCheckoutPlan,
 } from "../../../src/config/proCheckout";
 import { createRequestContext, errorResponse, successJson } from "../../../src/lib/apiError";
@@ -13,6 +14,10 @@ import {
   shouldEnforceForSuspicious,
 } from "../../../src/lib/abuseTelemetry";
 import { getCreditEmailFromCookie } from "../../../src/lib/creditSession";
+import { getAccountEntitlementByEmail, isActiveProAccountEntitlement, hasAccountEntitlementStore } from "../../../src/lib/accountEntitlements";
+import { resolveActiveEntitlementByVerifiedEmail } from "../../../src/lib/entitlementRestore";
+import { isLifetimePrice } from "../../../src/lib/proLifetimePolicy";
+import { buildProCheckoutSessionParams } from "../../../src/lib/proCheckoutSession";
 
 export const runtime = "nodejs";
 
@@ -144,6 +149,9 @@ export async function POST(request: Request) {
     requestEmail = signedInEmail ?? bodyEmail;
 
     if (!requestedPlan) return respond(errorResponse(context, 400, "INVALID_PLAN", "Selected plan is invalid."), "error");
+    if (!isProCheckoutPlanAvailable(requestedPlan)) {
+      return respond(errorResponse(context, 409, "PLAN_UNAVAILABLE", "Pro Lifetime is coming soon."), "error");
+    }
     if (!signedInEmail) {
       return respond(errorResponse(context, 401, "AUTH_REQUIRED", "Log in before starting checkout."), "error");
     }
@@ -157,19 +165,28 @@ export async function POST(request: Request) {
       return respond(errorResponse(context, 409, "SESSION_EMAIL_INVALID", "Signed-in email is invalid."), "error");
     }
     requestEmail = signedInEmail;
+    if (requestedPlan === "lifetime" && !hasAccountEntitlementStore()) {
+      return respond(errorResponse(context, 503, "LIFETIME_NOT_CONFIGURED", "Lifetime checkout is not configured."), "error");
+    }
     const evaluationId = await validateCheckoutEvaluation(body.evaluationId, requestEmail);
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
     if (!appUrl) return respond(errorResponse(context, 500, "APP_URL_MISSING", "Checkout is not configured."), "error");
 
     const existingCheckout = await findEvaluationCheckout(getStripeClient(), requestEmail, evaluationId);
-    if (existingCheckout) {
+    if (existingCheckout?.status === "open" && existingCheckout.metadata?.pro_plan !== requestedPlan) {
+      // A result may have an unfinished monthly/annual/top-up checkout. Replace
+      // it when the customer chooses a different plan, rather than charge that price.
+      await getStripeClient().checkout.sessions.expire(existingCheckout.id);
+    } else if (existingCheckout) {
       const url = existingCheckout.status === "complete"
         ? appUrl + "/?checkout_session_id=" + existingCheckout.id + "&evaluation_id=" + evaluationId
         : existingCheckout.url;
       if (url) return respond(successJson(context, { url }), "success");
     }
-    const alreadyActivePro = await emailHasActiveProSubscription(requestEmail);
+    const accountEntitlement = await getAccountEntitlementByEmail(requestEmail);
+    const alreadyActivePro = isActiveProAccountEntitlement(accountEntitlement) ||
+      Boolean(await resolveActiveEntitlementByVerifiedEmail(requestEmail)) || await emailHasActiveProSubscription(requestEmail);
     if (alreadyActivePro) {
       return respond(
         errorResponse(
@@ -186,14 +203,13 @@ export async function POST(request: Request) {
     const priceResult = await getStripeClient().prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
     const stripePriceId = priceResult.data[0]?.id;
     if (!stripePriceId) return respond(errorResponse(context, 500, "STRIPE_PRICE_NOT_FOUND", "Checkout price is unavailable."), "error");
+    if (requestedPlan === "lifetime" && !isLifetimePrice(priceResult.data[0])) {
+      return respond(errorResponse(context, 503, "LIFETIME_PRICE_INVALID", "Lifetime checkout price is not configured correctly."), "error");
+    }
 
-    const session = await createEvaluationCheckout(getStripeClient(), {
-      mode: "subscription",
-      line_items: [{ price: stripePriceId, quantity: 1 }],
-      customer_email: requestEmail,
-      ...evaluationCheckoutFields(appUrl, evaluationId),
-      metadata: { pro_plan: requestedPlan, ...(evaluationId ? { evaluation_id: evaluationId } : {}) },
-    }, requestEmail, evaluationId);
+    const session = await createEvaluationCheckout(getStripeClient(), buildProCheckoutSessionParams({
+      plan: requestedPlan, priceId: stripePriceId, email: requestEmail, appUrl, evaluationId,
+    }), requestEmail, evaluationId);
 
     if (session.status === "complete" && evaluationId) {
       return respond(successJson(context, { url: appUrl + "/?checkout_session_id=" + session.id + "&evaluation_id=" + evaluationId }), "success");

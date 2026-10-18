@@ -21,6 +21,7 @@ import {
 } from "../../../../src/lib/stripeWebhookEvents";
 import { createRequestContext, errorResponse } from "../../../../src/lib/apiError";
 import { upsertAccountEntitlement } from "../../../../src/lib/accountEntitlements";
+import { persistLifetimeCheckout, resolveLifetimeCheckout } from "../../../../src/lib/proLifetime";
 
 export const runtime = "nodejs";
 
@@ -220,6 +221,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session):
       return;
     }
 
+    const lifetime = await resolveLifetimeCheckout(getStripeClient(), session);
+    if (lifetime) {
+      await persistLifetimeCheckout(lifetime);
+      return;
+    }
+
     const metadataPack = normalizeCreditPackId(session.metadata?.credit_pack_id);
     const metadataLookupPack = resolveCreditPackIdFromLookupKey(session.metadata?.credit_pack_lookup_key);
     const fallbackLineItemPack = await resolveCreditPackIdFromSessionLineItems(session.id);
@@ -335,7 +342,13 @@ export async function POST(request: Request) {
     sessionId: traceFields.sessionId,
   });
 
-  const firstProcess = await markWebhookEventProcessed(event.id);
+  // Payment effects are idempotent (credit purchase IDs / entitlement upserts).
+  // Allow Stripe to retry these after any persistence failure. Lifetime replay
+  // checks the current charge, so a refunded payment never restores access.
+  const replaySafe = event.type === "charge.refunded" ||
+    event.type === "checkout.session.async_payment_succeeded" ||
+    (event.type === "checkout.session.completed" && (event.data.object as Stripe.Checkout.Session).mode === "payment");
+  const firstProcess = replaySafe || await markWebhookEventProcessed(event.id);
   if (!firstProcess) {
     console.info("STRIPE_WEBHOOK_DUPLICATE_IGNORED", {
       requestId: context.requestId,
@@ -349,6 +362,21 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+      }
+      case "checkout.session.async_payment_succeeded": {
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+      }
+      case "charge.refunded": {
+        const charge = event.data.object as Stripe.Charge;
+        const intentId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+        if (intentId) {
+          for await (const session of getStripeClient().checkout.sessions.list({ payment_intent: intentId, limit: 100 })) {
+            const lifetime = await resolveLifetimeCheckout(getStripeClient(), session);
+            if (lifetime) await persistLifetimeCheckout(lifetime);
+          }
+        }
         break;
       }
       case "customer.subscription.created":

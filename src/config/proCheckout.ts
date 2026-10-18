@@ -1,10 +1,18 @@
 export const PRO_MONTHLY_LOOKUP_KEY = "pro_monthly";
 export const PRO_ANNUAL_LOOKUP_KEY = "pro_annual";
+export const PRO_LIFETIME_LOOKUP_KEY = "pro_lifetime";
+export const PRO_LIFETIME_PRICE_CENTS = 9999;
+// Enable only after the Stripe one-time price and webhook configuration are verified.
+export const PRO_LIFETIME_CHECKOUT_ENABLED = false;
 
-export const PRO_CHECKOUT_PLANS = ["monthly", "annual"] as const;
+export const PRO_CHECKOUT_PLANS = ["monthly", "annual", "lifetime"] as const;
 
 export type ProCheckoutPlan = (typeof PRO_CHECKOUT_PLANS)[number];
-export type ProPriceLookupKey = typeof PRO_MONTHLY_LOOKUP_KEY | typeof PRO_ANNUAL_LOOKUP_KEY;
+export type ProPriceLookupKey = typeof PRO_MONTHLY_LOOKUP_KEY | typeof PRO_ANNUAL_LOOKUP_KEY | typeof PRO_LIFETIME_LOOKUP_KEY;
+
+export function isProCheckoutPlanAvailable(plan: ProCheckoutPlan): boolean {
+  return plan !== "lifetime" || PRO_LIFETIME_CHECKOUT_ENABLED;
+}
 
 const PRO_MONTHLY_PRICE_CENTS = 799;
 const PRO_ANNUAL_PRICE_CENTS = 5999;
@@ -40,11 +48,16 @@ export const PRO_CHECKOUT_DISPLAY: Record<
     periodLabel: "/year",
     saveNote: buildAnnualSaveNote(PRO_MONTHLY_PRICE_CENTS, PRO_ANNUAL_PRICE_CENTS),
   },
+  lifetime: {
+    price: formatPriceLabel(PRO_LIFETIME_PRICE_CENTS),
+    periodLabel: "One-time payment",
+  },
 };
 
 const PLAN_TO_LOOKUP_KEY: Record<ProCheckoutPlan, ProPriceLookupKey> = {
   monthly: PRO_MONTHLY_LOOKUP_KEY,
   annual: PRO_ANNUAL_LOOKUP_KEY,
+  lifetime: PRO_LIFETIME_LOOKUP_KEY,
 };
 
 export function normalizeProCheckoutPlan(value: unknown): ProCheckoutPlan | null {
@@ -68,7 +81,7 @@ function normalizeProLookupKey(value: unknown): ProPriceLookupKey | null {
   }
 
   const normalized = value.trim().toLowerCase();
-  if (normalized === PRO_MONTHLY_LOOKUP_KEY || normalized === PRO_ANNUAL_LOOKUP_KEY) {
+  if (normalized === PRO_MONTHLY_LOOKUP_KEY || normalized === PRO_ANNUAL_LOOKUP_KEY || normalized === PRO_LIFETIME_LOOKUP_KEY) {
     return normalized;
   }
 
@@ -90,6 +103,9 @@ export function resolveProCheckoutPlan(input: {
   }
   if (fromLegacyPriceId === PRO_ANNUAL_LOOKUP_KEY) {
     return "annual";
+  }
+  if (fromLegacyPriceId === PRO_LIFETIME_LOOKUP_KEY) {
+    return "lifetime";
   }
 
   return null;

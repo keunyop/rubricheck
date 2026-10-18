@@ -4,6 +4,8 @@ import { createRequestContext, errorResponse, successJson } from "../../../../sr
 import { includesProLookupKey } from "../../../../src/config/proCheckout";
 import { getCreditEmailFromCookie } from "../../../../src/lib/creditSession";
 import { findCustomerIdsByEmail, getStripeClient } from "../../../../src/lib/stripeServer";
+import { getAccountEntitlementByEmail } from "../../../../src/lib/accountEntitlements";
+import { isLifetimeEntitlement } from "../../../../src/lib/proLifetimePolicy";
 
 export const runtime = "nodejs";
 
@@ -111,6 +113,11 @@ export async function GET(request: Request) {
   }
 
   try {
+    const entitlement = await getAccountEntitlementByEmail(signedInEmail);
+    if (entitlement && isLifetimeEntitlement(entitlement)) {
+      return successJson(context, { status: "lifetime", hasProSubscription: false, hasLifetimeAccess: true,
+        cancelAtPeriodEnd: false, currentPeriodEnd: null, customerId: entitlement.customerId, subscriptionId: null });
+    }
     const stripe = getStripeClient();
     const customerIds = await findCustomerIdsByEmail(signedInEmail);
     const summaries: ProSubscriptionSummary[] = [];

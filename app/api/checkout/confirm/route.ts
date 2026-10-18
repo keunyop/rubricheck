@@ -23,6 +23,7 @@ import {
 } from "../../../../src/lib/entitlementSession";
 import { createRequestContext, errorResponse, successJson } from "../../../../src/lib/apiError";
 import { upsertAccountEntitlement } from "../../../../src/lib/accountEntitlements";
+import { persistLifetimeCheckout, resolveLifetimeCheckout } from "../../../../src/lib/proLifetime";
 
 export const runtime = "nodejs";
 
@@ -158,6 +159,14 @@ function getSessionSubscriptionId(session: Stripe.Checkout.Session): string | nu
   return normalized || null;
 }
 
+function setProSessionCookies(response: ReturnType<typeof successJson>, email: string) {
+  const options = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/" };
+  response.cookies.set({ ...options, name: ENTITLEMENT_SESSION_COOKIE_NAME,
+    value: createEntitlementSessionToken({ email, plan: "pro" }), maxAge: ENTITLEMENT_SESSION_TTL_SECONDS });
+  response.cookies.set({ ...options, name: CREDIT_SESSION_COOKIE_NAME,
+    value: createCreditSessionToken({ email }), maxAge: CREDIT_SESSION_TTL_SECONDS });
+}
+
 async function resolveCreditPackIdFromSessionLineItems(sessionId: string): Promise<CreditPackId | null> {
   const lineItems = await getStripeClient().checkout.sessions.listLineItems(sessionId, {
     limit: 20,
@@ -217,7 +226,19 @@ export async function POST(request: Request) {
 
     if (session.mode === "payment") {
       if (session.payment_status !== "paid") {
-        return successJson(context, { ok: false, status: "pending", mode: "credits" });
+        return successJson(context, { ok: false, status: "pending", mode: session.metadata?.pro_plan === "lifetime" ? "pro" : "credits" });
+      }
+
+      const lifetime = await resolveLifetimeCheckout(stripe, session);
+      if (lifetime) {
+        await persistLifetimeCheckout(lifetime);
+        if (lifetime.entitlement.status !== "active") {
+          return errorResponse(context, 409, "LIFETIME_REFUNDED", "This lifetime purchase has been refunded.");
+        }
+        const response = successJson(context, { ok: true, status: "active", mode: "pro", plan: "pro",
+          proPlan: "lifetime", evaluationId: normalizeEvaluationId(session.metadata?.evaluation_id) });
+        setProSessionCookies(response, sessionEmail);
+        return response;
       }
 
       const metadataPack = normalizeCreditPackId(session.metadata?.credit_pack_id);

@@ -26,7 +26,7 @@ type CreditRefundSummaryResponse = {
 };
 
 type BillingStatusResponse = {
-  status?: "none" | "active" | "canceling" | "canceled";
+  status?: "none" | "active" | "canceling" | "canceled" | "lifetime";
   cancelAtPeriodEnd?: boolean;
   currentPeriodEnd?: number | null;
   code?: string;
@@ -87,13 +87,13 @@ export function BillingManageClient() {
     refundableAmount: 0,
     currency: null,
   });
-  const [billingStatus, setBillingStatus] = useState<"none" | "active" | "canceling" | "canceled">("none");
+  const [billingStatus, setBillingStatus] = useState<"none" | "active" | "canceling" | "canceled" | "lifetime">("none");
   const [billingStatusPeriodEnd, setBillingStatusPeriodEnd] = useState<number | null>(null);
   const [billingStatusError, setBillingStatusError] = useState("");
   const hasProAccess = accountPlan === "pro";
   const hasManageableSubscription = billingStatus === "active" || billingStatus === "canceling";
   const shouldShowSubscriptionSection = hasProAccess || hasManageableSubscription;
-  const displayPlan = hasProAccess ? "Pro" : (creditBalance ?? 0) > 0 ? t("Top-up") : "Free";
+  const displayPlan = billingStatus === "lifetime" ? t("Pro Lifetime") : hasProAccess ? "Pro" : (creditBalance ?? 0) > 0 ? t("Top-up") : "Free";
   const billingStatusDateLabel = formatDateFromEpoch(billingStatusPeriodEnd, siteLanguage);
 
   useEffect(() => {
@@ -124,7 +124,7 @@ export function BillingManageClient() {
         }
 
         setBillingStatus(
-          data.status === "active" || data.status === "canceling" || data.status === "canceled" ? data.status : "none",
+          data.status === "active" || data.status === "canceling" || data.status === "canceled" || data.status === "lifetime" ? data.status : "none",
         );
         setBillingStatusPeriodEnd(
           typeof data.currentPeriodEnd === "number" && Number.isFinite(data.currentPeriodEnd) ? data.currentPeriodEnd : null,
@@ -349,7 +349,9 @@ export function BillingManageClient() {
                     ) : null}
                   </div>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
-                    {billingStatus === "canceling"
+                    {billingStatus === "lifetime"
+                      ? t("Pro Lifetime")
+                      : billingStatus === "canceling"
                       ? billingStatusDateLabel
                         ? t("Canceled, active until {date}", { date: billingStatusDateLabel })
                         : t("Canceled, active until the current billing period ends")
@@ -369,7 +371,9 @@ export function BillingManageClient() {
                   {billingStatusError}
                 </p>
               ) : null}
-              {shouldShowSubscriptionSection ? (
+              {billingStatus === "lifetime" ? (
+                <p className="mt-3 text-sm text-emerald-700">{t("Lifetime access is active. No renewal or recurring charges.")}</p>
+              ) : shouldShowSubscriptionSection ? (
                 <>
                   <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                     {!hasManageableSubscription

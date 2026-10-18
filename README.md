@@ -130,6 +130,12 @@ As a portfolio project, RubriCheck shows experience across both product thinking
 
 - Website: https://rubricheck.com
 
+## Pro Lifetime (prepared, sales disabled)
+
+Pro Lifetime is a USD $99.99 one-time purchase for ongoing Pro access. The price is
+visible as coming soon; both the pricing control and checkout API are disabled
+until Stripe setup is verified. See [Stripe setup and activation](doc/pro-lifetime-stripe-setup.md).
+
 ## My rubrics and general criteria
 
 Use **My rubrics** beside the rubric input to reopen recent rubrics, rename them,

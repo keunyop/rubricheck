@@ -6,6 +6,7 @@ import {
   buildAnnualSaveNote,
   getLookupKeyForProCheckoutPlan,
   includesProLookupKey,
+  isProCheckoutPlanAvailable,
   normalizeProCheckoutPlan,
   resolveProCheckoutPlan,
 } from "./proCheckout.ts";
@@ -44,4 +45,16 @@ test("pro checkout display reflects the current monthly and annual pricing", () 
 
 test("annual save note is calculated from the actual monthly equivalent", () => {
   assert.equal(buildAnnualSaveNote(799, 5999), "Save ~37% vs monthly");
+});
+
+test("lifetime is a $99.99 one-time plan, disabled until Stripe setup is verified", () => {
+  assert.equal(normalizeProCheckoutPlan("lifetime"), "lifetime");
+  assert.equal(resolveProCheckoutPlan({ priceId: "pro_lifetime" }), "lifetime");
+  assert.equal(getLookupKeyForProCheckoutPlan("lifetime"), "pro_lifetime");
+  assert.equal(PRO_CHECKOUT_DISPLAY.lifetime.price, "$99.99");
+  assert.equal(PRO_CHECKOUT_DISPLAY.lifetime.periodLabel, "One-time payment");
+  assert.equal(isProCheckoutPlanAvailable("lifetime"), false);
+  assert.equal(isProCheckoutPlanAvailable("monthly"), true);
+  assert.equal(isProCheckoutPlanAvailable("annual"), true);
+  assert.equal(includesProLookupKey(["pro_lifetime"]), false, "A lifetime price must never match a recurring subscription");
 });

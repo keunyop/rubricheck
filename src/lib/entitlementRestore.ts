@@ -11,6 +11,9 @@ import {
   type EntitlementRecord,
 } from "./entitlement";
 import { isActiveProEntitlement, isValidEmail, normalizeEmailInput } from "./entitlementRestoreShared";
+import { getAccountEntitlementByEmail } from "./accountEntitlements";
+import { findLifetimeCheckoutByCustomer, persistLifetimeCheckout } from "./proLifetime";
+import { isLifetimeEntitlement } from "./proLifetimePolicy";
 
 export { normalizeEmailInput, isValidEmail } from "./entitlementRestoreShared";
 const STRIPE_LOOKUP_CACHE_TTL_SECONDS = 60 * 5;
@@ -112,7 +115,16 @@ async function getActiveEntitlementByCustomerId(customerId: string): Promise<Ent
   }
 
   const subscriptions = await listSubscriptionsByCustomer(normalizedCustomerId);
-  return getBestActiveEntitlementFromSubscriptions(subscriptions);
+  const subscriptionEntitlement = getBestActiveEntitlementFromSubscriptions(subscriptions);
+  if (subscriptionEntitlement) return subscriptionEntitlement;
+
+  const lifetime = await findLifetimeCheckoutByCustomer(getStripeClient(), normalizedCustomerId);
+  if (lifetime) {
+    await persistLifetimeCheckout(lifetime);
+    return lifetime.entitlement;
+  }
+
+  return null;
 }
 
 async function findCustomerIdsByEmail(email: string): Promise<string[]> {
@@ -215,6 +227,14 @@ export async function resolveActiveEntitlementByVerifiedEmail(
   const normalizedEmail = normalizeEmailInput(email);
   if (!isValidEmail(normalizedEmail)) {
     throw new Error("INVALID_EMAIL");
+  }
+
+  // Durable lifetime access takes precedence over old subscription cache hints.
+  const durable = await getAccountEntitlementByEmail(normalizedEmail);
+  if (durable && isLifetimeEntitlement(durable)) {
+    const entitlement: EntitlementRecord = { ...durable, updatedAt: durable.updatedAt ?? getNowSeconds() };
+    await persistRedisEntitlementHints({ email: normalizedEmail, customerId: durable.customerId, entitlement });
+    return { customerId: durable.customerId, entitlement };
   }
 
   const cachedLookup = await getCachedStripeLookupByEmail(normalizedEmail);
