@@ -37,9 +37,9 @@ const page = await context.newPage();
 page.setDefaultNavigationTimeout(120000);
 page.on("pageerror", error => errors.push(error.message));
 const locales = [
-  { path: "", lifetime: "Pro Lifetime", monthly: "Monthly", annual: "Annual" },
-  { path: "/ko", lifetime: "Pro 평생 이용권", monthly: "월간", annual: "연간" },
-  { path: "/ms", lifetime: "Pro Seumur Hidup", monthly: "Bulanan", annual: "Tahunan" },
+  { path: "", lifetime: "Lifetime", monthly: "Monthly", annual: "Annual" },
+  { path: "/ko", lifetime: "평생 이용권", monthly: "월간", annual: "연간" },
+  { path: "/ms", lifetime: "Seumur Hidup", monthly: "Bulanan", annual: "Tahunan" },
 ];
 mkdirSync("doc/verification/lifetime", { recursive: true });
 try {
@@ -55,9 +55,9 @@ try {
       const monthly = page.getByRole("button", { name: locale.monthly, exact: true });
       const annual = page.getByRole("button", { name: locale.annual, exact: true });
       await annual.click();
-      assert.match(await page.locator('[aria-live="polite"]').innerText(), /\$59\.99/);
+      assert.match(await page.locator('[aria-live="polite"]').innerText(), /CAD\s*\$59\.99/);
       await monthly.click();
-      assert.match(await page.locator('[aria-live="polite"]').innerText(), /\$7\.99/);
+      assert.match(await page.locator('[aria-live="polite"]').innerText(), /CAD\s*\$7\.99/);
       await lifetime.click();
       assert.equal(await lifetime.getAttribute("aria-pressed"), "true");
       assert.match(await page.locator('[aria-live="polite"]').innerText(), /CAD\s*\$99\.99/);
@@ -67,7 +67,7 @@ try {
   }
   signedIn = true;
   await page.goto(base + "/pricing");
-  await page.getByRole("button", { name: "Pro Lifetime", exact: true }).click();
+  await page.getByRole("button", { name: "Lifetime", exact: true }).click();
   await page.getByRole("button", { name: "Upgrade to Pro", exact: true }).nth(1).click();
   await page.waitForURL(base + "/billing/cancel");
   assert.equal(checkoutRequests, 1);

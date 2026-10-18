@@ -38,7 +38,7 @@ test("credit pack marketing and price labels are configured for interstitial car
   assert.equal(getCreditPackMarketingLabel("10"), "Starter");
   assert.equal(getCreditPackMarketingLabel("25"), "Most Popular");
   assert.equal(getCreditPackMarketingLabel("60"), "Best Value");
-  assert.equal(getCreditPackPriceLabel("10"), "$4.99");
-  assert.equal(getCreditPackPriceLabel("25"), "$9.99");
-  assert.equal(getCreditPackPriceLabel("60"), "$19.99");
+  assert.equal(getCreditPackPriceLabel("10"), "CAD $4.99");
+  assert.equal(getCreditPackPriceLabel("25"), "CAD $9.99");
+  assert.equal(getCreditPackPriceLabel("60"), "CAD $19.99");
 });

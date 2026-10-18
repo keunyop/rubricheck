@@ -584,11 +584,11 @@ export function PricingClient() {
                   onClick={() => setCheckoutPlan("lifetime")}
                   disabled={isCreatingCheckout || accountPlan === "pro" || !isProCheckoutPlanAvailable("lifetime")}
                   className={`col-span-2 min-h-10 rounded-md px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:text-slate-400 sm:col-span-1 ${checkoutPlan === "lifetime" ? "bg-slate-900 text-white shadow-sm" : "text-slate-700 hover:bg-white"}`}
-                > {t("Pro Lifetime")} </button>
+                > {t("Lifetime")} </button>
               </div>
               {!isProCheckoutPlanAvailable("lifetime") ? (
                 <p id="lifetime-plan-preview" className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
-                  <span className="font-semibold">{t("Pro Lifetime")} · {PRO_CHECKOUT_DISPLAY.lifetime.price}</span>
+                  <span className="font-semibold">{t("Lifetime")} · {PRO_CHECKOUT_DISPLAY.lifetime.price}</span>
                   <span className="ml-2">{t("One-time payment")} · {t("Coming soon")}</span>
                 </p>
               ) : null}

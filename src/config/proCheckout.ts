@@ -20,7 +20,7 @@ const PRO_MONTHLY_PRICE_CENTS = 799;
 const PRO_ANNUAL_PRICE_CENTS = 5999;
 
 function formatPriceLabel(amountCents: number): string {
-  return `$${(amountCents / 100).toFixed(2)}`;
+  return `CAD $${(amountCents / 100).toFixed(2)}`;
 }
 
 export function buildAnnualSaveNote(monthlyPriceCents: number, annualPriceCents: number): string {
@@ -51,7 +51,7 @@ export const PRO_CHECKOUT_DISPLAY: Record<
     saveNote: buildAnnualSaveNote(PRO_MONTHLY_PRICE_CENTS, PRO_ANNUAL_PRICE_CENTS),
   },
   lifetime: {
-    price: `${PRO_LIFETIME_CURRENCY.toUpperCase()} ${formatPriceLabel(PRO_LIFETIME_PRICE_CENTS)}`,
+    price: formatPriceLabel(PRO_LIFETIME_PRICE_CENTS),
     periodLabel: "One-time payment",
   },
 };

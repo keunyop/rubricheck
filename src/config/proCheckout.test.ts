@@ -40,8 +40,8 @@ test("includesProLookupKey returns true for monthly or annual lookup keys", () =
 });
 
 test("pro checkout display reflects the current monthly and annual pricing", () => {
-  assert.equal(PRO_CHECKOUT_DISPLAY.monthly.price, "$7.99");
-  assert.equal(PRO_CHECKOUT_DISPLAY.annual.price, "$59.99");
+  assert.equal(PRO_CHECKOUT_DISPLAY.monthly.price, "CAD $7.99");
+  assert.equal(PRO_CHECKOUT_DISPLAY.annual.price, "CAD $59.99");
   assert.equal(PRO_CHECKOUT_DISPLAY.annual.saveNote, "Save ~37% vs monthly");
 });
 

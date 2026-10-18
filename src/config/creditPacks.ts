@@ -16,21 +16,21 @@ const CREDIT_PACK_CONFIG: Record<CreditPackId, CreditPackConfig> = {
     credits: 10,
     label: "10 evaluations",
     marketingLabel: "Starter",
-    priceLabel: "$4.99",
+    priceLabel: "CAD $4.99",
   },
   "25": {
     lookupKey: "credits_25_v1",
     credits: 25,
     label: "25 evaluations",
     marketingLabel: "Most Popular",
-    priceLabel: "$9.99",
+    priceLabel: "CAD $9.99",
   },
   "60": {
     lookupKey: "credits_60_v1",
     credits: 60,
     label: "60 evaluations",
     marketingLabel: "Best Value",
-    priceLabel: "$19.99",
+    priceLabel: "CAD $19.99",
   },
 };
 

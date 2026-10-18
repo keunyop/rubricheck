@@ -1,5 +1,6 @@
 export const billing: Record<string, readonly [string, string]> = {
   "Pro Lifetime": ["Pro 평생 이용권", "Pro Seumur Hidup"],
+  "Lifetime": ["평생 이용권", "Seumur Hidup"],
   "Coming soon": ["준비 중", "Akan datang"],
   "Pay once for ongoing Pro access. No recurring charges.": ["한 번 결제하고 Pro를 계속 이용하세요. 정기 결제는 없습니다.", "Bayar sekali untuk akses Pro berterusan. Tiada caj berulang."],
   "Lifetime access is active. No renewal or recurring charges.": ["평생 이용권을 사용 중입니다. 갱신이나 정기 결제는 없습니다.", "Akses seumur hidup aktif. Tiada pembaharuan atau caj berulang."],
