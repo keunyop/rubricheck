@@ -9,7 +9,7 @@ export function localeFromPath(path: string): Locale { const part = path.split("
 // Public content URLs choose their language. Saved defaults only restore at the
 // neutral home entry or account pages that do not have localized public URLs.
 export function shouldRestoreSiteLanguage(pathname: string): boolean {
-  return pathname === "/" || /^\/(billing|admin)(\/|$)/.test(pathname);
+  return pathname === "/" || pathname === "/workspace" || /^\/(billing|admin)(\/|$)/.test(pathname);
 }
 export function stripLocale(path: string): string { return /^\/(en|ko|ms)(?=\/|$)/.test(path) ? path.replace(/^\/(en|ko|ms)/, "") || "/" : path; }
 export function localizedPath(path: string, locale: Locale): string {

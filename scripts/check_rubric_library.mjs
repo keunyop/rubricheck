@@ -56,7 +56,7 @@ const assignment = () => page.getByRole("heading", { name: "Assignment", exact: 
 const modal = () => page.getByRole("dialog", { name: "My rubrics", exact: true });
 const pass = message => console.log("PASS " + message);
 try {
-  await page.goto(base);
+  await page.goto(base + "/workspace");
   await page.getByRole("button", { name: "My rubrics", exact: true }).click();
   await modal().getByText("Essay.pdf", { exact: true }).waitFor();
   assert.ok((await modal().innerText()).indexOf("Essay.pdf") < (await modal().innerText()).indexOf("Report rubric"));

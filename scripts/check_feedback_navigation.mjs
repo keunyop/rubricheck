@@ -52,7 +52,7 @@ await context.route("**/api/**", async route => {
 });
 const pass = name => console.log("PASS " + name);
 try {
-  await page.goto(base);
+  await page.goto(base + "/workspace");
   const sidebar = page.locator("aside[aria-label=Sidebar]");
   const account = page.getByRole("dialog", { name: "Account menu", exact: true });
   await sidebar.getByRole("button", { name: "Open account menu" }).click();
@@ -72,7 +72,7 @@ try {
   await page.getByRole("button", { name: "Feedback", exact: true }).click();
   await page.getByRole("dialog", { name: "Share your feedback" }).waitFor();
   await page.keyboard.press("Escape");
-  await page.goto(base);
+  await page.goto(base + "/workspace");
   await sidebar.getByRole("button", { name: "Open account menu" }).waitFor();
   await page.getByRole("button", { name: "Feedback", exact: true }).click();
   let feedback = page.getByRole("dialog", { name: "Share your feedback" });
@@ -86,7 +86,7 @@ try {
   await feedback.getByRole("button", { name: "Send feedback", exact: true }).click();
   await page.getByRole("dialog", { name: "Thanks for your feedback" }).waitFor();
   assert.equal(inbox.length, 1);
-  assert.equal(inbox[0].page, "/");
+  assert.equal(inbox[0].page, "/workspace");
   await page.getByRole("button", { name: "Done", exact: true }).click();
   pass("home and pricing use internal feedback; errors preserve input; success stores the message");
 
@@ -127,7 +127,7 @@ try {
 
   email = "kylee1112@hotmail.com";
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(base);
+  await page.goto(base + "/workspace");
   await sidebar.getByRole("button", { name: "Open account menu" }).click();
   assert.equal(await account.getByRole("link", { name: "Admin", exact: true }).getAttribute("href"), "/admin");
   await context.addCookies([{ name: "admin_secret", value: process.env.TEST_ADMIN_SECRET ?? "local-feedback-browser-test", url: base }]);

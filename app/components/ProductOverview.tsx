@@ -1,5 +1,7 @@
 "use client";
 
+import { LandingEntry } from "./LandingEntry";
+import { HomeResources } from "./HomeResources";
 import { useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "./LanguageProvider";
@@ -13,24 +15,25 @@ const steps = [
   ["Revise with a plan", "Start with the leading improvement priority, make your edits, and check your next version."],
 ];
 
-export function ProductOverview() {
+export function ProductOverview({ home = false }: { home?: boolean }) {
   const { t, href } = useLanguage();
   const [selected, setSelected] = useState(1);
   const criterion = sample.rubric[selected];
   return <main id="main-content" tabIndex={-1} className={styles.page}>
     <div className={styles.container}>
+      <LandingEntry home={home} />
       <section className={styles.hero} aria-labelledby="product-title">
         <div>
           <p className={styles.eyebrow}>{t("From first draft to final review")}</p>
           <h1 id="product-title">{t("Know what to improve.")} <span>{t("Before you submit.")}</span></h1>
           <p className={styles.intro}>{t("Turn your rubric into a clearer revision plan. RubriCheck helps you understand how your draft meets the criteria, where it falls short, and what to work on next.")}</p>
           <div className={styles.actions}>
-            <Link href={href("/#rubric-checker")} className={styles.primary}>{t("Check my draft")} <span aria-hidden="true">↗</span></Link>
-            <a href="#how-it-works" className={styles.secondary}>{t("See how it works")} <span aria-hidden="true">↓</span></a>
+            <Link href={href("/workspace")} className={styles.primary}>{t("Check my draft for free")} <span aria-hidden="true">↗</span></Link>
+            <a href="#sample-feedback" className={styles.secondary}>{t("See sample feedback")} <span aria-hidden="true">↓</span></a>
           </div>
           <p className={styles.note}>{t("One free summary preview. No sign-up or card required.")}</p>
         </div>
-        <section className={styles.preview} aria-labelledby="preview-title">
+        <section id="sample-feedback" className={styles.preview} aria-labelledby="preview-title">
           <div className={styles.previewTop}><span className={styles.statusDot} aria-hidden="true" />{t("Sample · Illustrative result")}</div>
           <div className={styles.previewBody}>
             <h2 id="preview-title">{t(sample.title)}</h2>
@@ -68,7 +71,8 @@ export function ProductOverview() {
           <article><h3>{t("Start with what you need")}</h3><p>{t("Try a preview, then sign up for {count} free checks. Credits and Pro unlock more feedback; rewrite suggestions require Pro.", { count: FREE_TRIAL_LIMIT })}</p><Link href={href("/pricing")}>{t("Compare plans")} <span aria-hidden="true">↗</span></Link></article>
         </div>
       </section>
-      <section className={styles.cta} aria-labelledby="cta-title"><div><p className={styles.eyebrow}>{t("Make your next revision count")}</p><h2 id="cta-title">{t("Start with the draft you have.")}</h2><p>{t("Bring your own rubric or use general criteria to get started.")}</p></div><Link href={href("/#rubric-checker")} className={styles.primary}>{t("Check my draft")} <span aria-hidden="true">↗</span></Link></section>
+      <section className={styles.cta} aria-labelledby="cta-title"><div><p className={styles.eyebrow}>{t("Make your next revision count")}</p><h2 id="cta-title">{t("Start with the draft you have.")}</h2><p>{t("Bring your own rubric or use general criteria to get started.")}</p></div><Link href={href("/workspace")} className={styles.primary}>{t("Check my draft for free")} <span aria-hidden="true">↗</span></Link></section>
+      {home ? <HomeResources /> : null}
     </div>
   </main>;
 }

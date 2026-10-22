@@ -8,6 +8,7 @@ test("attribution drops PII, secrets, private paths and arbitrary campaign value
   assert.deepEqual(touch,{source:"unknown",medium:"email",campaign:"unknown",landing:"/",referrer:"other"});
   assert.equal(JSON.stringify(touch).includes("student"),false);
   assert.equal(publicGrowthPath("/api/workspace/private"),"unknown");
+  assert.equal(publicGrowthPath("/ko/workspace?evaluation_id=private&checkout_session_id=secret"),"/workspace");
   assert.equal(publicGrowthPath("/ms/pricing?email=secret"),"/pricing");
   assert.equal(sanitizeTouch({source:"google",landing:"/private",email:"secret"}).landing,"unknown");
 });

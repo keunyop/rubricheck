@@ -6,6 +6,7 @@ import { isLocale } from "../../../src/i18n/config";
 // Real routes also avoid an extra HTTP hop when a proxy normalizes the host.
 const pages = {
   "/": () => import("../../page"),
+  "/workspace": () => import("../../workspace/page"),
   "/pricing": () => import("../../pricing/page"),
   "/product": () => import("../../product/page"),
   "/help": () => import("../../help/page"),
@@ -21,7 +22,7 @@ const pages = {
   "/legal/ai-disclaimer": () => import("../../legal/ai-disclaimer/page"),
   "/legal/data-retention": () => import("../../legal/data-retention/page"),
 };
-type Props = { params: Promise<{ locale: string; slug?: string[] }> };
+type Props = { params: Promise<{ locale: string; slug?: string[] }>; searchParams?: Promise<Record<string, string | string[] | undefined>> };
 async function resolvePage(props: Props) {
   const { locale, slug } = await props.params;
   const path = "/" + (slug ?? []).join("/");
@@ -33,5 +34,5 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 export default async function LocalizedPage(props: Props) {
   const Page = (await resolvePage(props)).default;
-  return <Page />;
+  return <Page searchParams={props.searchParams} />;
 }

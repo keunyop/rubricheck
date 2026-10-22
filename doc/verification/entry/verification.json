@@ -1,0 +1,44 @@
+{
+  "scope": "Separate the public landing page from the existing assignment workspace",
+  "routes": {
+    "/": "Public introduction; valid signed-in sessions go to /workspace",
+    "/workspace": "Existing guest and account workspace, excluded from indexing",
+    "/product": "Explicit introduction remains accessible for all visitors",
+    "locales": ["en", "ko", "ms"]
+  },
+  "compatibility": [
+    "Old result and checkout-return query parameters survive temporary redirects",
+    "Old #rubric-checker links reach the localized workspace",
+    "Unexpired drafts offer a continue action without exposing content",
+    "Other-account, expired, corrupt and empty drafts do not show a resume action",
+    "Existing text and uploaded files survive navigation",
+    "Language changes preserve workspace input and result state"
+  ],
+  "checks": {
+    "productionBuild": "passed",
+    "changedReactCodeEslint": "passed without warnings",
+    "unitAndApiTests": { "passed": 200, "failed": 0 },
+    "extendedLocaleAndAnalyticsAssertions": "10 existing tests passed again",
+    "seo": { "indexablePublicPages": 45, "noindexWorkspaceLocales": 3, "status": "passed" },
+    "browserSuitesPassed": [
+      "check_entry.mjs",
+      "check_evaluation_recovery.mjs",
+      "check_guest_trial.mjs",
+      "check_assignment_workspace.mjs",
+      "check_rubric_library.mjs",
+      "check_i18n.mjs",
+      "check_ui.mjs",
+      "check_saas.mjs",
+      "check_onboarding.mjs"
+    ],
+    "landingViewportWidths": [320, 390, 768, 1440],
+    "entryDetails": "results.json",
+    "interruption": "One SaaS browser run encountered ERR_NETWORK_IO_SUSPENDED; its rerun passed"
+  },
+  "limits": {
+    "serverSessionValidation": "Real signature and expiry validation with a local-only fixture secret",
+    "browserApiCallsMocked": true,
+    "liveAiEmailOrPaymentTransactionsTested": false,
+    "productionDeploymentPerformed": false
+  }
+}

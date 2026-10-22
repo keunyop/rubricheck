@@ -37,8 +37,8 @@ export async function SeoLandingPage({ page }: { page: SeoLandingPageContent }) 
           </div>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link href={href(page.ctaHref)} className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">{page.ctaLabel}</Link>
-            <Link href={href(`/?start=general&from=${page.slug}#rubric-checker`)} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Check without a rubric")}</Link>
-            <Link href={href(`/?start=library&from=${page.slug}#rubric-checker`)} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Use a saved rubric")}</Link>
+            <Link href={href(`/workspace?start=general&from=${page.slug}#rubric-checker`)} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Check without a rubric")}</Link>
+            <Link href={href(`/workspace?start=library&from=${page.slug}#rubric-checker`)} className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Use a saved rubric")}</Link>
           </div>
           <p className="mt-4 text-sm leading-6 text-slate-600">
             {t("Try a free preview, or sign up for {count} free checks.", { count: FREE_TRIAL_LIMIT })}
@@ -103,7 +103,7 @@ export async function SeoLandingPage({ page }: { page: SeoLandingPageContent }) 
         </section>
         <div className="flex flex-wrap justify-center gap-3">
           <Link href={href(page.ctaHref)} className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white">{page.ctaLabel}</Link>
-          <Link href={href(`/?start=general&from=${page.slug}#rubric-checker`)} className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Check without a rubric")}</Link>
+          <Link href={href(`/workspace?start=general&from=${page.slug}#rubric-checker`)} className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Check without a rubric")}</Link>
         </div>
       </div>
     </main>

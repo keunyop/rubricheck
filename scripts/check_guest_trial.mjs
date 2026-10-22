@@ -43,7 +43,7 @@ await context.route("**/api/**", async route => {
 });
 const pass = message => console.log("PASS " + message);
 try {
-  await page.goto(base);
+  await page.goto(base + "/workspace");
   await page.getByRole("button", { name: "Get my free summary", exact: true }).waitFor();
   assert.equal(await page.getByText("3 free checks · No card required", { exact: true }).count(), 0);
   assert.equal(await page.getByText("Get one free Evaluation Summary before signing up.", { exact: false }).count(), 0);

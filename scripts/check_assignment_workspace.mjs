@@ -59,7 +59,7 @@ await context.route("**/api/**", async route => {
 const sidebar = page.locator("aside[aria-label=Sidebar]");
 const pass = name => console.log("PASS " + name);
 try {
-  await page.goto(base);
+  await page.goto(base + "/workspace");
   await sidebar.getByRole("button", { name: "Biology lab report", exact: true }).waitFor();
   const labels = await sidebar.locator("nav").innerText();
   assert.ok(labels.indexOf("Projects") < labels.indexOf("Recents"));

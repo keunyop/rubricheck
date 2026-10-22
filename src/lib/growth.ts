@@ -4,7 +4,7 @@ export type GrowthClientEvent = (typeof GROWTH_CLIENT_EVENTS)[number];
 export type GrowthProduct = "unknown" | "guest" | "free" | "credits" | "pro" | "pro_monthly" | "pro_annual" | "pro_lifetime";
 export type GrowthTouch = { source: string; medium: string; campaign: string; landing: string; referrer: string };
 export const GROWTH_RETENTION_DAYS = 90;
-export const PUBLIC_PATHS = ["/", "/pricing", "/rubric-checker", "/ai-rubric-grader", "/assignment-rubric-checker", "/essay-rubric-checker", "/rubric-feedback-tool", "/how-to-use-a-rubric-to-check-an-assignment"];
+export const PUBLIC_PATHS = ["/", "/workspace", "/product", "/help", "/pricing", "/rubric-checker", "/ai-rubric-grader", "/assignment-rubric-checker", "/essay-rubric-checker", "/rubric-feedback-tool", "/how-to-use-a-rubric-to-check-an-assignment"];
 const SOURCES = ["google", "bing", "duckduckgo", "yahoo", "reddit", "facebook", "instagram", "youtube", "tiktok", "linkedin", "newsletter", "university"];
 const MEDIUMS = ["organic", "cpc", "paid_social", "social", "email", "referral"];
 // Add reviewed campaign identifiers here; arbitrary query strings can contain PII.

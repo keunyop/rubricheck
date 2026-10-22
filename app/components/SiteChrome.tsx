@@ -6,13 +6,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { stripLocale } from "../../src/i18n/config";
 import { useLanguage } from "./LanguageProvider";
+import { useAccountSummary } from "./AccountSummaryProvider";
 import { SiteFooter } from "./SiteFooter";
 import styles from "./site.module.css";
 
 export function SiteChrome({ children }: { children: ReactNode }) {
   const { t, href } = useLanguage();
+  const { signedInEmail } = useAccountSummary();
   const path = stripLocale(usePathname()).replace(/\/$/, "") || "/";
-  if (path === "/" || /^\/(admin|billing)(\/|$)/.test(path)) return children;
+  if (path === "/workspace" || /^\/(admin|billing)(\/|$)/.test(path)) return children;
 
   return <>
     <a href="#main-content" className="skip-link">{t("Skip to content")}</a>
@@ -25,7 +27,8 @@ export function SiteChrome({ children }: { children: ReactNode }) {
           {[["/product", "Product"], ["/pricing", "Pricing"], ["/help", "Help center"]].map(([url, label]) =>
             <Link key={url} href={href(url)} aria-current={path === url ? "page" : undefined}>{t(label)}</Link>)}
         </nav>
-        <Link href={href("/#rubric-checker")} className={styles.headerCta}>{t("Open workspace")} <span aria-hidden="true">↗</span></Link>
+        {!signedInEmail ? <Link href={href("/workspace?start=login")} className={styles.login}>{t("Log in")}</Link> : null}
+        <Link href={href("/workspace")} className={styles.headerCta} aria-label={t("Open workspace")}><span className={styles.desktopLabel} aria-hidden="true">{t("Open workspace")}</span><span className={styles.mobileLabel} aria-hidden="true">{t("Workspace")}</span> <span aria-hidden="true">↗</span></Link>
       </div>
     </header>
     {children}

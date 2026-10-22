@@ -1232,6 +1232,7 @@ export default function Home() {
     const entry = start + ":" + (signedInEmail || "guest");
     if (!start || starterRef.current === entry || url.searchParams.has("evaluation_id") || url.searchParams.has("checkout_session_id")) return;
     starterRef.current = entry;
+    if (start === "login" && !signedInEmail) setShowLoginModal(true);
     if (start === "general") { setRubricMode("general"); setSavedRubric(null); setSampleSelected(false); }
     if (start === "library") {
       if (signedInEmail) setShowRubricLibrary(true);

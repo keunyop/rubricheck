@@ -76,3 +76,9 @@
   .trustGrid { gap: 8px; }
   .cta { padding: 28px 24px; align-items: start; flex-direction: column; gap: 24px; }
 }
+
+.resume { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; padding: 18px 22px; margin-top: 24px; border: 1px solid #c7d2fe; border-radius: 12px; background: #f5f7ff; }
+.resume strong { font-size: 14px; font-weight: 600; }
+.resume p { font-size: 12px; color: #58677c; line-height: 1.7; margin-top: 4px; }
+.resume a { display: inline-flex; align-items: center; min-height: 44px; gap: 16px; font-size: 13px; font-weight: 600; color: #4338ca; }
+.preview { scroll-margin-top: 24px; }

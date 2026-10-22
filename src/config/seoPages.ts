@@ -179,7 +179,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
         "description": "Follow a worked example to self-check an assignment."
       }
     ],
-    "ctaHref": "/#rubric-checker"
+    "ctaHref": "/workspace#rubric-checker"
   },
   {
     "slug": "ai-rubric-grader",
@@ -272,7 +272,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
         "description": "Turn criterion-level feedback into a practical revision plan."
       }
     ],
-    "ctaHref": "/#rubric-checker"
+    "ctaHref": "/workspace#rubric-checker"
   },
   {
     "slug": "assignment-rubric-checker",
@@ -365,7 +365,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
         "description": "Turn criterion-level feedback into a practical revision plan."
       }
     ],
-    "ctaHref": "/#rubric-checker"
+    "ctaHref": "/workspace#rubric-checker"
   },
   {
     "slug": "essay-rubric-checker",
@@ -463,7 +463,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
         "description": "Follow a worked example to self-check an assignment."
       }
     ],
-    "ctaHref": "/#rubric-checker"
+    "ctaHref": "/workspace#rubric-checker"
   },
   {
     "slug": "how-to-use-a-rubric-to-check-an-assignment",
@@ -556,7 +556,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
         "description": "Turn grading criteria into a clear checklist for your draft."
       }
     ],
-    "ctaHref": "/#rubric-checker"
+    "ctaHref": "/workspace#rubric-checker"
   },
   {
     "slug": "rubric-feedback-tool",
@@ -649,7 +649,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
         "description": "Follow a worked example to self-check an assignment."
       }
     ],
-    "ctaHref": "/#rubric-checker"
+    "ctaHref": "/workspace#rubric-checker"
   }
 ];
 

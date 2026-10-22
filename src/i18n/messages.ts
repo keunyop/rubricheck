@@ -6,5 +6,6 @@ import { billing } from "./billing";
 import { legal } from "./legal";
 import { growth } from "./growth";
 import { saas } from "./saas";
+import { entry } from "./entry";
 import { onboarding } from "./onboarding";
-export const messages: Record<string, readonly [string, string]> = { ...core, ...errors, ...extras, ...billing, ...legal, ...growth, ...saas, ...onboarding };
+export const messages: Record<string, readonly [string, string]> = { ...core, ...errors, ...extras, ...billing, ...legal, ...growth, ...saas, ...onboarding, ...entry };

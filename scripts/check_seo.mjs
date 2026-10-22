@@ -113,7 +113,21 @@ try {
   }
 
   const home = pages.get("/");
-  assert.match(home, /id="rubric-checker"/);
+  assert.match(home, /id="sample-feedback"/);
+  assert.doesNotMatch(home, /id="rubric-checker"/);
+  const workspaces = new Map();
+  for (const prefix of ["", "/ko", "/ms"]) {
+    const path = prefix + "/workspace";
+    const response = await get(path);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("x-robots-tag"), /noindex/);
+    const html = await response.text();
+    assert.match(meta(html, "robots"), /noindex/);
+    assert.match(html, /id="rubric-checker"/);
+    assert.equal(new URL(canonical(html)[0].href).pathname, path);
+    assert.ok(!pages.has(path), "Workspace is excluded from sitemap");
+    workspaces.set(path, html);
+  }
   for (const path of pages.keys()) {
     const prefix = /^\/(ko|ms)(?=\/|$)/.exec(path)?.[0] ?? "";
     const barePath = path.slice(prefix.length) || "/";
@@ -126,8 +140,8 @@ try {
       if (!link.href?.startsWith("/") || link.href.startsWith("//")) continue;
       const destination = new URL(link.href, publicOrigin);
       if (destination.pathname.startsWith("/billing/")) continue;
-      assert.ok(pages.has(destination.pathname), path + " links to a known public page: " + link.href);
-      if (destination.hash === "#rubric-checker") assert.match(home, /id="rubric-checker"/);
+      assert.ok(pages.has(destination.pathname) || workspaces.has(destination.pathname), path + " links to a known public page: " + link.href);
+      if (destination.hash === "#rubric-checker") assert.match(workspaces.get(destination.pathname), /id="rubric-checker"/);
     }
   }
   const parameterHtml = await (await get("/essay-rubric-checker?utm_source=seo-test")).text();

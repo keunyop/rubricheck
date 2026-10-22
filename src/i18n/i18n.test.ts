@@ -15,9 +15,9 @@ test("localized routes retain query strings, fragments and private endpoints", (
   assert.equal(isLocale("id"), false);
 });
 test("explicit public language URLs take precedence over account and browser defaults", () => {
-  for (const path of ["/ko", "/ko/", "/ms", "/ko/rubric-checker", "/ms/pricing", "/rubric-checker", "/pricing", "/legal/privacy"])
+  for (const path of ["/ko", "/ko/", "/ms", "/ko/workspace", "/ms/workspace", "/ko/rubric-checker", "/ms/pricing", "/rubric-checker", "/pricing", "/legal/privacy"])
     assert.equal(shouldRestoreSiteLanguage(path), false, path);
-  for (const path of ["/", "/billing/manage", "/admin"])
+  for (const path of ["/", "/workspace", "/billing/manage", "/admin"])
     assert.equal(shouldRestoreSiteLanguage(path), true, path);
 });
 test("every translation has both languages and retains all named placeholders", () => {

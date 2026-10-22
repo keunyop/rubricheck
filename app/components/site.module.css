@@ -31,3 +31,26 @@
   .footerContainer { padding-inline: 20px; }
 }
 @media (max-width: 359px) { .brand { font-size: 16px; gap: 6px; } .brand img { width: 24px; } .headerInner { padding-inline: 14px; gap: 8px; } }
+
+.login { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; font-size: 13px; font-weight: 600; color: #526177; white-space: nowrap; }
+.login:hover { color: #4338ca; }
+@media (min-width: 768px) { .headerInner { gap: 24px; } }
+@media (max-width: 767px) { .login { margin-left: auto; font-size: 12px; } .login + .headerCta { margin-left: 0; } }
+@media (max-width: 359px) { .headerCta { padding-inline: 9px; gap: 6px; } }
+
+.mobileLabel { display: none; }
+@media (max-width: 767px) { .desktopLabel { display: none; } .mobileLabel { display: inline; } }
+
+@media (max-width: 767px) {
+  .headerInner { gap: 8px; }
+  .brand { font-size: 16px; gap: 6px; }
+  .brand img { width: 23px; }
+  .login { font-size: 11px; }
+  .headerCta { font-size: 11px; padding-inline: 10px; gap: 6px; }
+}
+@media (max-width: 359px) {
+  .headerInner { padding-inline: 12px; gap: 6px; }
+  .brand { font-size: 15px; gap: 5px; }
+  .brand img { width: 20px; }
+  .headerCta { padding-inline: 8px; gap: 5px; }
+}

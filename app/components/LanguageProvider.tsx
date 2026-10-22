@@ -38,12 +38,12 @@ export function LanguageProvider({ children, initialLocale }: { children: ReactN
     const path = localizedPath(location.pathname + location.search + location.hash, locale);
     if (path !== location.pathname + location.search + location.hash) {
       // Server-rendered articles must load their translated content as well.
-      if (stripLocale(location.pathname) !== "/") { window.location.replace(path); return; }
+      if (stripLocale(location.pathname) !== "/workspace") { window.location.replace(path); return; }
       // Keep uploads, the open modal and results when switching the workspace language.
       window.history.replaceState(null, "", path);
     }
-    if (stripLocale(location.pathname) === "/") {
-      document.title = HOME_SEO[locale].title;
+    if (stripLocale(location.pathname) === "/workspace") {
+      document.title = translate(locale, "Workspace") + " | RubriCheck";
       document.querySelector('meta[name="description"]')?.setAttribute("content", HOME_SEO[locale].description);
     }
     previousPath.current = path.split(/[?#]/)[0];
@@ -70,7 +70,7 @@ export function LanguageProvider({ children, initialLocale }: { children: ReactN
     if (!email) {
       setPreferencesLoading(false);
       const saved = document.cookie.split("; ").find(part => part.startsWith(LOCALE_COOKIE + "="))?.split("=")[1];
-      if (isLocale(saved) && location.pathname === "/") applySiteLanguage(saved);
+      if (isLocale(saved) && (location.pathname === "/" || location.pathname === "/workspace")) applySiteLanguage(saved);
       return () => controller.abort();
     }
     setPreferencesLoading(true);

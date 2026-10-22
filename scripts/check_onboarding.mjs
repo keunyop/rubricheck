@@ -39,7 +39,7 @@ const page = await context.newPage();
 page.setDefaultTimeout(15000);
 page.on("pageerror", error => errors.push(error.message));
 const pass = message => { checks.push(message); console.log("PASS " + message); };
-async function home(path = "/") { await page.goto(base + path, { waitUntil: "networkidle" }); await page.waitForFunction(() => !document.querySelector("#rubric-checker fieldset")?.disabled); }
+async function home(path = "/workspace") { await page.goto(base + path, { waitUntil: "networkidle" }); await page.waitForFunction(() => !document.querySelector("#rubric-checker fieldset")?.disabled); }
 async function fits() { assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false); }
 async function account() {
   const trigger = page.locator("main").getByRole("button", { name: "student@example.com", exact: true });
@@ -130,7 +130,7 @@ try {
     ["ms", "Semakan pertama anda dalam tiga langkah", "Bandingkan Percuma, tambah nilai dan Pro", "Cipta akaun percuma"],
   ]) {
     await context.clearCookies();
-    await home("/" + locale);
+    await home("/" + locale + "/workspace");
     const translatedGuide = page.locator("details").filter({ hasText: guideTitle });
     if (await translatedGuide.getAttribute("open") === null) await translatedGuide.locator("summary").click();
     await translatedGuide.getByRole("button", { name: signupTitle, exact: true }).waitFor();

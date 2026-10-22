@@ -41,10 +41,10 @@ const page = await context.newPage();
 page.setDefaultTimeout(15000);
 page.on("pageerror", error => errors.push(error.message));
 const pass = message => { checks.push(message); console.log("PASS " + message); };
-async function ready(path = "/") {
+async function ready(path = "/workspace") {
   await page.goto(base + path, { waitUntil: "networkidle" });
   await page.evaluate(() => document.fonts.ready);
-  if (path === "/") await page.waitForFunction(() => !document.querySelector("#rubric-checker fieldset")?.disabled);
+  if (path === "/workspace") await page.waitForFunction(() => !document.querySelector("#rubric-checker fieldset")?.disabled);
 }
 async function fits() {
   const problems = await page.evaluate(() => {

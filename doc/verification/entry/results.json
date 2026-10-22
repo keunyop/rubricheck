@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "Real server routing verifies sessions, keeps public introductions accessible and preserves legacy result/checkout links in all three languages",
+    "First visits show responsive localized introductions, usable sample feedback and one-click guest access to the workspace",
+    "A real guest draft and uploaded file survive landing navigation and Continue my draft restores the existing workspace",
+    "Empty, expired, invalid and other-account drafts do not create a misleading resume action; browsing alone never redirects",
+    "Public login opens the existing email dialog and legacy workspace anchors preserve language, query and fragment",
+    "A previously cached guest introduction also routes correctly after the account summary confirms login",
+    "A signed-in browser enters the workspace directly and can still deliberately view the product introduction"
+  ],
+  "errors": [],
+  "serverSessionVerification": "real HMAC validation with local-only test secret",
+  "browserApisMocked": true
+}

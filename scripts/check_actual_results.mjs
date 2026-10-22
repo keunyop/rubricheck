@@ -72,7 +72,7 @@ const saved = () => panel.getByText("Actual result saved.", { exact: true }).wai
 const pass = name => console.log("PASS " + name);
 
 try {
-  await page.goto(base);
+  await page.goto(base + "/workspace");
   await sidebar.getByRole("button", { name: "History essay", exact: true }).click();
   await page.getByRole("heading", { name: "Evaluation Summary", exact: true }).waitFor();
   await panel.getByRole("button", { name: "Add actual score and comments", exact: true }).click();

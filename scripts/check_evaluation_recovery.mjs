@@ -63,7 +63,7 @@ async function scenario(name, run) {
   } finally { await context.close(); }
 }
 async function fillText(page) {
-  await page.goto(base);
+  await page.goto(base + "/workspace");
   await page.getByRole("button", { name: "Text", exact: true }).first().click();
   await page.getByRole("button", { name: "Text", exact: true }).nth(1).click();
   await page.getByPlaceholder("Paste rubric text here").fill("Evidence 60 points. Analysis 40 points.\n루브릭");
@@ -78,7 +78,7 @@ async function seedResult(page) {
 }
 try {
   await scenario("narrow ranges retain endpoints and free priorities stay locked", async page => {
-    await page.goto(base);
+    await page.goto(base + "/workspace");
     const result = { ...free, overall_range: [70, 75], score_calculation: {
       version: "rubric-sum-v2", range_kind: "uncalibrated_estimate", grading_mode: "standard",
       rubric_total: 100, criteria_range_sum: [70, 75], mode_adjustment: 0,
@@ -98,7 +98,7 @@ try {
     await fillText(page);
     await page.getByRole("link", { name: "Pricing", exact: true }).click();
     await page.waitForURL("**/pricing");
-    await page.getByRole("link", { name: "<- Back to home" }).click();
+    await page.getByRole("link", { name: "<- Back to workspace" }).click();
     await page.getByPlaceholder("Paste rubric text here").waitFor();
     await assertText(page);
     await page.reload();
@@ -111,12 +111,12 @@ try {
     await assertText(page);
   });
   await scenario("files survive full navigation and remain usable for evaluation", async (page, _context, state) => {
-    await page.goto(base);
+    await page.goto(base + "/workspace");
     await page.locator("#rubric-file-input").setInputFiles({ name: "rubric.txt", mimeType: "text/plain", buffer: Buffer.from("Evidence: 100 points") });
     await page.locator("#assignment-file-input").setInputFiles({ name: "assignment.txt", mimeType: "text/plain", buffer: Buffer.from("Original assignment file.") });
     await page.getByRole("link", { name: "Pricing", exact: true }).click();
     await page.waitForURL("**/pricing");
-    await page.getByRole("link", { name: "<- Back to home" }).click();
+    await page.getByRole("link", { name: "<- Back to workspace" }).click();
     await page.getByText("rubric.txt", { exact: true }).waitFor();
     await page.getByText("assignment.txt", { exact: true }).waitFor();
     const [request] = await Promise.all([
@@ -174,7 +174,7 @@ try {
   await scenario("checkout cancellation and independent tabs preserve the correct work", async (page, context, state) => {
     await fillText(page); await seedResult(page);
     const other = await context.newPage();
-    await other.goto(base);
+    await other.goto(base + "/workspace");
     await other.getByRole("button", { name: "Text", exact: true }).first().click();
     assert.equal(await other.getByPlaceholder("Paste rubric text here").inputValue(), "");
     await other.getByPlaceholder("Paste rubric text here").fill("Another tab's rubric");
@@ -192,11 +192,11 @@ try {
     await fillText(page);
     await page.getByRole("link", { name: "Pricing", exact: true }).click();
     await page.getByText("Your browser could not save these inputs. Keep this page open and open Pricing in a new tab.", { exact: true }).waitFor();
-    assert.equal(new URL(page.url()).pathname, "/");
+    assert.equal(new URL(page.url()).pathname, "/workspace");
     await assertText(page);
   });
   await scenario("expired and corrupted drafts do not crash or restore stale input", async page => {
-    await page.goto(base);
+    await page.goto(base + "/workspace");
     await page.evaluate(() => sessionStorage.setItem("rubricheck_evaluation_draft_v1", JSON.stringify({ rubricMode: "text", assignmentMode: "text", rubricText: "stale", assignmentText: "stale", savedAt: Date.now() - 86400001 })));
     await page.reload();
     await page.getByRole("button", { name: "Text", exact: true }).first().click();

@@ -78,8 +78,8 @@ try {
   assert.equal(await page.getByRole("button", { name: /Argument/ }).getAttribute("aria-pressed"), "true");
   await page.getByRole("button", { name: /Organization/ }).click();
   assert.match(await page.locator("#sample-criterion-feedback").innerText(), /paragraphs progress/);
-  await page.getByRole("link", { name: "See how it works" }).click();
-  assert.ok(page.url().endsWith("#how-it-works"));
+  await page.getByRole("link", { name: "See sample feedback" }).click();
+  assert.ok(page.url().endsWith("#sample-feedback"));
   pass("Illustrative product preview responds to click and keyboard without calling grading or consuming checks");
 
   await visit("/help");
@@ -125,7 +125,7 @@ try {
   assert.doesNotMatch(await page.locator("main").innerText(), /All topics|Contact support|What happens/);
   pass("Translated help search and language navigation work in Korean and Malay");
 
-  await visit("/");
+  await visit("/workspace");
   await page.waitForFunction(() => !document.querySelector("#rubric-checker fieldset")?.disabled);
   const rubric = page.getByRole("region", { name: "Rubric", exact: true });
   await rubric.locator('input[type="file"]').first().setInputFiles({ name: "rubric.txt", mimeType: "text/plain", buffer: Buffer.from("Evidence: 100 points") });
