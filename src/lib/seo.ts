@@ -166,7 +166,7 @@ export function buildSoftwareApplicationSchema({
       name: translate(locale, "Free trial: {count} evaluations", { count: FREE_TRIAL_LIMIT }),
       url: absoluteUrl(localizedPath("/pricing", locale)),
       price: "0",
-      priceCurrency: "USD",
+      priceCurrency: "CAD",
     },
   };
 }

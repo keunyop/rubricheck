@@ -19,6 +19,7 @@ import { getAccountEntitlementByEmail, isActiveProAccountEntitlement, hasAccount
 import { resolveActiveEntitlementByVerifiedEmail } from "../../../src/lib/entitlementRestore";
 import { isLifetimePrice } from "../../../src/lib/proLifetimePolicy";
 import { buildProCheckoutSessionParams } from "../../../src/lib/proCheckoutSession";
+import { growthCheckoutMetadata, recordGrowthCheckout } from "../../../src/lib/growthServer";
 
 export const runtime = "nodejs";
 
@@ -183,7 +184,10 @@ export async function POST(request: Request) {
       const url = existingCheckout.status === "complete"
         ? appUrl + "/?checkout_session_id=" + existingCheckout.id + "&evaluation_id=" + evaluationId
         : existingCheckout.url;
-      if (url) return respond(successJson(context, { url }), "success");
+      if (url) {
+        if (existingCheckout.status === "open") await recordGrowthCheckout(request, existingCheckout.id, `pro_${requestedPlan}`);
+        return respond(successJson(context, { url }), "success");
+      }
     }
     const accountEntitlement = await getAccountEntitlementByEmail(requestEmail);
     const alreadyActivePro = isActiveProAccountEntitlement(accountEntitlement) ||
@@ -210,9 +214,14 @@ export async function POST(request: Request) {
       return respond(errorResponse(context, 503, "LIFETIME_PRICE_INVALID", "Lifetime checkout price is not configured correctly."), "error");
     }
 
-    const session = await createEvaluationCheckout(getStripeClient(), buildProCheckoutSessionParams({
+    const checkoutParams = buildProCheckoutSessionParams({
       plan: requestedPlan, priceId: stripePriceId, email: requestEmail, appUrl, evaluationId,
-    }), requestEmail, evaluationId);
+    });
+    const growthMetadata = await growthCheckoutMetadata(request);
+    checkoutParams.metadata = { ...checkoutParams.metadata, ...growthMetadata };
+    if (requestedPlan === "lifetime") checkoutParams.payment_intent_data = { metadata: checkoutParams.metadata };
+    else checkoutParams.subscription_data = { metadata: checkoutParams.metadata };
+    const session = await createEvaluationCheckout(getStripeClient(), checkoutParams, requestEmail, evaluationId);
 
     if (session.status === "complete" && evaluationId) {
       return respond(successJson(context, { url: appUrl + "/?checkout_session_id=" + session.id + "&evaluation_id=" + evaluationId }), "success");
@@ -221,6 +230,7 @@ export async function POST(request: Request) {
       return respond(errorResponse(context, 500, "CHECKOUT_SESSION_URL_MISSING", "Checkout session is unavailable."), "error");
     }
 
+    await recordGrowthCheckout(request, session.id, `pro_${requestedPlan}`);
     return respond(successJson(context, { url: session.url, plan: requestedPlan }), "success");
   } catch (error) {
     if (error instanceof Error && error.message === "EVALUATION_EXPIRED") return respond(errorResponse(context, 410, "EVALUATION_EXPIRED", "Your saved result has expired. Return home before purchasing."), "error");

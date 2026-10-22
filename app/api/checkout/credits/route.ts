@@ -21,6 +21,7 @@ import {
 import { buildCreditCheckoutSessionParams } from "../../../../src/lib/creditCheckoutSession";
 import { getCreditEmailFromCookie } from "../../../../src/lib/creditSession";
 import { getCustomerIdByEmail } from "../../../../src/lib/entitlement";
+import { growthCheckoutMetadata, recordGrowthCheckout } from "../../../../src/lib/growthServer";
 
 export const runtime = "nodejs";
 
@@ -195,6 +196,8 @@ export async function POST(request: Request) {
 
     Object.assign(sessionParams, evaluationCheckoutFields(appUrl, evaluationId));
     if (evaluationId) sessionParams.metadata = { ...sessionParams.metadata, evaluation_id: evaluationId };
+    sessionParams.metadata = { ...sessionParams.metadata, ...await growthCheckoutMetadata(request) };
+    sessionParams.payment_intent_data = { metadata: sessionParams.metadata };
     let session: Stripe.Checkout.Session;
     try {
       session = await createEvaluationCheckout(stripe, sessionParams, requestEmail, evaluationId);
@@ -207,14 +210,14 @@ export async function POST(request: Request) {
           customerId: sessionParams.customer,
         });
         session = await stripe.checkout.sessions.create(
-          buildCreditCheckoutSessionParams({
+          { ...buildCreditCheckoutSessionParams({
             priceId: stripePriceId,
             appUrl,
             email: requestEmail,
             packId,
             lookupKey,
             customerId: null,
-          }),
+          }), metadata: sessionParams.metadata, payment_intent_data: sessionParams.payment_intent_data },
         );
       } else if (!shouldRetryWithoutCustomerCreation(sessionError)) {
         throw sessionError;
@@ -232,6 +235,8 @@ export async function POST(request: Request) {
             customerId: null,
           }),
           customer_creation: undefined,
+          metadata: sessionParams.metadata,
+          payment_intent_data: sessionParams.payment_intent_data,
         });
       }
     }
@@ -240,6 +245,7 @@ export async function POST(request: Request) {
       return respond(NextResponse.json({ url: appUrl + "/?checkout_session_id=" + session.id + "&evaluation_id=" + evaluationId }), "success");
     }
     if (!session.url) return respond(errorResponse(context, 500, "CHECKOUT_SESSION_URL_MISSING", "Checkout session is unavailable."), "error");
+    await recordGrowthCheckout(request, session.id, "credits");
 
     const response = NextResponse.json({ url: session.url, packId }, { headers: { "x-request-id": context.requestId } });
     response.cookies.set({

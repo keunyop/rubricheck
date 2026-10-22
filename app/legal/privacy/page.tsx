@@ -17,7 +17,7 @@ export default async function PrivacyPolicyPage() {
       <section className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">{t("Privacy Policy")}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-700"> {t("Last updated: October 13, 2026. This Privacy Policy explains what information RubriCheck processes, why we process it, and the choices available to you.")} </p>
+        <p className="mt-3 text-sm leading-6 text-slate-700"> {t("Last updated: October 22, 2026. This Privacy Policy explains what information RubriCheck processes, why we process it, and the choices available to you.")} </p>
         <p className="mt-3 text-sm leading-6 text-slate-700"> {t("RubriCheck does not sell personal information. Access to user data is restricted to authorized systems and personnel for security, support, and product operations.")} </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Information We Process")}</h2>
@@ -35,6 +35,8 @@ export default async function PrivacyPolicyPage() {
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Data Sharing")}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700"> {t("Data may be shared with trusted service providers that support hosting, analytics, AI processing, and payments under contractual obligations. Data may also be disclosed where required by law or to protect users and service integrity.")} </p>
 
+        <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Optional usage analytics")}</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-700">{t("With your permission, we measure public page visits and evaluation, signup and checkout steps using a pseudonymous browser identifier. We link these steps to a pseudonymous account identifier after verification. We retain only approved campaign names, public landing paths, referrer categories and country when available. Assignment content, names, emails and payment secrets are not sent to analytics providers. Turn optional analytics off using the control at the bottom of the page. Do Not Track and Global Privacy Control disable optional collection.")}</p>
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Your Choices")}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700"> {t("You may request access, correction, or deletion of eligible personal data. Some records may be retained as required for legal, accounting, fraud prevention, or security reasons.")} </p>
 

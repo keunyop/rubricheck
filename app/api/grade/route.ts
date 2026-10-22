@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { instrumentGrade } from "../../../src/lib/growthServer";
 import { LOCALES, type Locale } from "../../../src/i18n/config";
 import { getLanguagePreferences } from "../../../src/lib/languagePreferences";
 import { generalRubric, ASSIGNMENT_INSTRUCTIONS_LIMIT } from "../../../lib/generalRubric";
@@ -208,7 +209,9 @@ async function resolveCurrentFeedbackTier(
   });
 }
 
-export async function POST(request: Request) {
+export function POST(request: Request) { return instrumentGrade(request, runGrade); }
+
+async function runGrade(request: Request) {
   const context = createRequestContext(request);
   let usage: UsageCheckResult | undefined;
   let trialReservation: TrialReservation | undefined;
@@ -527,6 +530,7 @@ export async function POST(request: Request) {
       Object.assign(usageHeaders, buildUsageLimitHeaders(usage));
       const headers = new Headers(usageHeaders);
       headers.set("x-request-id", context.requestId);
+      headers.set("x-growth-product", usage.billingSource === "credit" ? "credits" : usage.billingSource === "pro" ? "pro" : "free");
       if (rubricSource !== "general") {
         try {
           if (savedRubric) {

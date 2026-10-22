@@ -1,5 +1,6 @@
 "use client";
 import { useLanguage } from "../components/LanguageProvider";
+import { PlanFitNote } from "../components/PlanFitNote";
 
 
 import { useEffect, useRef, useState } from "react";
@@ -144,6 +145,10 @@ export function PricingClient() {
       setActivePricingTab("pro");
     }
   }, [activePricingTab, isTopUpsLocked]);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tab") === "topups" && !isTopUpsLocked) setActivePricingTab("topups");
+  }, [isTopUpsLocked]);
 
   useEffect(() => {
     if (!showAccountMenu && !showBillingMenu) {
@@ -524,6 +529,7 @@ export function PricingClient() {
             <p className="mt-2 text-left text-sm text-slate-600 md:text-[15px]"> {t("Choose Pro for full access, or one-time top-ups for Strict Mode and full evaluation feedback.")} </p>
           </div>
 
+          {!isTopUpsLocked && <PlanFitNote onChoose={setActivePricingTab} />}
           <div role="group" aria-label={t("Plan type")} className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
             <button
               type="button"

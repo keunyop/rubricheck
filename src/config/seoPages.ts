@@ -276,11 +276,11 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
   },
   {
     "slug": "assignment-rubric-checker",
-    "title": "Assignment Rubric Checker: Check Before You Submit",
-    "description": "Check your assignment against its rubric. Find missing requirements in reports, reflections, and projects, then choose what to revise before submission.",
+    "title": "Assignment Rubric Checker for College Assignments",
+    "description": "Check college assignments against your rubric with AI feedback. Find missing requirements and revision priorities. Try a free summary before signing up.",
     "h1": "Check Your Assignment Against the Rubric",
     "eyebrow": "Review assignment requirements",
-    "intro": "Use RubriCheck to compare a report, reflection, or written project with its assignment rubric. Upload the draft and grading criteria to see estimated scores and revision priorities while you still have time to make changes.",
+    "intro": "Check your college assignment against your instructor's rubric before submission. Add a report, reflection, or project draft and its grading criteria for a free AI summary without signing up. Credits or Pro unlock full criterion feedback and Strict mode; Pro also includes rewrite suggestions.",
     "primaryKeyword": "assignment rubric checker",
     "keywords": [
       "assignment rubric checker",
@@ -369,11 +369,11 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
   },
   {
     "slug": "essay-rubric-checker",
-    "title": "Essay Rubric Checker: Check Your Essay Against a Rubric",
-    "description": "Check your essay against your rubric for thesis, evidence, analysis, and structure. Get estimated scores and decide what to revise before you submit.",
+    "title": "Check My Essay Against a Rubric: AI Feedback",
+    "description": "Check your essay against your own rubric for thesis, evidence and analysis. Get a free AI summary, then use credits or Pro for detailed essay rubric feedback.",
     "h1": "Check Your Essay Against a Rubric",
     "eyebrow": "Review your essay before submission",
-    "intro": "To check your essay against a rubric, compare each grading criterion with evidence in your draft. RubriCheck reviews your essay and your own rubric together so you can identify gaps in the argument, supporting evidence, and structure before submitting.",
+    "intro": "Check your essay against the rubric your instructor actually uses. Add your essay and rubric to get a free AI summary without signing up. Review gaps in your thesis, evidence and analysis; use credits or Pro when you need full criterion feedback. All scores are estimates, not official grades.",
     "primaryKeyword": "essay rubric checker",
     "keywords": [
       "essay rubric checker",

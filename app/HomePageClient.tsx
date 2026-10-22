@@ -1,4 +1,6 @@
 "use client";
+import { flushGrowth, trackGrowth } from "../src/lib/growthClient";
+import { PlanFitNote } from "./components/PlanFitNote";
 
 
 import {
@@ -872,6 +874,13 @@ export default function Home() {
   const [resultOwnerEmail, setResultOwnerEmail] = useState<string | null>(null);
   const [draftOwnerEmail, setDraftOwnerEmail] = useState<string | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"compose" | "project" | "result">("compose");
+  const growthResultId = displayedResult?.evaluation_id;
+  const growthPreviewVisible = Boolean(trialPreview && !sampleSelected && !signedInEmail);
+  useEffect(() => {
+    if (sampleSelected || workspaceView === "project") return;
+    if (growthResultId && resultOwnerEmail === signedInEmail) trackGrowth("evaluation_result_viewed", { evaluation: growthResultId });
+    else if (growthPreviewVisible) trackGrowth("evaluation_result_viewed");
+  }, [growthResultId, growthPreviewVisible, resultOwnerEmail, signedInEmail, sampleSelected, workspaceView]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [draftProjectId, setDraftProjectId] = useState<string | null>(null);
   const [openingAssignment, setOpeningAssignment] = useState(false);
@@ -2248,6 +2257,7 @@ export default function Home() {
         evaluationAttemptRef.current = { inputs, key: crypto.randomUUID() };
       }
       const attemptKey = evaluationAttemptRef.current!.key;
+      await flushGrowth();
       let requestPromise: Promise<Response>;
 
       if (rubricMode !== "file" && assignmentMode === "text") {
@@ -2392,6 +2402,7 @@ export default function Home() {
       setOpenAiTimeoutCount(0);
 
       if (isTrialPreview(data)) {
+        const growthAttempt = response.headers.get("x-growth-attempt") ?? undefined;
         setTrialPreview(data); trialPreviewRef.current = data; setTrialUsed(true);
         setSampleSelected(false);
         try { window.sessionStorage.setItem("rubricheck_pending_trial", "1"); } catch {}
@@ -2399,6 +2410,7 @@ export default function Home() {
         requestAnimationFrame(() => {
           const heading = document.getElementById("guest-evaluation-summary");
           heading?.scrollIntoView({ behavior: "smooth", block: "center" }); heading?.focus({ preventScroll: true });
+          if (heading) trackGrowth("evaluation_result_viewed", { attempt: growthAttempt });
         });
         return;
       }
@@ -2412,6 +2424,8 @@ export default function Home() {
       setShouldFocusEvaluationHeading(true);
       setResultOwnerEmail(signedInEmail);
       setGradeResult(data);
+      const growthAttempt = response.headers.get("x-growth-attempt") ?? undefined;
+      if (!data.evaluation_id) requestAnimationFrame(() => trackGrowth("evaluation_result_viewed", { attempt: growthAttempt }));
       setResultMode(selectedMode);
       if (response.headers.get("x-history-unavailable") === "1") {
         setWorkspaceNotice(t("Your result is ready, but could not be added to Recents. Keep this page open and try again."));
@@ -2431,6 +2445,7 @@ export default function Home() {
       });
     } catch (error) {
       console.error("EVALUATION_REQUEST_FAILED", error);
+      trackGrowth("evaluation_network_failed");
       setError(t("Something went wrong. Please try again."));
     } finally {
       evaluationInFlightRef.current = false;
@@ -3443,6 +3458,7 @@ export default function Home() {
                   </p>
                 </div>
                 <p className="mt-4 text-sm leading-6 text-slate-700 md:text-[15px]">{displayedResult.summary}</p>
+                {displayedResult.access_tier === "free" && !sampleSelected && <PlanFitNote evaluationId={displayedResult.evaluation_id} />}
               </div>
 
               <div className="mt-4">
