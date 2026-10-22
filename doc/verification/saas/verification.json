@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-22",
+  "scope": "Product discovery, shared public navigation and footer, localized searchable help, existing support integration",
+  "routes": [
+    "/product",
+    "/help",
+    "/ko/product",
+    "/ko/help",
+    "/ms/product",
+    "/ms/help"
+  ],
+  "verification": {
+    "productionBuild": "passed",
+    "unitAndApiTests": {
+      "passed": 200,
+      "failed": 0
+    },
+    "seoPublicUrls": 45,
+    "browserSuites": [
+      "check_saas.mjs",
+      "check_ui.mjs",
+      "check_i18n.mjs",
+      "check_guest_trial.mjs",
+      "check_assignment_workspace.mjs",
+      "check_feedback_navigation.mjs",
+      "check_evaluation_recovery.mjs"
+    ],
+    "browserSuitesPassed": 7,
+    "browser": "Chromium",
+    "newPageViewportWidths": [
+      320,
+      390,
+      768,
+      1440
+    ]
+  },
+  "constraints": [
+    "Browser scenarios use mocked APIs. Live AI, email and Stripe transactions were not exercised.",
+    "No backend API, billing logic or database schema changes.",
+    "Source changes are local; production deployment was not performed."
+  ],
+  "designReferences": [
+    "https://www.nngroup.com/articles/homepage-design-principles/",
+    "https://www.w3.org/WAI/tutorials/page-structure/"
+  ]
+}

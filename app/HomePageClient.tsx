@@ -24,7 +24,7 @@ import { useAccountSummary } from "./components/AccountSummaryProvider";
 import { AccountStatusPill } from "./components/AccountStatusPill";
 import { ProBadge } from "./components/ProBadge";
 import { AssignmentSidebar, WorkspaceIcon } from "./components/AssignmentSidebar";
-import { FeedbackButton } from "./components/FeedbackButton";
+import { SiteFooter } from "./components/SiteFooter";
 import { RubricLibrary, RubricDownloads } from "./components/RubricLibrary";
 import type { SavedRubricDetail } from "../src/lib/rubricLibraryTypes";
 import { generalRubric, ASSIGNMENT_INSTRUCTIONS_LIMIT } from "../lib/generalRubric";
@@ -169,14 +169,6 @@ const NEXT_PUBLIC_VERCEL_ENV = process.env.NEXT_PUBLIC_VERCEL_ENV?.trim().toLowe
 const NODE_ENV = process.env.NODE_ENV?.trim().toLowerCase() ?? "";
 const SHOW_PRO_FEATURES = true;
 const SHOW_ACCOUNT_AND_PRICING = true;
-
-const FOOTER_LEGAL_LINKS = [
-  { label: "Privacy", href: "/legal/privacy" },
-  { label: "Terms", href: "/legal/terms" },
-  { label: "Refund Policy", href: "/legal/refund-policy" },
-  { label: "AI Disclaimer", href: "/legal/ai-disclaimer" },
-  { label: "Data Retention", href: "/legal/data-retention" },
-] as const;
 
 const loadingStepLabels: Record<Exclude<LoadingStep, "idle">, string> = {
   uploading: "Uploading...",
@@ -2837,6 +2829,11 @@ export default function Home() {
                 ) : null}
               </div>
             </div>
+            <nav aria-label={t("Product and support")} className={styles.discoveryNav}>
+              {[["/product", "Meet RubriCheck"], ["/help", "Help center"]].map(([url, label]) => <Link key={url} href={href(url)} target="_blank" rel="noopener">
+                {t(label)} <span aria-hidden="true">↗</span><span className="sr-only"> ({t("opens in a new tab")})</span>
+              </Link>)}
+            </nav>
             <h1 hidden={workspaceView !== "compose"} className={styles.title}>{t(ACTIVE_LANDING_COPY.headline)}</h1>
             <p hidden={workspaceView !== "compose"} className={styles.subtitle}>
               {t(ACTIVE_LANDING_COPY.subtitle)}
@@ -3876,23 +3873,7 @@ export default function Home() {
 
         {!gradeResult && workspaceView === "compose" ? <HomeResources /> : null}
 
-        <footer className="mt-10 px-1 py-2">
-          <div className="flex flex-col gap-3 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
-            <p>{t("AI-generated estimate only. Not an official grade. RubriCheck.")}</p>
-            <div className="flex flex-wrap items-center gap-3">
-              {FOOTER_LEGAL_LINKS.map((link) => (
-                <a
-                  key={link.href}
-                  href={href(link.href)}
-                  className="font-medium text-slate-600 transition hover:text-slate-900"
-                >
-                  {t(link.label)}
-                </a>
-              ))}
-              <FeedbackButton email={signedInEmail} />
-            </div>
-          </div>
-        </footer>
+        <SiteFooter workspace onPricing={() => void goToPricingPage()} />
         {showEnvDebugFooter ? (
           <footer className="pt-1 text-center text-[11px] text-slate-500">
             NEXT_PUBLIC_APP_ENV={NEXT_PUBLIC_APP_ENV || "(unset)"} | NODE_ENV={NODE_ENV || "(unset)"} |

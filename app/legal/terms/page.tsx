@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> { return buildMetada
 export default async function TermsOfServicePage() {
   const t = await getTranslator();
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10 text-slate-800">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-slate-50 px-4 py-10 text-slate-800">
       <section className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">{t("Terms of Service")}</h1>

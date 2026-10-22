@@ -7,7 +7,6 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Modal } from "../components/Modal";
-import { FeedbackButton } from "../components/FeedbackButton";
 import { useAccountSummary } from "../components/AccountSummaryProvider";
 import { AccountStatusPill } from "../components/AccountStatusPill";
 import { SubpageBackHomeLink } from "../components/SubpageBackHomeLink";
@@ -45,13 +44,6 @@ type PricingTab = "pro" | "topups";
 type AuthVerificationPurpose = "login" | "restore";
 
 const EMAIL_AVATAR_CLASS_NAME = "border-indigo-200 bg-indigo-100 text-indigo-700";
-const FOOTER_LEGAL_LINKS = [
-  { label: "Privacy", href: "/legal/privacy" },
-  { label: "Terms", href: "/legal/terms" },
-  { label: "Refund Policy", href: "/legal/refund-policy" },
-  { label: "AI Disclaimer", href: "/legal/ai-disclaimer" },
-  { label: "Data Retention", href: "/legal/data-retention" },
-] as const;
 
 function isValidEmail(email: string): boolean {
   if (!email || email.length > 320) {
@@ -435,7 +427,7 @@ export function PricingClient() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-3 py-6 sm:px-6 md:py-12">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-slate-50 px-3 py-6 sm:px-6 md:py-12">
       <div className="mx-auto w-full max-w-4xl space-y-8">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8">
           <SubpageBackHomeLink className="mb-3 inline-block text-sm font-medium text-indigo-700 transition hover:text-indigo-600" />
@@ -791,23 +783,6 @@ export function PricingClient() {
         </Modal>
       ) : null}
 
-      <footer className="mx-auto mt-8 w-full max-w-4xl px-1 py-2">
-        <div className="flex flex-col gap-3 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
-          <p>{t("AI-generated estimate only. Not an official grade. RubriCheck.")}</p>
-          <div className="flex flex-wrap items-center gap-3">
-            {FOOTER_LEGAL_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={href(link.href)}
-                className="font-medium text-slate-600 transition hover:text-slate-900"
-              >
-                {t(link.label)}
-              </a>
-            ))}
-            <FeedbackButton email={signedInEmail} />
-          </div>
-        </div>
-      </footer>
     </main>
   );
 }

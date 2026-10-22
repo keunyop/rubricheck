@@ -4,6 +4,7 @@ import { growthEnabled } from "../src/lib/growthServer";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AccountSummaryProvider } from "./components/AccountSummaryProvider";
 import { LanguageProvider } from "./components/LanguageProvider";
+import { SiteChrome } from "./components/SiteChrome";
 import { getLocale } from "../src/i18n/server";
 import { JsonLd } from "./components/JsonLd";
 import {
@@ -113,7 +114,7 @@ export default async function RootLayout({
       >
         <JsonLd data={buildWebSiteSchema()} />
         <JsonLd data={buildOrganizationSchema()} />
-        <AccountSummaryProvider><LanguageProvider initialLocale={locale}>{children}<GrowthAnalytics /></LanguageProvider></AccountSummaryProvider>
+        <AccountSummaryProvider><LanguageProvider initialLocale={locale}><SiteChrome>{children}</SiteChrome><GrowthAnalytics /></LanguageProvider></AccountSummaryProvider>
       </body>
     </html>
   );

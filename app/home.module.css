@@ -5,6 +5,10 @@
 .topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: #0f172a; font-size: 18px; font-weight: 650; letter-spacing: -.6px; }
 .brand img { width: 34px; height: auto; }
+.discoveryNav { display: flex; flex-wrap: wrap; gap: 4px 20px; margin-top: 10px; }
+.discoveryNav a { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: #64748b; font-size: 12px; }
+.discoveryNav a:hover { color: #4338ca; }
+.header:has(.discoveryNav) .title { margin-top: 14px; }
 .title { max-width: 720px; margin-top: 28px; color: #0f172a; font-size: clamp(24px, 2.4vw, 32px); line-height: 1.25; font-weight: 600; letter-spacing: -.8px; text-wrap: balance; }
 .subtitle { max-width: 650px; margin-top: 10px; color: #64748b; font-size: 14px; line-height: 1.7; }
 .inputGrid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 20px; }

@@ -1,0 +1,52 @@
+.page { background: #fff; color: #172033; min-height: 75vh; }
+.page:lang(ko) { word-break: keep-all; overflow-wrap: break-word; }
+.container { max-width: 1068px; margin: auto; padding: 48px 24px 64px; }
+.intro { text-align: center; max-width: 660px; margin: 0 auto 48px; }
+.eyebrow { color: #4f46e5; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+.intro h1 { margin-top: 14px; font-size: clamp(30px, 3.5vw, 44px); font-weight: 600; line-height: 1.2; letter-spacing: -1.5px; text-wrap: balance; }
+.intro > p:last-of-type { margin-top: 16px; color: #64748b; font-size: 15px; }
+.search { display: flex; align-items: center; gap: 12px; margin: 28px auto 0; max-width: 550px; padding: 0 16px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; color: #64748b; }
+.search:focus-within { outline: 2px solid #4f46e5; outline-offset: 3px; }
+.search svg { flex-shrink: 0; }
+.search input { width: 100%; min-width: 0; height: 54px; font-size: 14px; color: #172033; outline: none; background: transparent; }
+.search input::placeholder { color: #64748b; }
+.content { display: grid; grid-template-columns: 215px minmax(0, 1fr); gap: 54px; }
+.sidebar h2 { color: #64748b; font-size: 11px; font-weight: 600; margin-bottom: 12px; }
+.topics { display: flex; flex-direction: column; gap: 5px; }
+.topics button { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; border-radius: 8px; padding: 10px 12px; font-size: 13px; text-align: left; color: #526177; }
+.topics button span { visibility: hidden; }
+.topics button:hover { background: #f8fafc; }
+.topics button[aria-pressed="true"] { background: #eef2ff; color: #4338ca; font-weight: 600; }
+.topics button[aria-pressed="true"] span { visibility: visible; }
+.quickStart { border-top: 1px solid #e2e8f0; margin-top: 24px; padding-top: 20px; font-size: 12px; color: #64748b; }
+.quickStart a { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: #4338ca; font-weight: 550; }
+.resultsHeading { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 0 0 18px; border-bottom: 1px solid #dfe5ee; }
+.resultsHeading h2 { font-size: 18px; font-weight: 600; letter-spacing: -.3px; }
+.resultsHeading p { color: #64748b; font-size: 12px; white-space: nowrap; }
+.articles details { border-bottom: 1px solid #e2e8f0; }
+.articles summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 21px 4px; font-size: 14px; line-height: 1.65; font-weight: 550; }
+.articles summary::-webkit-details-marker { display: none; }
+.articles summary > span { flex-shrink: 0; font-size: 22px; line-height: 1; font-weight: 300; color: #64748b; }
+.articles details[open] summary { color: #4338ca; }
+.articles details[open] summary > span { transform: rotate(45deg); }
+.answer { padding: 0 24px 24px 4px; font-size: 13px; color: #526177; line-height: 1.9; }
+.answer a { display: inline-flex; gap: 12px; align-items: center; min-height: 44px; color: #4338ca; margin-top: 8px; font-weight: 550; }
+.empty { padding: 36px 0; }
+.empty h3 { font-size: 16px; font-weight: 600; }
+.empty p { margin-top: 12px; font-size: 14px; line-height: 1.8; color: #64748b; }
+.empty button { margin-top: 14px; min-height: 44px; color: #4338ca; font-size: 13px; text-decoration: underline; }
+.support { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 36px; padding: 26px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
+.support h2 { font-size: 20px; font-weight: 600; margin-top: 7px; letter-spacing: -.5px; }
+.support div > p:last-child { color: #64748b; font-size: 12px; line-height: 1.8; max-width: 330px; margin-top: 10px; }
+.support > button { flex-shrink: 0; min-height: 44px; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; background: #fff; }
+@media (max-width: 767px) {
+  .container { padding: 36px 20px; }
+  .intro { margin-bottom: 28px; }
+  .intro h1 { letter-spacing: -1px; }
+  .content { grid-template-columns: 1fr; gap: 28px; }
+  .topics { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .topics button { border: 1px solid #e2e8f0; padding: 8px 12px; font-size: 12px; }
+  .topics button span { display: none; }
+  .quickStart { display: flex; gap: 10px; align-items: center; margin-top: 12px; padding-top: 6px; }
+  .support { flex-direction: column; align-items: start; padding: 24px; }
+}

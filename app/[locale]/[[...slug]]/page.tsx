@@ -7,6 +7,8 @@ import { isLocale } from "../../../src/i18n/config";
 const pages = {
   "/": () => import("../../page"),
   "/pricing": () => import("../../pricing/page"),
+  "/product": () => import("../../product/page"),
+  "/help": () => import("../../help/page"),
   "/rubric-checker": () => import("../../rubric-checker/page"),
   "/ai-rubric-grader": () => import("../../ai-rubric-grader/page"),
   "/assignment-rubric-checker": () => import("../../assignment-rubric-checker/page"),

@@ -6,7 +6,7 @@ import { useId, useRef, useState, type FormEvent } from "react";
 import { FEEDBACK_CATEGORIES, MAX_FEEDBACK_LENGTH, type FeedbackCategory } from "../../src/lib/productFeedbackTypes";
 import styles from "./feedback.module.css";
 
-export function FeedbackButton({ email = "" }: { email?: string }) {
+export function FeedbackButton({ email = "", label = "Feedback" }: { email?: string; label?: string }) {
   const { t } = useLanguage();
   const dialog = useRef<HTMLDialogElement>(null);
   const pending = useRef(false);
@@ -40,7 +40,7 @@ export function FeedbackButton({ email = "" }: { email?: string }) {
   }
 
   return <>
-    <button type="button" className="cursor-pointer font-medium text-slate-600 transition hover:text-slate-900" aria-haspopup="dialog" onClick={open}>{t("Feedback")}</button>
+    <button type="button" className="cursor-pointer font-medium text-slate-600 transition hover:text-slate-900" aria-haspopup="dialog" onClick={open}>{t(label)}</button>
     <dialog ref={dialog} className={styles.dialog} aria-labelledby={id + "-title"} aria-describedby={id + "-description"}
       onCancel={event => { if (pending.current) event.preventDefault(); }}
       onClick={event => { if (event.target === event.currentTarget && !pending.current) dialog.current?.close(); }}>

@@ -18,7 +18,7 @@ export async function SeoLandingPage({ page }: { page: SeoLandingPageContent }) 
   ];
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_55%,#ffffff_100%)] px-4 py-10 text-slate-900">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_55%,#ffffff_100%)] px-4 py-10 text-slate-900">
       <JsonLd data={buildWebPageSchema({ title: page.title, description: page.description, path: page.path, locale })} />
       <JsonLd data={buildBreadcrumbSchema(breadcrumbItems)} />
       <div className="mx-auto w-full max-w-5xl space-y-8">
@@ -105,12 +105,6 @@ export async function SeoLandingPage({ page }: { page: SeoLandingPageContent }) 
           <Link href={href(page.ctaHref)} className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white">{page.ctaLabel}</Link>
           <Link href={href(`/?start=general&from=${page.slug}#rubric-checker`)} className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Check without a rubric")}</Link>
         </div>
-        <footer className="flex flex-wrap gap-x-5 gap-y-3 px-2 text-sm text-slate-600">
-          <Link href={href("/")}>RubriCheck</Link>
-          <Link href={href("/pricing")}>{t("Pricing")}</Link>
-          <Link href={href("/legal/privacy")}>{t("Privacy")}</Link>
-          <Link href={href("/legal/ai-disclaimer")}>{t("AI feedback limitations")}</Link>
-        </footer>
       </div>
     </main>
   );

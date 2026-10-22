@@ -1,0 +1,151 @@
+{
+  "checks": [
+    "Product and help pages fit 320, 390, 768 and 1440px in English, Korean and Malay, with active navigation and one main/footer",
+    "Illustrative product preview responds to click and keyboard without calling grading or consuming checks",
+    "Help filtering, search, keyboard accordions and empty-state reset work",
+    "Support uses the existing feedback payload, preserves content after failure, retries successfully and restores focus",
+    "Translated help search and language navigation work in Korean and Malay",
+    "Opening help preserves the active workspace text and uploaded file",
+    "Pricing, guide and policy pages share navigation, footer and a working keyboard skip link"
+  ],
+  "dimensions": [
+    {
+      "path": "/product",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "path": "/product",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "path": "/product",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "path": "/product",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "path": "/help",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "path": "/help",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "path": "/help",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "path": "/help",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "path": "/ko/product",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "path": "/ko/product",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "path": "/ko/product",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "path": "/ko/product",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "path": "/ko/help",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "path": "/ko/help",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "path": "/ko/help",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "path": "/ko/help",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "path": "/ms/product",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "path": "/ms/product",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "path": "/ms/product",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "path": "/ms/product",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "path": "/ms/help",
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "path": "/ms/help",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "path": "/ms/help",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "path": "/ms/help",
+      "width": 1440,
+      "overflow": false
+    },
+    {
+      "path": "/pricing",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "path": "/legal/privacy",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "path": "/how-to-use-a-rubric-to-check-an-assignment",
+      "width": 390,
+      "overflow": false
+    }
+  ],
+  "browserErrors": [],
+  "mockedApi": true,
+  "feedbackAttempts": 2
+}

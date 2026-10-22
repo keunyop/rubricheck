@@ -1,0 +1,17 @@
+import { HOME_FAQ_ITEMS } from "./seoPages";
+
+export const HELP_CATEGORIES = ["All topics", "Getting started", "Files & feedback", "Account & billing", "Privacy & data"] as const;
+export type HelpCategory = typeof HELP_CATEGORIES[number];
+type HelpArticle = { id: string; category: HelpCategory; question: string; answer: string; link?: { href: string; label: string } };
+
+export const HELP_ARTICLES: HelpArticle[] = [
+  ...HOME_FAQ_ITEMS.map((item, index): HelpArticle => ({ ...item, id: `basics-${index}`, category: index > 2 ? "Files & feedback" : "Getting started" })),
+  { id: "no-rubric", category: "Getting started", question: "Can I start without a rubric?", answer: "Yes. Choose No rubric in the workspace to use general criteria. Add assignment instructions if you have them. For feedback specific to a course, use the instructor’s rubric when available.", link: { href: "/?start=general#rubric-checker", label: "Check without a rubric" } },
+  { id: "upload", category: "Files & feedback", question: "What if my upload cannot be read?", answer: "Check that the file uses a supported format and that every page is readable. For scans or photos, use a clear, upright image. You can also select Text and paste the content directly. Keep rubric and assignment text in their separate fields." },
+  { id: "login", category: "Account & billing", question: "How do I sign in or restore my purchases?", answer: "Select Log in and enter the email used for your account or purchase. Enter the verification code sent to that inbox. Check spam if the email is missing, and use the same address on another device to restore access." },
+  { id: "plans", category: "Account & billing", question: "What is the difference between credits and Pro?", answer: "Top-ups are one-time purchases for evaluations with Strict Mode and full evaluation feedback. Pro includes an evaluation allowance and rewrite suggestions. See Pricing for current plans, limits, and purchase options.", link: { href: "/pricing", label: "Compare plans" } },
+  { id: "billing", category: "Account & billing", question: "Where can I manage billing or request a refund?", answer: "After signing in, open Billing and refunds from your account controls to see available management options. Refund eligibility depends on the purchase and usage; review the refund policy for details.", link: { href: "/billing/manage", label: "Billing and refunds" } },
+  { id: "history", category: "Getting started", question: "Where can I find previous feedback?", answer: "Signed-in evaluations appear in Recents in the workspace sidebar. Use Projects to group related drafts and their versions. My rubrics lets you reuse a rubric saved from a successful signed-in check." },
+  { id: "data", category: "Privacy & data", question: "What happens to my uploaded work?", answer: "RubriCheck processes your inputs to generate feedback. Guest previews are retained for 24 hours; saved account history and rubric files follow their own retention rules. Read the data retention policy for what is stored and how to request deletion.", link: { href: "/legal/data-retention", label: "Data Retention" } },
+  { id: "privacy", category: "Privacy & data", question: "How can I request access to or deletion of my data?", answer: "Use Contact support below, select the relevant category, and include the email associated with your account so the team can follow up. Do not include passwords, verification codes, or payment card details.", link: { href: "/legal/privacy", label: "Privacy Policy" } },
+];
