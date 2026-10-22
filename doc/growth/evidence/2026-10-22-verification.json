@@ -1,0 +1,140 @@
+{
+  "verified_at_utc": "2026-10-22T18:56:36.853217+00:00",
+  "branch": "growth/revenue-measurement-2026-10-22",
+  "base_commit": "b5975da",
+  "production_mutations": false,
+  "real_payments_submitted": false,
+  "customer_messages_sent": false,
+  "tests": [
+    {
+      "command": "npm run test:all",
+      "result": "pass",
+      "passed": 199,
+      "failed": 0
+    },
+    {
+      "command": "npm run build",
+      "result": "pass"
+    },
+    {
+      "command": "npx tsc --noEmit",
+      "result": "pass"
+    },
+    {
+      "command": "focused ESLint on growth libraries, translations, components, and API routes/tests",
+      "result": "pass",
+      "repository_wide_lint_claimed": false
+    },
+    {
+      "command": "npm run test:seo",
+      "result": "pass",
+      "public_pages": 39
+    },
+    {
+      "command": "npm run test:growth:browser",
+      "result": "pass",
+      "scope": "real local browser/Next API/PostgreSQL RPC; local HTTP PostgREST/Redis adapter; external requests blocked"
+    },
+    {
+      "command": "psql -v ON_ERROR_STOP=1 -f supabase/growth_analytics.test.sql",
+      "result": "pass",
+      "scope": "disposable local PostgreSQL 18 on loopback; migration applied locally; SQL transaction rolled back"
+    },
+    {
+      "command": "npm run test:trial:browser",
+      "result": "pass",
+      "scope": "local Next production build with API fixtures; no production payment/model/database calls"
+    },
+    {
+      "command": "npm run test:recovery:browser",
+      "result": "pass",
+      "scope": "local Next production build with API fixtures; no production payment/model/database calls"
+    },
+    {
+      "command": "node scripts/check_pro_lifetime.mjs",
+      "result": "pass",
+      "scope": "local Next production build with API fixtures; no production payment/model/database calls"
+    },
+    {
+      "command": "npm run test:i18n:browser",
+      "result": "pass",
+      "scope": "local Next production build with API fixtures; no production payment/model/database calls"
+    },
+    {
+      "command": "npm run test:ui:browser",
+      "result": "pass",
+      "scope": "local Next production build with API fixtures; no production payment/model/database calls"
+    },
+    {
+      "command": "npm run test:workspace:browser",
+      "result": "pass",
+      "scope": "local Next production build with API fixtures; no production payment/model/database calls"
+    },
+    {
+      "command": "npm run test:rubrics:browser",
+      "result": "pass",
+      "scope": "local Next production build with API fixtures; no production payment/model/database calls"
+    },
+    {
+      "command": "npm run test:actual-results:browser",
+      "result": "pass",
+      "scope": "local Next production build with API fixtures; no production payment/model/database calls"
+    }
+  ],
+  "remaining_requirements": [
+    "live Stripe read-only access and MRR/fee reconciliation",
+    "current GA4/Search Console and provider cost exports",
+    "approval for production migration/configuration/rollout",
+    "daily retention scheduler before enabling analytics",
+    "staging real-service smoke tests and GA4 payload verification"
+  ],
+  "changed_files": [
+    ".gitignore",
+    "README.md",
+    "app/HomePageClient.tsx",
+    "app/admin/AdminDashboardClient.tsx",
+    "app/admin/GrowthPanel.tsx",
+    "app/api/account/logout/route.ts",
+    "app/api/admin/growth/route.test.ts",
+    "app/api/admin/growth/route.ts",
+    "app/api/analytics/route.ts",
+    "app/api/checkout/credits/route.ts",
+    "app/api/checkout/route.ts",
+    "app/api/entitlement/restore/verify/route.ts",
+    "app/api/grade/route.ts",
+    "app/api/stripe/webhook/route.ts",
+    "app/components/GrowthAnalytics.tsx",
+    "app/components/PlanFitNote.tsx",
+    "app/layout.tsx",
+    "app/legal/data-retention/page.tsx",
+    "app/legal/privacy/page.tsx",
+    "app/pricing/PricingClient.tsx",
+    "app/sitemap.ts",
+    "doc/growth/2026-10-22-revenue-growth.md",
+    "doc/growth/evidence/2026-10-22-pricing-desktop.png",
+    "doc/growth/evidence/2026-10-22-pricing-mobile.png",
+    "doc/growth/evidence/2026-10-22-revenue-baseline.json",
+    "doc/growth/evidence/2026-10-22-verification.json",
+    "doc/growth/revenue-baseline.sql",
+    "package.json",
+    "scripts/check_growth.mjs",
+    "src/config/seoPages.ts",
+    "src/i18n/growth.ts",
+    "src/i18n/legal.ts",
+    "src/i18n/messages.ts",
+    "src/lib/growth.test.ts",
+    "src/lib/growth.ts",
+    "src/lib/growthClient.test.ts",
+    "src/lib/growthClient.ts",
+    "src/lib/growthPayments.test.ts",
+    "src/lib/growthPayments.ts",
+    "src/lib/growthReport.test.ts",
+    "src/lib/growthReport.ts",
+    "src/lib/growthServer.test.ts",
+    "src/lib/growthServer.ts",
+    "src/lib/seo.ts",
+    "src/lib/supabaseRest.ts",
+    "supabase/growth_analytics.test.sql",
+    "supabase/migrations/20261022180308_growth_analytics.sql"
+  ]
+}

@@ -265,3 +265,11 @@ See [verification results](doc/verification/i18n/verification.json) and
 [language-flow checks](doc/verification/i18n/results.json). Live model translation
 quality and production account persistence require a deployment smoke test; the
 automated runs isolate external services with fixtures and module mocks.
+
+## Revenue and conversion measurement
+
+See the [October 22 revenue audit and growth handoff](doc/growth/2026-10-22-revenue-growth.md)
+for verified baseline figures, privacy-aware funnel measurement, the reversible
+Credits/Pro comparison, SEO priorities, local verification, and the 7/14/30-day review plan.
+First-party collection defaults off. The additive migration, daily retention job,
+server configuration and production rollout require approval before enabling it.

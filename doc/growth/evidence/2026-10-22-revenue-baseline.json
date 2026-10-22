@@ -1,0 +1,127 @@
+{
+  "source": "Read-only aggregate queries on RubriCheck Supabase",
+  "timezone": "America/Vancouver",
+  "baseline": {
+    "usage_mtd": [
+      {
+        "actors": 2,
+        "attempts": 5,
+        "not_refunded": 5,
+        "billing_source": "credit"
+      }
+    ],
+    "entitlements": [
+      {
+        "plan": "pro",
+        "rows": 17,
+        "status": "active",
+        "accounts": 17,
+        "unexpired": 16
+      },
+      {
+        "plan": "pro",
+        "rows": 8,
+        "status": "canceled",
+        "accounts": 8,
+        "unexpired": 1
+      }
+    ],
+    "period_start": "2026-10-01T07:00:00Z",
+    "snapshot_utc": "2026-10-22T17:57:45.344606+00:00",
+    "free_counters": {
+      "actors": 850,
+      "latest": "2026-10-22T16:45:48.163327+00:00",
+      "all_time_evaluations": 1289
+    },
+    "processed_events": [
+      {
+        "scope": "checkout_session",
+        "events": 7,
+        "latest": "2026-10-06T02:57:47.856119+00:00",
+        "earliest": "2026-03-02T06:24:53.331747+00:00"
+      },
+      {
+        "scope": "webhook_event",
+        "events": 118,
+        "latest": "2026-10-21T21:54:07.281764+00:00",
+        "earliest": "2026-03-02T06:24:52.90357+00:00"
+      }
+    ],
+    "credit_refunds_mtd": 1,
+    "credit_payments_all": [
+      {
+        "latest": "2026-10-06T02:57:47.79531+00:00",
+        "currency": "cad",
+        "earliest": "2026-03-02T06:24:53.639617+00:00",
+        "payments": 7,
+        "purchasers": 5,
+        "live_sessions": 7,
+        "test_sessions": 0,
+        "credit_pack_id": "10",
+        "amount_minor_units": 3493
+      },
+      {
+        "latest": "2026-09-29T03:59:46.571017+00:00",
+        "currency": null,
+        "earliest": "2026-03-03T07:11:39.781745+00:00",
+        "payments": 3,
+        "purchasers": 2,
+        "live_sessions": 0,
+        "test_sessions": 0,
+        "credit_pack_id": null,
+        "amount_minor_units": null
+      }
+    ],
+    "credit_payments_mtd": [
+      {
+        "currency": "cad",
+        "payments": 1,
+        "purchasers": 1,
+        "amount_minor_units": 499
+      }
+    ],
+    "period_end_exclusive": "2026-10-22T17:57:45.344606+00:00",
+    "webhook_failures_mtd": [],
+    "free_reservations_mtd": [
+      {
+        "actors": 3,
+        "status": "released",
+        "requests": 8
+      },
+      {
+        "actors": 63,
+        "status": "succeeded",
+        "requests": 91
+      }
+    ]
+  },
+  "refunds": {
+    "pro_periods": [
+      {
+        "count": 8,
+        "status": "canceled",
+        "expiry_type": "dated"
+      },
+      {
+        "count": 17,
+        "status": "active",
+        "expiry_type": "dated"
+      }
+    ],
+    "refunds_mtd": [
+      {
+        "latest": "2026-10-06T03:07:30.632926+00:00",
+        "refunds": 1,
+        "currency": "cad",
+        "earliest": "2026-10-06T03:07:30.632926+00:00",
+        "refunded_credits": 10,
+        "refunded_minor_units": 499
+      }
+    ],
+    "free_observation": {
+      "last": "2026-10-22T16:45:30.643827+00:00",
+      "first": "2026-09-15T21:58:15.108195+00:00"
+    }
+  },
+  "stripeAccess": "Local key is test mode; excluded from production revenue audit"
+}
