@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { useLanguage } from "./LanguageProvider";
 import { analyticsAllowed, trackGrowth } from "../../src/lib/growthClient";
 import { publicGrowthPath } from "../../src/lib/growth";
+import { createGoogleTagQueue } from "../../src/lib/googleTag";
 
 export function GrowthAnalytics() {
   const { t } = useLanguage();
@@ -23,7 +24,7 @@ export function GrowthAnalytics() {
     // Keep GA4 page views, with clean URLs and no user IDs or payment parameters.
     const w = window as Window & { dataLayer?: unknown[]; gtag?: (...args: unknown[]) => void };
     w.dataLayer ??= [];
-    w.gtag ??= function (...args: unknown[]) { w.dataLayer!.push(args); };
+    w.gtag ??= createGoogleTagQueue(entry => { w.dataLayer!.push(entry); });
     if (!document.getElementById("rubricheck-ga4")) {
       const script = document.createElement("script"); script.id = "rubricheck-ga4"; script.async = true;
       script.src = "https://www.googletagmanager.com/gtag/js?id=G-S7M12R54DP"; document.head.appendChild(script);
