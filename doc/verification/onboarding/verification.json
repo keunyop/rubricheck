@@ -1,0 +1,31 @@
+{
+  "scope": "Local SaaS completeness and first-visit UX improvements",
+  "changes": [
+    "Inline first-check guide with rubric explanation and optional free sign-up",
+    "Free, top-up and Pro comparison derived from existing feature permissions",
+    "Shared account settings dialog with plan, remaining evaluations and credit balance",
+    "English, Korean and Malay copy and responsive layouts"
+  ],
+  "checks": {
+    "productionBuild": "passed",
+    "eslintChangedJavaScriptAndTypeScript": "passed without warnings",
+    "unitAndApiTests": { "passed": 200, "failed": 0 },
+    "seoPublicPages": 45,
+    "browserSuites": [
+      "check_onboarding.mjs",
+      "check_guest_trial.mjs",
+      "check_assignment_workspace.mjs",
+      "check_ui.mjs",
+      "check_i18n.mjs"
+    ],
+    "onboardingViewportWidths": [320, 390, 768, 1440],
+    "accountDialogShortViewport": "390x568",
+    "onboardingDetails": "results.json"
+  },
+  "limits": {
+    "browserApiCallsMocked": true,
+    "liveAiEmailOrPaymentTransactionsTested": false,
+    "productionDeploymentPerformed": false,
+    "realUserUsabilityStudyPerformed": false
+  }
+}

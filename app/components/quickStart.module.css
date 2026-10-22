@@ -1,0 +1,20 @@
+.guide { margin-bottom: 24px; border: 1px solid #dfe5f3; border-radius: 12px; background: #f8faff; }
+.guide:lang(ko) { word-break: keep-all; overflow-wrap: break-word; }
+.guide summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 18px; list-style: none; color: #334155; }
+.guide summary::-webkit-details-marker { display: none; }
+.guide summary strong { display: block; font-size: 13px; font-weight: 600; }
+.guide summary span span { display: block; margin-top: 4px; color: #64748b; font-size: 12px; line-height: 1.6; }
+.chevron { font-size: 20px; color: #6366f1; }
+.guide[open] .chevron { transform: rotate(180deg); }
+.body { padding: 0 18px 16px; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; border-top: 1px solid #e2e8f0; padding-top: 18px; }
+.steps li { display: flex; gap: 10px; align-items: start; }
+.number { display: grid; place-items: center; width: 23px; height: 23px; flex-shrink: 0; border-radius: 7px; background: #e8edff; color: #4338ca; font-size: 11px; font-weight: 600; }
+.steps h2 { font-size: 12px; font-weight: 600; color: #334155; line-height: 1.8; }
+.steps p { margin-top: 5px; font-size: 12px; line-height: 1.85; color: #64748b; }
+.next { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 20px; padding-top: 12px; margin-top: 16px; border-top: 1px solid #e2e8f0; }
+.next p { max-width: 580px; font-size: 12px; line-height: 1.8; color: #526177; }
+.next button { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: #4338ca; font-size: 12px; font-weight: 600; }
+.next button:disabled { opacity: .5; cursor: wait; }
+.notice { margin-top: 8px; color: #64748b; font-size: 10px; line-height: 1.7; }
+@media (max-width: 1000px) { .steps { grid-template-columns: 1fr; gap: 14px; } .steps p { margin-top: 2px; } }

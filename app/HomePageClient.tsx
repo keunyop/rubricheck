@@ -40,6 +40,7 @@ import { formatOverallScoreDisplay, explainScoreCalculation, SCORE_RANGE_NOTICE,
 import type { HiddenAiAlertSource } from "../lib/hiddenAiAlert";
 import { isKnownAdminEmail } from "../src/config/admin";
 import { ACTIVE_LANDING_COPY } from "../src/config/copy";
+import { QuickStartGuide } from "./components/QuickStartGuide";
 import { HomeResources } from "./components/HomeResources";
 import { Modal } from "./components/Modal";
 import styles from "./home.module.css";
@@ -909,6 +910,7 @@ export default function Home() {
   const [hasProAccess, setHasProAccess] = useState(false);
   const [entitlementStatus, setEntitlementStatus] = useState<"active" | "needs_restore">("needs_restore");
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [signupEntry, setSignupEntry] = useState(false);
   const [showStrictModeUpgradeModal, setShowStrictModeUpgradeModal] = useState(false);
   const [restoreStep, setRestoreStep] = useState<RestoreStep>("email");
   const [restoreEmail, setRestoreEmail] = useState("");
@@ -929,6 +931,8 @@ export default function Home() {
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const comparisonGalleryRef = useRef<HTMLDivElement | null>(null);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const accountSettingsDialog = useRef<HTMLDialogElement | null>(null);
+  const accountSettingsReturnFocus = useRef<HTMLButtonElement | null>(null);
   const billingMenuRef = useRef<HTMLDivElement | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const [resultReady, setResultReady] = useState(false);
@@ -971,7 +975,8 @@ export default function Home() {
     }
   }, []);
 
-  function openLoginModal(infoMessage?: string) {
+  function openLoginModal(infoMessage?: string, signup = false) {
+    setSignupEntry(signup);
     setShowStrictModeUpgradeModal(false);
     setShowAccountMenu(false);
     setShowBillingMenu(false);
@@ -1029,12 +1034,12 @@ export default function Home() {
     return SHOW_ACCOUNT_AND_PRICING;
   }
 
-  function maybeOpenLoginModal(infoMessage?: string) {
+  function maybeOpenLoginModal(infoMessage?: string, signup = false) {
     if (!shouldShowLoginModal()) {
       return;
     }
 
-    openLoginModal(infoMessage);
+    openLoginModal(infoMessage, signup);
   }
 
   function openStrictModeUpgradeModal() {
@@ -2713,6 +2718,8 @@ export default function Home() {
 
   return (
     <AssignmentSidebar
+      accountDialogRef={accountSettingsDialog}
+      onAccountClose={() => { accountSettingsReturnFocus.current?.focus(); accountSettingsReturnFocus.current = null; }}
       canAccessAdmin={canAccessAdmin} onPricing={() => void goToPricingPage()} onLogout={() => void handleLogout()}
       email={signedInEmail} data={workspace.data} loading={workspace.loading} error={workspace.error}
       busy={workspaceBusy || isResumingCheckout || !draftReady || !resultReady}
@@ -2772,6 +2779,14 @@ export default function Home() {
                               className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
                             >
                               <p className="truncate px-2 py-1 text-xs text-slate-500">{signedInEmail}</p>
+                              <button type="button" role="menuitem"
+                                onClick={() => {
+                                  accountSettingsReturnFocus.current = accountMenuRef.current?.querySelector("button") ?? null;
+                                  setShowAccountMenu(false);
+                                  accountSettingsDialog.current?.showModal();
+                                }}
+                                className="mt-1 min-h-10 w-full rounded-lg px-2 py-2 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                              >{t("Account settings")}</button>
                               {canAccessAdmin ? (
                                 <Link
                                   href={href("/admin")}
@@ -2839,6 +2854,12 @@ export default function Home() {
               {t(ACTIVE_LANDING_COPY.subtitle)}
             </p>
           </div>
+
+          {workspaceView === "compose" && !gradeResult && !trialPreview && draftReady && resultReady &&
+            (!signedInEmail ? !trialUsed : !workspace.loading && !workspace.error && workspace.data.assignments.length === 0) ?
+            <QuickStartGuide key={signedInEmail || "guest"} disabled={workspaceBusy || isResumingCheckout}
+              initiallyOpen={!rubricText.trim() && !assignmentText.trim() && !rubricFiles.length && !assignmentFiles.length && rubricMode !== "library"}
+              onSignup={signedInEmail ? undefined : () => maybeOpenLoginModal(t("New here? Verify your email to create a free account. No password or payment card is needed."), true)} /> : null}
 
           {!signedInEmail && workspaceView === "compose" ? <>
             <GuestChoices sampleSelected={sampleSelected} disabled={workspaceBusy} onSelect={setSampleSelected} />
@@ -3780,7 +3801,7 @@ export default function Home() {
           <Modal titleId="main-login-title" closeLabel={t("Close login modal")} onClose={() => setShowLoginModal(false)}>
             <form onSubmit={event => { event.preventDefault(); if (!isStartingRestore && !isVerifyingRestore) void (restoreStep === "code" ? handleVerifyRestorePro() : handleStartRestorePro()); }}>
             <h3 id="main-login-title" className="text-lg font-semibold text-slate-900">
-              {trialPreview || trialUsed ? t("Sign up or log in") : t("Log in")}
+              {trialPreview || trialUsed || signupEntry ? t("Sign up or log in") : t("Log in")}
             </h3>
             <p className="mt-2 text-sm text-slate-600"> {t("We will email you a sign-in code.")} </p>
               <label htmlFor="main-restore-email" className="mt-4 block">

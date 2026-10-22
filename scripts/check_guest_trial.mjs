@@ -141,10 +141,12 @@ try {
   await choices.locator("button:disabled").first().waitFor();
   assert.equal(await sampleChoice.isDisabled(), true);
   assert.equal(await ownChoice.isDisabled(), true);
+  assert.equal(await page.getByRole("button", { name: "Create free account", exact: true }).isDisabled(), true);
   releaseEvaluation();
   await page.getByRole("button", { name: "Retry", exact: true }).waitFor();
   assert.equal(await sampleChoice.isEnabled(), true);
   assert.equal(await ownChoice.isEnabled(), true);
+  assert.equal(await page.getByRole("button", { name: "Create free account", exact: true }).isEnabled(), true);
   pass("choices are disabled during evaluation and re-enabled after failure");
   assert.equal(await page.getByRole("dialog").count(), 0);
   await page.getByRole("button", { name: "Retry", exact: true }).click();

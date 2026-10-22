@@ -2,8 +2,9 @@
 import { useLanguage } from "./LanguageProvider";
 
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import Link from "next/link";
+import { useAccountSummary } from "./AccountSummaryProvider";
 import { LanguageSettings } from "./LanguageSettings";
 import type { AssignmentHistoryItem, AssignmentProject, AssignmentWorkspace } from "../../src/lib/assignmentWorkspaceTypes";
 import styles from "./assignmentWorkspace.module.css";
@@ -24,6 +25,8 @@ export function WorkspaceIcon({ name }: { name: "search" | "panel" | "menu" | "n
 
 type Props = {
   children: ReactNode;
+  accountDialogRef?: RefObject<HTMLDialogElement | null>;
+  onAccountClose?: () => void;
   email: string;
   data: AssignmentWorkspace;
   loading: boolean;
@@ -44,6 +47,7 @@ type Props = {
 
 export function AssignmentSidebar(props: Props) {
   const { t, href } = useLanguage();
+  const { accountPlan, remainingEvaluations, creditBalance } = useAccountSummary();
   const [expanded, setExpanded] = useState(true);
   const [query, setQuery] = useState("");
   const [projectName, setProjectName] = useState("");
@@ -52,7 +56,8 @@ export function AssignmentSidebar(props: Props) {
   const mobile = useRef<HTMLDialogElement>(null);
   const search = useRef<HTMLDialogElement>(null);
   const create = useRef<HTMLDialogElement>(null);
-  const account = useRef<HTMLDialogElement>(null);
+  const localAccount = useRef<HTMLDialogElement>(null);
+  const account = props.accountDialogRef ?? localAccount;
 
   useEffect(() => {
     try { setExpanded(localStorage.getItem("rubricheck_sidebar") !== "closed"); } catch {}
@@ -70,7 +75,7 @@ export function AssignmentSidebar(props: Props) {
     window.addEventListener("keydown", openSearch);
     return () => window.removeEventListener("keydown", openSearch);
   }, []);
-  useEffect(() => { search.current?.close(); create.current?.close(); mobile.current?.close(); account.current?.close(); setQuery(""); }, [props.email]);
+  useEffect(() => { search.current?.close(); create.current?.close(); mobile.current?.close(); account.current?.close(); setQuery(""); }, [props.email, account]);
 
   function closeAccount() { account.current?.close(); mobile.current?.close(); }
 
@@ -126,9 +131,17 @@ export function AssignmentSidebar(props: Props) {
       {props.children}
     </div>
     <dialog ref={mobile} className={styles.mobileDialog} aria-label={t("Sidebar")} onClick={event => { if (event.target === event.currentTarget) mobile.current?.close(); }}><div className={styles.mobilePanel}>{content(true)}</div></dialog>
-    <dialog ref={account} className={styles.accountDialog} aria-label={t("Account menu")} onClick={event => { if (event.target === event.currentTarget) account.current?.close(); }}>
+    <dialog ref={account} onClose={props.onAccountClose} className={styles.accountDialog} aria-label={t("Account menu")} onClick={event => { if (event.target === event.currentTarget) account.current?.close(); }}>
       <div className={styles.accountBody}>
         <div className={styles.accountHeading}><span className={styles.email} title={props.email}>{props.email || t("Language preferences")}</span><button className={styles.iconButton} aria-label={t("Close account menu")} onClick={() => account.current?.close()}><WorkspaceIcon name="close" /></button></div>
+        {props.email ? <section className={styles.accountOverview} aria-labelledby="account-settings-title">
+          <h2 id="account-settings-title">{t("Account settings")}</h2>
+          <dl>
+            <div><dt>{t("Current plan")}</dt><dd>{t(accountPlan === "pro" ? "Pro" : accountPlan === "topup" ? "Top-up" : "Free")}</dd></div>
+            <div><dt>{t("Evaluations available")}</dt><dd>{accountPlan === "pro" ? t("Unlimited evaluations") : remainingEvaluations === null ? "\u2014" : remainingEvaluations.toLocaleString()}</dd></div>
+            <div><dt>{t("Credit balance")}</dt><dd>{creditBalance === null ? "\u2014" : creditBalance.toLocaleString()}</dd></div>
+          </dl>
+        </section> : null}
         <nav aria-label={t("Account")}>
           {props.canAccessAdmin && <Link href={href("/admin")} className={styles.accountItem} onClick={closeAccount}>{t("Admin")}</Link>}
           <button className={styles.accountItem} onClick={() => { closeAccount(); props.onPricing(); }}>{t("Pricing")}</button>

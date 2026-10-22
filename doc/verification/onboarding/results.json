@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "First visit explains rubric, inputs and result; guide is keyboard-collapsible, responsive and stays closed for a restored draft",
+    "Free sign-up uses existing email verification and preserves the draft without starting an evaluation or checkout",
+    "Header and sidebar share account settings, accurate usage and language controls; mobile dialog fits and restores the correct trigger focus",
+    "Account overview distinguishes Free, top-up, Pro and unavailable counts without showing invented balances",
+    "Pricing comparison matches feature permissions, explains guest versus signed-in Free, and scrolls within its own region on mobile",
+    "New onboarding and plan comparison are translated and usable in Korean and Malay"
+  ],
+  "errors": [],
+  "mockedApi": true
+}

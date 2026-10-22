@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Modal } from "../components/Modal";
 import { useAccountSummary } from "../components/AccountSummaryProvider";
 import { AccountStatusPill } from "../components/AccountStatusPill";
+import { PlanComparison } from "../components/PlanComparison";
 import { SubpageBackHomeLink } from "../components/SubpageBackHomeLink";
 
 import { isKnownAdminEmail } from "../../src/config/admin";
@@ -521,6 +522,7 @@ export function PricingClient() {
             <p className="mt-2 text-left text-sm text-slate-600 md:text-[15px]"> {t("Choose Pro for full access, or one-time top-ups for Strict Mode and full evaluation feedback.")} </p>
           </div>
 
+          <PlanComparison />
           {!isTopUpsLocked && <PlanFitNote onChoose={setActivePricingTab} />}
           <div role="group" aria-label={t("Plan type")} className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
             <button
