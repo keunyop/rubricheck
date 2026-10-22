@@ -135,6 +135,22 @@
     "src/lib/seo.ts",
     "src/lib/supabaseRest.ts",
     "supabase/growth_analytics.test.sql",
-    "supabase/migrations/20261022180308_growth_analytics.sql"
-  ]
+    "supabase/migrations/20261022191555_growth_analytics.sql",
+    "supabase/migrations/20261022191618_growth_retention_schedule.sql"
+  ],
+  "deployment_followup": {
+    "authorized": true,
+    "production_schema_applied": true,
+    "migrations": [
+      "20261022191555_growth_analytics",
+      "20261022191618_growth_retention_schedule"
+    ],
+    "retention_schedule_utc": "15 10 * * *",
+    "rpc_smoke_test": "service-role insert, identify and report in rolled-back transaction; zero remaining records",
+    "first_scheduled_cleanup_run": "pending",
+    "collection_gate": "off pending live Stripe webhook verification",
+    "ga4_gate": "off pending property configuration",
+    "revalidation": "199 tests, build, TypeScript and focused lint passed",
+    "migration_history_rewritten": false
+  }
 }

@@ -4,7 +4,7 @@ import { mock, test } from "node:test";
 import type Stripe from "stripe";
 const rows=new Map<string,Record<string,unknown>>();
 mock.module("./growthServer.ts",{namedExports:{growthEnabled:()=>true,growthHash:(s:string)=>createHash("sha256").update(s).digest("hex")}});
-mock.module("./supabaseRest.ts",{namedExports:{callSupabaseRpc:async(_name:string,args:Record<string,unknown>)=>{if(!rows.has(String(args.p_key)))rows.set(String(args.p_key),args);}}});
+mock.module("./supabaseRest.ts",{namedExports:{callSupabaseRpc:async(_name:string,args:Record<string,unknown>,options:{timeoutMs:number})=>{assert.equal(options.timeoutMs,2500);if(!rows.has(String(args.p_key)))rows.set(String(args.p_key),args);}}});
 const {recordStripeGrowth}=await import("./growthPayments.ts");
 const account="a".repeat(64);
 const stripe={subscriptions:{retrieve:async()=>({metadata:{growth_account:account,pro_plan:"annual"},items:{data:[]}})},refunds:{list:async function*(){yield{id:"re_1",created:100,status:"succeeded",amount:200,currency:"cad"};yield{id:"re_2",created:101,status:"succeeded",amount:100,currency:"cad"};}}} as unknown as Stripe;
