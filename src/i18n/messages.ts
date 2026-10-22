@@ -4,4 +4,5 @@ import { errors } from "./errors";
 import { extras } from "./extras";
 import { billing } from "./billing";
 import { legal } from "./legal";
-export const messages: Record<string, readonly [string, string]> = { ...core, ...errors, ...extras, ...billing, ...legal };
+import { growth } from "./growth";
+export const messages: Record<string, readonly [string, string]> = { ...core, ...errors, ...extras, ...billing, ...legal, ...growth };

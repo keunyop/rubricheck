@@ -22,6 +22,7 @@ import {
 import { createRequestContext, errorResponse } from "../../../../src/lib/apiError";
 import { upsertAccountEntitlement } from "../../../../src/lib/accountEntitlements";
 import { persistLifetimeCheckout, resolveLifetimeCheckout } from "../../../../src/lib/proLifetime";
+import { recordStripeGrowth } from "../../../../src/lib/growthPayments";
 
 export const runtime = "nodejs";
 
@@ -333,6 +334,11 @@ export async function POST(request: Request) {
   }
 
   const traceFields = getEventTraceFields(event);
+  // Independent idempotency keys (invoice / payment intent / refund). Retry analytics
+  // even when the existing entitlement event marker has already been written.
+  let growthFailed = false;
+  try { await recordStripeGrowth(event, getStripeClient()); }
+  catch { growthFailed = true; console.warn("GROWTH_PAYMENT_WRITE_FAILED"); }
   console.info("STRIPE_WEBHOOK_RECEIVED", {
     requestId: context.requestId,
     eventId: event.id,
@@ -350,6 +356,7 @@ export async function POST(request: Request) {
     (event.type === "checkout.session.completed" && (event.data.object as Stripe.Checkout.Session).mode === "payment");
   const firstProcess = replaySafe || await markWebhookEventProcessed(event.id);
   if (!firstProcess) {
+    if (growthFailed) return errorResponse(context, 500, "GROWTH_PAYMENT_WRITE_FAILED", "Payment reporting will retry.");
     console.info("STRIPE_WEBHOOK_DUPLICATE_IGNORED", {
       requestId: context.requestId,
       eventId: event.id,
@@ -389,6 +396,7 @@ export async function POST(request: Request) {
         break;
     }
 
+    if (growthFailed) return errorResponse(context, 500, "GROWTH_PAYMENT_WRITE_FAILED", "Payment reporting will retry.");
     return NextResponse.json({ received: true }, { headers: { "x-request-id": context.requestId } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown webhook error";

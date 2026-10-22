@@ -83,13 +83,14 @@ function applyOrder(searchParams: URLSearchParams, orderBy: SupabaseOrder): void
   searchParams.set("order", parts.join("."));
 }
 
-export async function callSupabaseRpc<T>(functionName: string, params: JsonRecord): Promise<T> {
+export async function callSupabaseRpc<T>(functionName: string, params: JsonRecord, options?: { timeoutMs: number }): Promise<T> {
   const endpoint = `${getSupabaseUrl()}/rest/v1/rpc/${functionName}`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify(params),
     cache: "no-store",
+    ...(options ? { signal: AbortSignal.timeout(options.timeoutMs) } : {}),
   });
 
   if (!response.ok) {

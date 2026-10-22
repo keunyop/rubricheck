@@ -17,7 +17,7 @@ export default async function DataRetentionPolicyPage() {
       <section className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">{t("Data Retention Policy")}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-700"> {t("Last updated: October 13, 2026. This policy summarizes default retention windows for RubriCheck data categories.")} </p>
+        <p className="mt-3 text-sm leading-6 text-slate-700"> {t("Last updated: October 22, 2026. This policy summarizes default retention windows for RubriCheck data categories.")} </p>
         <p className="mt-3 text-sm leading-6 text-slate-700"> {t("Actual retention may vary by legal obligations, fraud prevention needs, and incident response requirements.")} </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Evaluation Data")}</h2>
@@ -39,6 +39,8 @@ export default async function DataRetentionPolicyPage() {
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Billing and Entitlement Records")}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700"> {t("Subscription, top-up, and entitlement records are retained for the period needed for accounting, tax, chargeback handling, and legal compliance.")} </p>
 
+        <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Optional usage analytics")}</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-700">{t("Journey events are kept for 90 days and payment reporting records for 400 days, with daily cleanup. Payment attribution is removed after 90 days. Account attribution is cleared after 90 days of inactivity, and inactive account reporting records after 400 days. These pseudonymous records are server-only and available only to authorized administrators. Existing accounting and entitlement records follow their separate retention rules.")}</p>
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Deletion Requests")}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700"> {t("You can request deletion of eligible personal data through support. Some records may be excluded from deletion where retention is required by law, fraud prevention, or legitimate security interests.")} </p>
       <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Language settings and translations")}</h2>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FeedbackInbox } from "./FeedbackInbox";
+import { GrowthPanel } from "./GrowthPanel";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import type { AdminDashboardData as ServerDashboardData } from "../../src/lib/adminDashboard";
@@ -306,6 +307,7 @@ export function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
         </header>
 
         <FeedbackInbox />
+        <GrowthPanel />
 
         {dashboard ? (
           <>

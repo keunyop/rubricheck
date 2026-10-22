@@ -1,0 +1,46 @@
+-- LOCAL ONLY: execute after credits_mvp.sql and the growth migration.
+begin;
+do $$
+declare a text:=repeat('a',64); b text:=repeat('b',64); v uuid:='11111111-1111-4111-8111-111111111111'; n integer; report jsonb;
+begin
+  if has_table_privilege('anon','public.growth_events','SELECT') or has_table_privilege('authenticated','public.growth_payments','INSERT') then raise exception 'analytics tables exposed'; end if;
+  if has_function_privilege('anon','public.rubricheck_growth_report(timestamptz,timestamptz)','EXECUTE') then raise exception 'report exposed'; end if;
+  if exists(select 1 from pg_class where relname in ('growth_events','growth_payments','growth_accounts','growth_visitors') and not relrowsecurity) then raise exception 'RLS missing'; end if;
+  perform public.rubricheck_growth_event('page','page_view',v,null,'guest',null,null,null,'{"source":"google","medium":"organic","campaign":"unknown","landing":"/","referrer":"google.com"}','MY');
+  perform public.rubricheck_growth_event('page','page_view',v,null,'guest',null,null,null,null,'MY');
+  select count(*) into n from public.growth_events where event_key='page'; if n<>1 then raise exception 'duplicate event'; end if;
+  perform public.rubricheck_growth_event('start','evaluation_started',v,null,'guest','22222222-2222-4222-8222-222222222222',null,null,null,'MY');
+  perform public.rubricheck_growth_event('forged-view','evaluation_result_viewed',v,null,'unknown','22222222-2222-4222-8222-222222222222',null,null,null,'MY');
+  if exists(select 1 from public.growth_events where event_key='forged-view') then raise exception 'fabricated result view accepted'; end if;
+  perform public.rubricheck_growth_event('complete','guest_preview_completed',v,null,'guest','22222222-2222-4222-8222-222222222222',null,null,null,'MY');
+  perform public.rubricheck_growth_event('view','evaluation_result_viewed',v,null,'unknown','22222222-2222-4222-8222-222222222222',null,null,null,'MY');
+  if not exists(select 1 from public.growth_events where event_key='view' and product='guest') then raise exception 'result linkage lost'; end if;
+  perform public.rubricheck_growth_identify(a,'new-local@example.invalid',v,true);
+  perform public.rubricheck_growth_identify(a,'new-local@example.invalid',v,true);
+  if (select count(*) from public.growth_events where event_name='signup_completed' and account_key=a)<>1 then raise exception 'signup duplicated'; end if;
+  if (select first_touch->>'source' from public.growth_accounts where account_key=a)<>'google' then raise exception 'first touch lost on signup'; end if;
+  report:=public.rubricheck_growth_report(now()-interval '1 day',now()+interval '1 second');
+  if not exists(select 1 from jsonb_array_elements(report->'events') e where e->>'event_key'='page' and e->>'actor'=a) then raise exception 'guest linkage lost'; end if;
+  perform public.rubricheck_growth_payment('invoice',a,now()-interval '1 hour','pro_annual','subscription_initial',5999,'cad');
+  perform public.rubricheck_growth_payment('invoice',a,now()-interval '1 hour','pro_annual','subscription_initial',5999,'cad');
+  if (select count(*) from public.growth_payments where payment_key='invoice')<>1 then raise exception 'payment duplicated'; end if;
+  perform public.rubricheck_growth_payment('earlier',a,now()-interval '2 hours','credits','one_time',499,'cad');
+  if (select first_paid_at from public.growth_accounts where account_key=a)<>now()-interval '2 hours' then raise exception 'out-of-order first payment'; end if;
+  perform public.rubricheck_growth_identify(b,'other-local@example.invalid',v,true);
+  report:=public.rubricheck_growth_report(now()-interval '1 day',now()+interval '1 second');
+  if exists(select 1 from jsonb_array_elements(report->'events') e where e->>'event_key'='page' and e->>'actor'=a) then raise exception 'shared browser falsely merged'; end if;
+  update public.growth_events set occurred_at=now()-interval '91 days' where event_key='page';
+  perform public.rubricheck_growth_prune();
+  if exists(select 1 from public.growth_events where event_key='page') then raise exception 'event retention failed'; end if;
+  perform public.rubricheck_growth_payment('ancient',a,now()-interval '401 days','credits','one_time',499,'cad');
+  if exists(select 1 from public.growth_payments where payment_key='ancient') then raise exception 'expired replay accepted'; end if;
+  perform public.rubricheck_growth_opt_out(a,v);
+  perform public.rubricheck_growth_payment('after-opt-out',a,now(),'credits','one_time',499,'cad');
+  if exists(select 1 from public.growth_payments where payment_key='after-opt-out' and (first_touch is not null or last_touch is not null)) then raise exception 'opt-out attribution leaked'; end if;
+  raise notice 'PASS: RLS, RPC grants, deduplication, consent-scoped guest linkage, result validation, first-touch, payment ordering and retention';
+end $$;
+set local role service_role;
+select public.rubricheck_growth_event('role-check','page_view','99999999-9999-4999-8999-999999999999',null,'guest',null,null,null,null,'unknown');
+select public.rubricheck_growth_identify(repeat('c',64),'role-check@example.invalid','99999999-9999-4999-8999-999999999999',true);
+reset role;
+rollback;

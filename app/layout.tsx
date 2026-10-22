@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { GrowthAnalytics } from "./components/GrowthAnalytics";
+import { growthEnabled } from "../src/lib/growthServer";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AccountSummaryProvider } from "./components/AccountSummaryProvider";
 import { LanguageProvider } from "./components/LanguageProvider";
@@ -13,8 +13,6 @@ import {
   buildWebSiteSchema,
 } from "../src/lib/seo";
 import "./globals.css";
-
-const GOOGLE_ANALYTICS_ID = "G-S7M12R54DP";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +33,7 @@ export const metadata: Metadata = {
   description:
     "RubriCheck is an AI rubric grader and rubric checker for students and educators. Evaluate essay and assignment drafts with criterion-level feedback, score ranges, and revision guidance before submission.",
   applicationName: "RubriCheck",
+  referrer: "strict-origin",
   keywords: [
     "ai rubric grader",
     "rubric checker",
@@ -108,31 +107,13 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <head>
-        <script
-          async
-          src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_ID}`}
-        />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', '${GOOGLE_ANALYTICS_ID}');
-            `,
-          }}
-        />
-      </head>
+    <html lang={locale} suppressHydrationWarning data-growth-enabled={growthEnabled() ? "true" : undefined}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <JsonLd data={buildWebSiteSchema()} />
         <JsonLd data={buildOrganizationSchema()} />
-        <AccountSummaryProvider><LanguageProvider initialLocale={locale}>{children}</LanguageProvider></AccountSummaryProvider>
-        <Analytics />
-        <SpeedInsights />
+        <AccountSummaryProvider><LanguageProvider initialLocale={locale}>{children}<GrowthAnalytics /></LanguageProvider></AccountSummaryProvider>
       </body>
     </html>
   );

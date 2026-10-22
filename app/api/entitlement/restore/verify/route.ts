@@ -24,6 +24,7 @@ import {
   shouldEnforceForSuspicious,
 } from "../../../../../src/lib/abuseTelemetry";
 import { upsertAccountEntitlement } from "../../../../../src/lib/accountEntitlements";
+import { recordGrowthLogin } from "../../../../../src/lib/growthServer";
 
 export const runtime = "nodejs";
 
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
       return errorResponse(context, 429, "ABUSE_BLOCKED", "Request blocked by abuse controls.");
     }
 
+    if (outcome === "success" && response.ok) await recordGrowthLogin(request, response, email);
     return response;
   };
 
