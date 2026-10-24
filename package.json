@@ -2,9 +2,16 @@
   "name": "rubricheck",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24.22.1 <25"
+  },
   "scripts": {
+    "check:runtime": "node scripts/check-node-version.mjs",
+    "predev": "npm run check:runtime",
     "dev": "next dev",
+    "prebuild": "npm run check:runtime",
     "build": "next build",
+    "prestart": "npm run check:runtime",
     "start": "next start",
     "lint": "eslint",
     "harness:simulate": "node scripts/simulate_harness.mjs",
