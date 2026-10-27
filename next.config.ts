@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   devIndicators: { position: "bottom-right" },
   async headers() {
-    return ["/admin/:path*", "/billing/:path*", "/api/:path*", "/workspace", "/ko/workspace", "/ms/workspace"].map((source) => ({
+    return ["/admin/:path*", "/billing/:path*", "/api/:path*", "/workspace", ...["ko", "ms", "hi", "ur", "vi", "zh"].map((locale) => `/${locale}/workspace`)].map((source) => ({
       source,
       headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
     }));

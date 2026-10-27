@@ -69,6 +69,10 @@ function buildFallbackExampleRevision(criterionName: string, feedback: string, l
   const cleanedFeedback = feedback.replace(/\s+/g, " ").trim();
   if (language === "ko") return (cleanedFeedback ? `${criterionName} 개선 방향: ${cleanedFeedback}` : `${criterionName} 항목이 채점 기준에 더 잘 부합하도록 수정하세요.`).slice(0, 300);
   if (language === "ms") return (cleanedFeedback ? `Baiki ${criterionName}: ${cleanedFeedback}` : `Semak bahagian ${criterionName} supaya lebih menepati rubrik.`).slice(0, 300);
+  if (language === "hi") return (cleanedFeedback ? `${criterionName} में सुधार: ${cleanedFeedback}` : `${criterionName} को मूल्यांकन मानदंडों के अनुरूप संशोधित करें।`).slice(0, 300);
+  if (language === "ur") return (cleanedFeedback ? `${criterionName} میں بہتری: ${cleanedFeedback}` : `${criterionName} کو جانچ کے معیار کے مطابق بہتر بنائیں۔`).slice(0, 300);
+  if (language === "vi") return (cleanedFeedback ? `Cải thiện ${criterionName}: ${cleanedFeedback}` : `Chỉnh sửa phần ${criterionName} để phù hợp hơn với bảng tiêu chí.`).slice(0, 300);
+  if (language === "zh") return (cleanedFeedback ? `改进${criterionName}：${cleanedFeedback}` : `修改${criterionName}部分，使其更符合评分标准。`).slice(0, 300);
   if (!cleanedFeedback) {
     return `Revise the ${criterionName} section to align more directly with rubric expectations.`;
   }

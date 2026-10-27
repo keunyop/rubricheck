@@ -1,12 +1,12 @@
-.settings { display: grid; gap: 8px; padding: 12px; border-top: 1px solid #e2e8f0; margin-top: 4px; text-align: left; }
+.settings { display: grid; gap: 8px; padding: 12px; border-top: 1px solid #e2e8f0; margin-top: 4px; text-align: start; }
 .settings label, .result label { font-size: 12px; font-weight: 600; color: #475569; }
 .settings label { margin-top: 7px; }
-.settings select, .result select { min-height: 42px; width: 100%; border: 1px solid #cbd5e1; border-radius: 9px; padding: 8px 32px 8px 11px; background: #fff; color: #0f172a; font-size: 14px; }
+.settings select, .result select { min-height: 42px; width: 100%; border: 1px solid #cbd5e1; border-radius: 9px; padding-block: 8px; padding-inline: 11px 32px; background: #fff; color: #0f172a; font-size: 14px; }
 .settings select:focus-visible, .result select:focus-visible { outline: 2px solid #4f46e5; outline-offset: 3px; }
 .help { font-size: 12px; line-height: 1.65; color: #64748b; overflow-wrap: anywhere; }
 .settings select:disabled, .result select:disabled { opacity: .55; cursor: not-allowed; }
 .error { font-size: 12px; line-height: 1.6; color: #b91c1c; }
 .error button { text-decoration: underline; }
-.result { margin-left: auto; max-width: 100%; display: grid; grid-template-columns: auto minmax(0, 156px); align-items: center; gap: 6px 10px; }
+.result { margin-inline-start: auto; max-width: 100%; display: grid; grid-template-columns: auto minmax(0, 156px); align-items: center; gap: 6px 10px; }
 .result .help, .result .error { grid-column: 1 / -1; }
 @media (max-width: 639px) { .result { width: 100%; justify-content: space-between; } }
