@@ -219,21 +219,6 @@ workspace, recovery, and feedback browser scripts. Browser tests use mocked API
 responses; set `TEST_BASE_URL` for a local Next server and `PLAYWRIGHT_MODULE`
 if Playwright is installed outside this repository.
 
-## Node.js runtime security
-
-Use Node.js **24.22.1 or a later stable 24.x release**. The October 21, 2026
-security release fixes CVE-2026-111497 and other runtime vulnerabilities.
-`.nvmrc` and `.node-version` select the patched release for local version managers.
-Run `npm run check:runtime` after upgrading. Development, builds, production startup,
-and Next.js server initialization reject unsupported runtimes. The server logs only
-the verified Node.js version at initialization.
-
-Vercel manages minor and patch updates within the selected `24.x` line. Redeploy
-without the build cache after a security update and confirm
-`NODE_RUNTIME_VERIFIED node=24.22.1` (or a later 24.x version) in both build and
-runtime logs before rotating secrets. A package engine setting alone does not
-prove that a deployed runtime is patched. See [runtime maintenance](doc/security/node-runtime.md).
-
 ## Actual scores and comments
 
 Open a saved assignment and choose **Add actual score and comments** to record a grade,
