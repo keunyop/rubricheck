@@ -2739,7 +2739,7 @@ export default function Home() {
       <div className="mx-auto w-full max-w-6xl space-y-6">
         {workspaceNotice && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{t(workspaceNotice)}</p>}
         {openingAssignment && <p role="status" className="text-sm text-slate-500">{t("Opening assignment...")}</p>}
-        {workspaceView === "compose" && activeProject ? <div className={workspaceStyles.contextBar}><div className={workspaceStyles.contextTitle}><WorkspaceIcon name="folder" /><button onClick={() => openProject(activeProject)}>{activeProject.name}</button><span>/ New version</span></div></div> : null}
+        {workspaceView === "compose" && activeProject ? <div className={workspaceStyles.contextBar}><div className={workspaceStyles.contextTitle}><WorkspaceIcon name="folder" /><button onClick={() => openProject(activeProject)}>{activeProject.name}</button><span>/ {t("New version")}</span></div></div> : null}
         <section className={workspaceView === "compose" ? styles.workspace : "relative rounded-xl border border-slate-200 bg-white px-5 py-4"}>
           <div className={workspaceView === "compose" ? styles.header : styles.headerCompact}>
             <div className={styles.topbar}>
@@ -3200,7 +3200,7 @@ export default function Home() {
 
         <section hidden={workspaceView !== "compose" || (!comparisonImages.length && !canAccessAdmin)} className="overflow-hidden rounded-2xl border border-slate-200 bg-[linear-gradient(160deg,#ffffff_0%,#f8fafc_58%,#eef2ff_100%)] p-4 shadow-sm md:p-5">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-slate-900">RubriCheck vs Real Gallery</h2>
+            <h2 className="text-base font-semibold text-slate-900">{t("RubriCheck vs Real Gallery")}</h2>
             <div className="flex items-center gap-2">
               {canAccessAdmin ? (
                 <button
@@ -3218,7 +3218,7 @@ export default function Home() {
                 aria-expanded={!isComparisonCollapsed}
                 className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700"
               >
-                {isComparisonCollapsed ? "Expand" : "Collapse"}
+                {t(isComparisonCollapsed ? "Expand" : "Collapse")}
               </button>
             </div>
           </div>
@@ -3230,7 +3230,7 @@ export default function Home() {
                     type="button"
                     onClick={() => handleScrollComparisonGallery("left")}
                     className="absolute -left-2.5 top-1/2 z-10 -translate-y-1/2 rounded-full border border-slate-300 bg-white/95 px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm"
-                    aria-label="Scroll gallery left"
+                    aria-label={t("Scroll gallery left")}
                   >
                     {"<"}
                   </button>
@@ -3240,7 +3240,7 @@ export default function Home() {
                     type="button"
                     onClick={() => handleScrollComparisonGallery("right")}
                     className="absolute -right-2.5 top-1/2 z-10 -translate-y-1/2 rounded-full border border-slate-300 bg-white/95 px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm"
-                    aria-label="Scroll gallery right"
+                    aria-label={t("Scroll gallery right")}
                   >
                     {">"}
                   </button>
@@ -3425,7 +3425,7 @@ export default function Home() {
                   <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                     <p className="text-sm font-semibold text-amber-900">
                       {formatHiddenAiAlertSources(displayedResult.hidden_ai_alert.sources)} {t("warning")} </p>
-                    <p className="mt-1 text-sm leading-6 text-amber-800">
+                    <p dir="auto" className="mt-1 text-start text-sm leading-6 text-amber-800">
                       {displayedResult.hidden_ai_alert.message}
                     </p>
                   </div>
@@ -3476,7 +3476,7 @@ export default function Home() {
                     {t(SCORE_COMPARISON_NOTICE)}
                   </p>
                 </div>
-                <p className="mt-4 text-sm leading-6 text-slate-700 md:text-[15px]">{displayedResult.summary}</p>
+                <p dir="auto" lang={displayedResult.language} className="mt-4 text-start text-sm leading-6 text-slate-700 md:text-[15px]">{displayedResult.summary}</p>
                 {displayedResult.access_tier === "free" && !sampleSelected && <PlanFitNote evaluationId={displayedResult.evaluation_id} />}
               </div>
 
@@ -3484,7 +3484,7 @@ export default function Home() {
                 <h3 className="text-sm font-semibold text-slate-900">{t("Top Improvements")}</h3>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
                   {getVisibleTopImprovements(displayedResult).map((item, index) => (
-                    <li key={`${index}-${item}`}>{item}</li>
+                    <li key={`${index}-${item}`} dir="auto" lang={displayedResult.language} className="text-start">{item}</li>
                   ))}
                   {Array.from({ length: getLockedTopImprovementsCount(displayedResult) }).map((_, index) => (
                     <li key={`locked-improvement-${index}`} className="list-none pl-0">
@@ -3575,7 +3575,7 @@ export default function Home() {
 
                     return (
                       <tr key={criteriaKey}>
-                        <td className="whitespace-normal break-words px-4 py-3 align-top font-medium">{displayedResult.grading_basis === "general" ? t(item.name) : item.name}</td>
+                        <td dir="auto" className="whitespace-normal break-words px-4 py-3 text-start align-top font-medium">{displayedResult.grading_basis === "general" ? t(item.name) : item.name}</td>
                         <td className="px-4 py-3 align-top">{item.max_score}</td>
                         <td className="px-4 py-3 align-top">
                           <span className="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-sm font-medium text-indigo-700">
@@ -3583,11 +3583,11 @@ export default function Home() {
                           </span>
                         </td>
                         <td className="whitespace-normal break-words px-4 py-3 align-top">
-                          <p>{rationaleText}</p>
+                          <p dir="auto" lang={displayedResult.language} className="text-start">{rationaleText}</p>
                           {detailedBreakdownBullets.length > 0 ? (
                             <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-700">
                               {detailedBreakdownBullets.map((bullet, bulletIndex) => (
-                                <li key={`${criteriaKey}-detail-${bulletIndex}`}>{bullet}</li>
+                                <li key={`${criteriaKey}-detail-${bulletIndex}`} dir="auto" lang={displayedResult.language} className="text-start">{bullet}</li>
                               ))}
                             </ul>
                           ) : null}
@@ -3602,7 +3602,7 @@ export default function Home() {
                           {canShowDetailedBreakdown && evidenceList.length > 0 ? (
                             <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-600">
                               {evidenceList.map((snippet, snippetIndex) => (
-                                <li key={`${criteriaKey}-evidence-${snippetIndex}`}>{snippet}</li>
+                                <li key={`${criteriaKey}-evidence-${snippetIndex}`} dir="auto" className="text-start">{snippet}</li>
                               ))}
                             </ul>
                           ) : null}
@@ -3618,7 +3618,7 @@ export default function Home() {
                                   <ProBadge className="shrink-0" />
                                 </span>
                                 <span className="text-xs font-medium text-slate-500">
-                                  {isRewriteOpen ? "Hide" : "Show"}
+                                  {t(isRewriteOpen ? "Hide" : "Show")}
                                 </span>
                               </button>
                               {isRewriteOpen ? (
@@ -3627,7 +3627,7 @@ export default function Home() {
                                     rewriteSuggestions.length > 0 ? (
                                       <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
                                         {rewriteSuggestions.map((suggestion, suggestionIndex) => (
-                                          <li key={`${criteriaKey}-rewrite-${suggestionIndex}`}>{suggestion}</li>
+                                          <li key={`${criteriaKey}-rewrite-${suggestionIndex}`} dir="auto" lang={displayedResult.language} className="text-start">{suggestion}</li>
                                         ))}
                                       </ul>
                                     ) : (
@@ -3702,20 +3702,20 @@ export default function Home() {
                     className="rounded-xl border border-slate-200 bg-slate-50 p-4"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h4 className="text-sm font-semibold text-slate-900">{displayedResult.grading_basis === "general" ? t(item.name) : item.name}</h4>
+                      <h4 dir="auto" className="text-start text-sm font-semibold text-slate-900">{displayedResult.grading_basis === "general" ? t(item.name) : item.name}</h4>
                       <span className="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-sm font-medium text-indigo-700">
                         {formatEstimatedRangeDisplay(item.estimated_range, "-")}
                       </span>
                     </div>
                     <p className="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500"> {t("Max score:")} {item.max_score}
                     </p>
-                    <p className="mt-2 whitespace-normal break-words text-sm text-slate-700">
+                    <p dir="auto" lang={displayedResult.language} className="mt-2 whitespace-normal break-words text-start text-sm text-slate-700">
                       {rationaleText}
                     </p>
                     {detailedBreakdownBullets.length > 0 ? (
                       <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-700">
                         {detailedBreakdownBullets.map((bullet, bulletIndex) => (
-                          <li key={`${criteriaKey}-mobile-detail-${bulletIndex}`}>{bullet}</li>
+                          <li key={`${criteriaKey}-mobile-detail-${bulletIndex}`} dir="auto" lang={displayedResult.language} className="text-start">{bullet}</li>
                         ))}
                       </ul>
                     ) : null}
@@ -3730,7 +3730,7 @@ export default function Home() {
                     {canShowDetailedBreakdown && evidenceList.length > 0 ? (
                       <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-slate-600">
                         {evidenceList.map((snippet, snippetIndex) => (
-                          <li key={`${criteriaKey}-mobile-evidence-${snippetIndex}`}>{snippet}</li>
+                          <li key={`${criteriaKey}-mobile-evidence-${snippetIndex}`} dir="auto" className="text-start">{snippet}</li>
                         ))}
                       </ul>
                     ) : null}
@@ -3747,7 +3747,7 @@ export default function Home() {
                             <ProBadge className="shrink-0" />
                           </span>
                           <span className="text-xs font-medium text-slate-500">
-                            {isRewriteOpen ? "Hide" : "Show"}
+                            {t(isRewriteOpen ? "Hide" : "Show")}
                           </span>
                         </button>
                         {isRewriteOpen ? (
@@ -3756,7 +3756,7 @@ export default function Home() {
                               rewriteSuggestions.length > 0 ? (
                                 <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
                                   {rewriteSuggestions.map((suggestion, suggestionIndex) => (
-                                    <li key={`${criteriaKey}-mobile-rewrite-${suggestionIndex}`}>{suggestion}</li>
+                                    <li key={`${criteriaKey}-mobile-rewrite-${suggestionIndex}`} dir="auto" lang={displayedResult.language} className="text-start">{suggestion}</li>
                                   ))}
                                 </ul>
                               ) : (

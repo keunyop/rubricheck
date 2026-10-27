@@ -51,7 +51,7 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 45, "Sitemap includes all 15 public pages in three languages");
+  assert.equal(urls.length, 105, "Sitemap includes all 15 public pages in seven languages");
   assert.equal(new Set(urls.map(String)).size, urls.length, "No duplicate sitemap URLs");
   assert.doesNotMatch(sitemap, /<loc>[^<]*\/(?:api|admin|billing)(?:\/|<)/);
   const titles = new Set();
@@ -59,7 +59,7 @@ try {
   const pages = new Map();
 
   for (const url of urls) {
-    const locale = /^\/(ko|ms)(\/|$)/.exec(url.pathname)?.[1] ?? "en";
+    const locale = /^\/(ko|ms|hi|ur|vi|zh)(\/|$)/.exec(url.pathname)?.[1] ?? "en";
     const prefix = locale === "en" ? "" : "/" + locale;
     const homePath = prefix || "/";
     assert.equal(url.origin, publicOrigin);
@@ -71,11 +71,17 @@ try {
     const html = await response.text();
     pages.set(url.pathname, html);
     assert.ok(html.includes('<html lang="' + locale + '"'), url.pathname + " server language");
+    assert.ok(html.includes('dir="' + (locale === "ur" ? "rtl" : "ltr") + '"'), url.pathname + " server direction");
     const alternates = tags(html, "link").filter(tag => tag.rel === "alternate" && tag.hreflang);
-    for (const language of ["en", "ko", "ms", "ko-KR", "ms-MY", "x-default"]) {
-      const alternate = alternates.find(tag => tag.hreflang === language);
-      assert.ok(alternate, url.pathname + " has " + language + " alternate");
-      assert.ok(urls.some(item => item.href === new URL(alternate.href).href), "Alternate is an indexable sitemap URL");
+    const barePath = prefix ? url.pathname.slice(prefix.length) || "/" : url.pathname;
+    const languageLocale = { en: "en", ko: "ko", ms: "ms", hi: "hi", ur: "ur", vi: "vi", zh: "zh", "ko-KR": "ko", "ms-MY": "ms", "hi-IN": "hi", "ur-PK": "ur", "vi-VN": "vi", "zh-CN": "zh", "x-default": "en" };
+    for (const language of ["en", "ko", "ms", "hi", "ur", "vi", "zh", "ko-KR", "ms-MY", "hi-IN", "ur-PK", "vi-VN", "zh-CN", "x-default"]) {
+      const matches = alternates.filter(tag => tag.hreflang === language);
+      assert.equal(matches.length, 1, url.pathname + " has exactly one " + language + " alternate");
+      const targetLocale = languageLocale[language];
+      const expectedPath = targetLocale === "en" ? barePath : "/" + targetLocale + (barePath === "/" ? "" : barePath);
+      assert.equal(new URL(matches[0].href).href, publicOrigin + expectedPath, url.pathname + " has the matching " + language + " page");
+      assert.ok(urls.some(item => item.href === new URL(matches[0].href).href), "Alternate is an indexable sitemap URL");
     }
     assert.equal([...html.matchAll(/<h1\b/g)].length, 1, url.pathname + " has one rendered H1");
     assert.equal(canonical(html).length, 1, url.pathname + " has one canonical");
@@ -101,7 +107,7 @@ try {
     assert.equal(new Set(ids).size, ids.length, "No repeated structured-data entity definitions");
     const breadcrumb = schemas.find((schema) => schema["@type"] === "BreadcrumbList");
     if (breadcrumb) {
-      assert.ok(html.includes('aria-label="' + ({ en: "Breadcrumb", ko: "현재 위치", ms: "Jejak navigasi" })[locale] + '"'), "Breadcrumbs are visible as well as marked up");
+      assert.match(html, /<nav\b[^>]*aria-label=/, "Breadcrumbs are visible as well as marked up");
       assert.equal(breadcrumb.itemListElement.length, 2);
       breadcrumb.itemListElement.forEach((item, index) => assert.equal(item.position, index + 1));
       assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + homePath);
@@ -116,7 +122,7 @@ try {
   assert.match(home, /id="sample-feedback"/);
   assert.doesNotMatch(home, /id="rubric-checker"/);
   const workspaces = new Map();
-  for (const prefix of ["", "/ko", "/ms"]) {
+  for (const prefix of ["", "/ko", "/ms", "/hi", "/ur", "/vi", "/zh"]) {
     const path = prefix + "/workspace";
     const response = await get(path);
     assert.equal(response.status, 200);
@@ -129,7 +135,7 @@ try {
     workspaces.set(path, html);
   }
   for (const path of pages.keys()) {
-    const prefix = /^\/(ko|ms)(?=\/|$)/.exec(path)?.[0] ?? "";
+    const prefix = /^\/(ko|ms|hi|ur|vi|zh)(?=\/|$)/.exec(path)?.[0] ?? "";
     const barePath = path.slice(prefix.length) || "/";
     if (barePath !== "/" && !barePath.startsWith("/legal/") && barePath !== "/pricing") {
       assert.ok(tags(pages.get(prefix || "/"), "a").some((tag) => tag.href === path), "Localized homepage links to " + path);

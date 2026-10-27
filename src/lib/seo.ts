@@ -63,6 +63,7 @@ export function buildMetadata({
   title = translate(locale, title);
   description = translate(locale, description);
   const imageUrl = absoluteUrl(DEFAULT_OG_IMAGE_PATH);
+  const openGraphLocales: Record<Locale, string> = { en: "en_US", ko: "ko_KR", ms: "ms_MY", hi: "hi_IN", ur: "ur_PK", vi: "vi_VN", zh: "zh_CN" };
 
   return {
     title,
@@ -74,8 +75,8 @@ export function buildMetadata({
     },
     openGraph: {
       type: "website",
-      locale: { en: "en_US", ko: "ko_KR", ms: "ms_MY" }[locale],
-      alternateLocale: LOCALES.filter(value => value !== locale).map(value => ({ en: "en_US", ko: "ko_KR", ms: "ms_MY" })[value]),
+      locale: openGraphLocales[locale],
+      alternateLocale: LOCALES.filter(value => value !== locale).map(value => openGraphLocales[value]),
       url: absoluteUrl(canonicalPath),
       siteName: SITE_NAME,
       title,
@@ -140,7 +141,7 @@ export function buildWebSiteSchema() {
     publisher: { "@id": absoluteUrl("/#organization") },
     name: SITE_NAME,
     url: SITE_URL,
-    inLanguage: ["en", "ko-KR", "ms-MY"],
+    inLanguage: ["en", "ko-KR", "ms-MY", "hi-IN", "ur-PK", "vi-VN", "zh-CN"],
   };
 }
 
@@ -210,5 +211,6 @@ export function buildBreadcrumbSchema(items: BreadcrumbItem[]) {
 }
 
 export function languageAlternates(path: string) {
-  return { en: absoluteUrl(localizedPath(path, "en")), ko: absoluteUrl(localizedPath(path, "ko")), "ko-KR": absoluteUrl(localizedPath(path, "ko")), ms: absoluteUrl(localizedPath(path, "ms")), "ms-MY": absoluteUrl(localizedPath(path, "ms")), "x-default": absoluteUrl(localizedPath(path, "en")) };
+  const urls = Object.fromEntries(LOCALES.map(locale => [locale, absoluteUrl(localizedPath(path, locale))]));
+  return { ...urls, "ko-KR": urls.ko, "ms-MY": urls.ms, "hi-IN": urls.hi, "ur-PK": urls.ur, "vi-VN": urls.vi, "zh-CN": urls.zh, "x-default": urls.en };
 }

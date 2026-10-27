@@ -1,4 +1,12 @@
 export const core: Record<string, readonly [string, string]> = {
+  "Free": ["무료", "Percuma"],
+  "RubriCheck vs Real Gallery": ["RubriCheck와 실제 점수 비교", "Galeri RubriCheck berbanding keputusan sebenar"],
+  "Expand": ["펼치기", "Kembangkan"],
+  "Collapse": ["접기", "Runtuhkan"],
+  "Show": ["보기", "Tunjukkan"],
+  "Hide": ["숨기기", "Sembunyikan"],
+  "Scroll gallery left": ["갤러리를 왼쪽으로 스크롤", "Tatal galeri ke kiri"],
+  "Scroll gallery right": ["갤러리를 오른쪽으로 스크롤", "Tatal galeri ke kanan"],
   "Language preferences": ["언어 설정", "Tetapan bahasa"],
   "Site language": ["사이트 언어", "Bahasa laman"],
   "Grading result language": ["채점 결과 언어", "Bahasa hasil penilaian"],

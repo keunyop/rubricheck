@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { isLocale, localizedPath, localeFromPath, shouldRestoreSiteLanguage } from "./config.ts";
 import { messages } from "./messages.ts";
+import { newLanguages } from "./newLanguages.ts";
 import { translate } from "./translate.ts";
 import { buildEvaluationPrompt } from "../../lib/evaluationPrompt.ts";
 
@@ -12,7 +13,25 @@ test("localized routes retain query strings, fragments and private endpoints", (
     assert.equal(localizedPath(source, "ms"), expected);
   assert.equal(localizedPath("/ko?evaluation_id=123", "en"), "/?evaluation_id=123");
   assert.equal(localeFromPath("/ko/pricing"), "ko");
+  for (const locale of ["hi", "ur", "vi", "zh"] as const) {
+    assert.equal(localizedPath(`/${locale}/pricing?x=1`, "en"), "/pricing?x=1");
+    assert.equal(localeFromPath(`/${locale}/pricing`), locale);
+  }
   assert.equal(isLocale("id"), false);
+});
+test("new translations retain placeholders and never fall back to another language", () => {
+  const placeholders = (value: string) => [...value.matchAll(/\{(\w+)\}/g)].map(match => match[1]).sort();
+  for (const source of Object.keys(messages)) assert.ok(source in newLanguages, `Missing translation: ${source}`);
+  for (const [source, translations] of Object.entries(newLanguages)) {
+    assert.ok(source in messages, source);
+    assert.equal(translations.length, 4, source);
+    for (const translation of translations) {
+      assert.ok(translation.trim(), source);
+      assert.ok(!translation.includes("\ufffd"), source);
+      assert.deepEqual(placeholders(translation), placeholders(source), source);
+    }
+  }
+  for (const locale of ["hi", "ur", "vi", "zh"] as const) assert.equal(translate(locale, "Unknown message"), "Unknown message");
 });
 test("explicit public language URLs take precedence over account and browser defaults", () => {
   for (const path of ["/ko", "/ko/", "/ms", "/ko/workspace", "/ms/workspace", "/ko/rubric-checker", "/ms/pricing", "/rubric-checker", "/pricing", "/legal/privacy"])
@@ -34,7 +53,7 @@ test("every translation has both languages and retains all named placeholders", 
 });
 test("grading explicitly requests the target feedback language independently of source text", () => {
   const rubric = { criteria: [{ name: "Argument", max_score: 100, description: "Clarity" }] };
-  for (const [locale, language] of [["en", "English"], ["ko", "Korean"], ["ms", "Malay"]] as const) {
+  for (const [locale, language] of [["en", "English"], ["ko", "Korean"], ["ms", "Malay"], ["hi", "Hindi"], ["ur", "Urdu"], ["vi", "Vietnamese"], ["zh", "Simplified Chinese"]] as const) {
     const prompt = buildEvaluationPrompt(rubric, "Untrusted assignment text", "standard", "diagnostic", locale);
     assert.ok(prompt.includes(language));
     assert.ok(prompt.includes("Untrusted assignment text"));

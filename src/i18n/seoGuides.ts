@@ -1,3 +1,4 @@
+import { localizeNewSeoGuide } from "./seoNewGuides";
 import type { SeoLandingPageContent } from "../config/seoPages";
 import { HOME_FAQ_ITEMS, HOME_INTERNAL_LINKS } from "../config/seoPages";
 import { translate } from "./translate";
@@ -145,6 +146,7 @@ const guides: Record<"ko" | "ms", Record<string, GuideCopy>> = {
 
 export function localizeSeoGuide(page: SeoLandingPageContent, locale: Locale): SeoLandingPageContent {
   if (locale === "en") return page;
+  if (locale === "hi" || locale === "ur" || locale === "vi" || locale === "zh") return localizeNewSeoGuide(page, locale);
   const copy = guides[locale][page.slug];
   if (!copy) return page;
   const t = (message: string) => translate(locale, message);
