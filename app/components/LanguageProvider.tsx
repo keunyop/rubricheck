@@ -34,6 +34,7 @@ export function LanguageProvider({ children, initialLocale }: { children: ReactN
   const applySiteLanguage = useCallback((locale: Locale) => {
     setSiteLanguage(locale);
     document.documentElement.lang = locale;
+    document.documentElement.dir = locale === "ur" ? "rtl" : "ltr";
     document.cookie = `${LOCALE_COOKIE}=${locale}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
     const path = localizedPath(location.pathname + location.search + location.hash, locale);
     if (path !== location.pathname + location.search + location.hash) {
@@ -56,6 +57,7 @@ export function LanguageProvider({ children, initialLocale }: { children: ReactN
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize client navigation with the external URL.
     setSiteLanguage(locale);
     document.documentElement.lang = locale;
+    document.documentElement.dir = locale === "ur" ? "rtl" : "ltr";
   }, [pathname]);
 
   useEffect(() => {

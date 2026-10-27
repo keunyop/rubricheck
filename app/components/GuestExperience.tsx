@@ -56,7 +56,7 @@ function SummaryCard({ score, summary }: { score: string; summary: string }) {
       <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">{t(SCORE_RANGE_NOTICE)}</p>
       <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">{t(SCORE_COMPARISON_NOTICE)}</p>
     </div>
-    <p className="mt-4 text-sm leading-6 text-slate-700 md:text-[15px]">{summary}</p>
+    <p dir="auto" className="mt-4 text-start text-sm leading-6 text-slate-700 md:text-[15px]">{summary}</p>
   </div>;
 }
 

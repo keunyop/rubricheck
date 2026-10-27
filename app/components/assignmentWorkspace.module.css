@@ -4,10 +4,10 @@
 .shell[data-expanded="false"] .desktopSidebar { display: none; }
 .shell[data-expanded="true"] .content { margin-left: 260px; }
 .sidebarHeader { display: flex; align-items: center; gap: 2px; margin-bottom: 22px; min-height: 36px; }
-.brand { margin-right: auto; padding: 6px 8px; font-size: 18px; font-weight: 650; letter-spacing: -.6px; color: #18181b; }
+.brand { margin-inline-end: auto; padding: 6px 8px; font-size: 18px; font-weight: 650; letter-spacing: -.6px; color: #18181b; }
 .iconButton, .desktopOpen, .mobileOpen { display: inline-flex; justify-content: center; align-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 8px; color: #62656c; cursor: pointer; }
 .iconButton:hover, .desktopOpen:hover, .mobileOpen:hover { background: #e5e7eb; color: #18181b; }
-.newAssignment, .navItem, .mutedItem { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 8px; text-align: left; font-size: 14px; color: #35383f; cursor: pointer; min-width: 0; }
+.newAssignment, .navItem, .mutedItem { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 8px; text-align: start; font-size: 14px; color: #35383f; cursor: pointer; min-width: 0; }
 .newAssignment { font-weight: 550; margin-bottom: 16px; background: #fff; border: 1px solid #e2e8f0; }
 .newAssignment:hover, .navItem:hover, .mutedItem:hover, .searchResult:hover { background: #e7e8eb; }
 .navItem[data-active="true"] { background: #e1e3e8; color: #111827; }
@@ -21,15 +21,15 @@
 .sidebarFooter { display: flex; align-items: center; gap: 10px; padding: 14px 8px 4px; margin-top: 12px; border-top: 1px solid #e3e5e9; min-height: 54px; }
 .avatar { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: #e1e5ef; font-size: 12px; font-weight: 600; flex-shrink: 0; }
 .email { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; color: #63666f; }
-.accountTrigger { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 8px; margin: -8px; box-sizing: content-box; border-radius: 10px; text-align: left; cursor: pointer; }
+.accountTrigger { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 8px; margin: -8px; box-sizing: content-box; border-radius: 10px; text-align: start; cursor: pointer; }
 .accountTrigger:hover { background: #e7e8eb; }
-.accountMore { margin-left: auto; flex-shrink: 0; color: #777982; }
+.accountMore { margin-inline-start: auto; flex-shrink: 0; color: #777982; }
 .accountDialog { position: fixed; inset: auto auto max(16px, env(safe-area-inset-bottom)) 12px; margin: 0; padding: 0; width: 248px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 32px); border: 1px solid #e5e7eb; border-radius: 16px; color: #27272a; background: white; box-shadow: 0 12px 48px #0003; }
 .accountDialog::backdrop { background: #11182726; }
 .accountBody { padding: 8px; }
 .accountHeading { display: flex; align-items: center; gap: 8px; padding: 0 4px 6px 10px; border-bottom: 1px solid #eceef2; margin-bottom: 6px; }
 .accountHeading .email { flex: 1; }
-.accountItem { display: block; width: 100%; padding: 12px; border-radius: 9px; text-align: left; font-size: 14px; cursor: pointer; }
+.accountItem { display: block; width: 100%; padding: 12px; border-radius: 9px; text-align: start; font-size: 14px; cursor: pointer; }
 .accountItem:hover { background: #f3f4f6; }
 .accountItem:focus-visible { outline: 2px solid #4f46e5; outline-offset: -2px; }
 .logoutItem { margin-top: 6px; border-top: 1px solid #eceef2; color: #b91c1c; }

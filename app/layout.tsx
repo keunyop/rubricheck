@@ -108,7 +108,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   return (
-    <html lang={locale} suppressHydrationWarning data-growth-enabled={growthEnabled() ? "true" : undefined}>
+    <html lang={locale} dir={locale === "ur" ? "rtl" : "ltr"} suppressHydrationWarning data-growth-enabled={growthEnabled() ? "true" : undefined}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

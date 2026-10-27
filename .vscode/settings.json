@@ -1,3 +1,6 @@
 {
-    "chatgpt.openOnStartup": true
+    "chatgpt.openOnStartup": true,
+    "terminal.integrated.env.windows": {
+        "PATH": "${workspaceFolder}\\.security-local\\node-v24.22.1-win-x64;${env:PATH}"
+    }
 }

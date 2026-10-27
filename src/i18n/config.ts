@@ -1,7 +1,7 @@
-export const LOCALES = ["en", "ko", "ms"] as const;
+export const LOCALES = ["en", "ko", "ms", "hi", "ur", "vi", "zh"] as const;
 export type Locale = typeof LOCALES[number];
-export const LANGUAGE_NAMES: Record<Locale, string> = { en: "English", ko: "한국어", ms: "Bahasa Melayu" };
-export const MODEL_LANGUAGE_NAMES: Record<Locale, string> = { en: "English", ko: "Korean (한국어)", ms: "Malay (Bahasa Melayu, Malaysia; not Indonesian)" };
+export const LANGUAGE_NAMES: Record<Locale, string> = { en: "English", ko: "한국어", ms: "Bahasa Melayu", hi: "हिन्दी", ur: "اردو", vi: "Tiếng Việt", zh: "简体中文" };
+export const MODEL_LANGUAGE_NAMES: Record<Locale, string> = { en: "English", ko: "Korean (한국어)", ms: "Malay (Bahasa Melayu, Malaysia; not Indonesian)", hi: "Hindi (हिन्दी)", ur: "Urdu (اردو)", vi: "Vietnamese (Tiếng Việt)", zh: "Simplified Chinese (简体中文)" };
 export const LOCALE_COOKIE = "rubricheck_language";
 export type LanguagePreferences = { siteLanguage: Locale; resultLanguage: Locale };
 export function isLocale(value: unknown): value is Locale { return LOCALES.includes(value as Locale); }
@@ -11,7 +11,7 @@ export function localeFromPath(path: string): Locale { const part = path.split("
 export function shouldRestoreSiteLanguage(pathname: string): boolean {
   return pathname === "/" || pathname === "/workspace" || /^\/(billing|admin)(\/|$)/.test(pathname);
 }
-export function stripLocale(path: string): string { return /^\/(en|ko|ms)(?=\/|$)/.test(path) ? path.replace(/^\/(en|ko|ms)/, "") || "/" : path; }
+export function stripLocale(path: string): string { const part = path.split("/")[1]; return isLocale(part) ? path.slice(part.length + 1) || "/" : path; }
 export function localizedPath(path: string, locale: Locale): string {
   if (!path.startsWith("/") || path.startsWith("//") || /^\/(api|admin|billing|_next)(\/|$)/.test(path)) return path;
   const [pathname, ...tail] = path.split(/(?=[?#])/);
