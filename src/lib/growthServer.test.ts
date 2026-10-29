@@ -5,7 +5,7 @@ let fail=false;
 mock.module("./supabaseRest.ts",{namedExports:{hasSupabaseConfig:()=>true,callSupabaseRpc:async(_name:string,params:Record<string,unknown>)=>{if(fail)throw Error("storage unavailable");calls.push(params);}}});
 const {instrumentGrade,visitorCookie}=await import("./growthServer.ts");
 process.env.GROWTH_ANALYTICS_ENABLED="true";process.env.GROWTH_HASH_SECRET="synthetic-test-only";
-const request=()=>new Request("http://localhost/api/grade",{headers:{cookie:`rubricheck_analytics=granted; rubricheck_growth=${visitorCookie("33333333-3333-4333-8333-333333333333")}`}});
+const request=()=>new Request("http://localhost/api/grade",{headers:{cookie:`rubricheck_growth=${visitorCookie("33333333-3333-4333-8333-333333333333")}`}});
 test("grading measurement preserves response and sends only allowed metadata, with billing source rather than access tier",async()=>{
   calls.length=0;
   const result={evaluation_id:"44444444-4444-4444-8444-444444444444",access_tier:"topup",summary:"PRIVATE ASSIGNMENT",title:"PERSON NAME",criteria:[{feedback:"PRIVATE RUBRIC"}]};
@@ -22,8 +22,10 @@ test("server failures are distinct from abandonment and analytics outages do not
   fail=true;
   try {assert.equal((await instrumentGrade(request(),async()=>Response.json({ok:true}))).status,200);}finally{fail=false;}
 });
-test("a guest preview is measured separately and no consent produces no events",async()=>{
+test("a guest preview is measured automatically and an explicit refusal produces no events",async()=>{
   calls.length=0;await instrumentGrade(request(),async()=>Response.json({guest_preview:true,summary:"private"}));
   assert.equal(calls[1].p_event_name,"guest_preview_completed");
-  calls.length=0;await instrumentGrade(new Request("http://localhost"),async()=>Response.json({ok:true}));assert.equal(calls.length,0);
+  const denied = request();
+  denied.headers.set("cookie", denied.headers.get("cookie") + "; rubricheck_analytics=denied");
+  calls.length=0;await instrumentGrade(denied,async()=>Response.json({ok:true}));assert.equal(calls.length,0);
 });

@@ -1,7 +1,7 @@
 import { acquisitionTouch, type GrowthClientEvent } from "./growth";
 
 export function analyticsAllowed(): boolean {
-  return typeof window !== "undefined" && navigator.doNotTrack !== "1" && !(navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl && document.cookie.split(";").some(v => v.trim() === "rubricheck_analytics=granted");
+  return typeof window !== "undefined" && navigator.doNotTrack !== "1" && !(navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl && !document.cookie.split(";").some(v => v.trim() === "rubricheck_analytics=denied");
 }
 let queue: Promise<unknown> = Promise.resolve();
 let capturedEntry = false;

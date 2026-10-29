@@ -1,4 +1,5 @@
 export const legal: Record<string, readonly [string, string]> = {
+  "Last updated: October 28, 2026. This Privacy Policy explains what information RubriCheck processes, why we process it, and the choices available to you.": ["최종 수정: 2026년 10월 28일. 이 방침은 RubriCheck가 처리하는 정보, 처리 목적, 이용자가 선택할 수 있는 사항을 설명합니다.", "Kemas kini terakhir: 28 Oktober 2026. Dasar ini menerangkan maklumat yang diproses oleh RubriCheck, tujuan pemprosesan dan pilihan anda."],
   "Privacy Policy": ["개인정보 처리방침", "Dasar Privasi"],
   "How RubriCheck collects, uses, and protects personal data.": ["RubriCheck의 개인정보 수집, 이용 및 보호 방법을 안내합니다.", "Cara RubriCheck mengumpul, menggunakan dan melindungi data peribadi."],
   "Last updated: October 22, 2026. This Privacy Policy explains what information RubriCheck processes, why we process it, and the choices available to you.": ["최종 수정: 2026년 10월 13일. 이 방침은 RubriCheck가 처리하는 정보, 처리 목적, 이용자가 선택할 수 있는 사항을 설명합니다.", "Kemas kini terakhir: 22 Oktober 2026. Dasar ini menerangkan maklumat yang diproses oleh RubriCheck, tujuan pemprosesan dan pilihan anda."],

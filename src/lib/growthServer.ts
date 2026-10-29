@@ -11,7 +11,7 @@ export function growthRpc<T>(name: string, params: JsonRecord): Promise<T> { ret
 export function growthEnabled(): boolean { return process.env.GROWTH_ANALYTICS_ENABLED === "true" && Boolean(process.env.GROWTH_HASH_SECRET?.trim()) && hasSupabaseConfig(); }
 export function growthHash(value: string): string { const key = process.env.GROWTH_HASH_SECRET?.trim(); if (!key) throw Error("GROWTH_NOT_CONFIGURED"); return createHmac("sha256", key).update(value).digest("hex"); }
 function cookie(request: Request, name: string): string { return (request.headers.get("cookie") ?? "").split(";").map(v => v.trim()).find(v => v.startsWith(name + "="))?.slice(name.length + 1) ?? ""; }
-export function growthConsent(request: Request): boolean { return cookie(request, CONSENT_COOKIE) === "granted" && request.headers.get("dnt") !== "1" && request.headers.get("sec-gpc") !== "1"; }
+export function growthConsent(request: Request): boolean { return cookie(request, CONSENT_COOKIE) !== "denied" && request.headers.get("dnt") !== "1" && request.headers.get("sec-gpc") !== "1"; }
 export function visitorCookie(id: string, now = Date.now()): string { const body = `${id}.${Math.floor(now / 1000) + TTL}`; return `${body}.${growthHash("visitor:" + body)}`; }
 export function growthVisitor(request: Request): string | null {
   if (!growthEnabled() || !growthConsent(request)) return null;

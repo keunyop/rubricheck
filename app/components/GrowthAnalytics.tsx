@@ -3,22 +3,16 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { useLanguage } from "./LanguageProvider";
 import { analyticsAllowed, trackGrowth } from "../../src/lib/growthClient";
 import { publicGrowthPath } from "../../src/lib/growth";
 import { createGoogleTagQueue } from "../../src/lib/googleTag";
 
 export function GrowthAnalytics() {
-  const { t } = useLanguage();
   const pathname = usePathname();
   const [allowed, setAllowed] = useState(false);
-  const [decided, setDecided] = useState(false);
-  const [ready, setReady] = useState(false);
   useEffect(() => {
-    // Read browser consent after hydration.
+    // Start automatically after hydration, respecting saved opt-outs and DNT/GPC.
     setAllowed(analyticsAllowed());
-    setDecided(document.cookie.split(";").some(value => /^rubricheck_analytics=(granted|denied)$/.test(value.trim())));
-    setReady(true);
   }, []);
   useEffect(() => {
     if (!allowed || publicGrowthPath(pathname) === "unknown") return;
@@ -39,26 +33,7 @@ export function GrowthAnalytics() {
     }
     w.gtag("event", "page_view", { page_location: location.origin + pathname, page_referrer: "", page_title: "RubriCheck" });
   }, [allowed, pathname]);
-  async function choose(granted: boolean) {
-    if (!granted) await fetch("/api/analytics", {method:"DELETE",signal:AbortSignal.timeout(2000)}).catch(()=>{});
-    document.cookie = `rubricheck_analytics=${granted ? "granted" : "denied"}; Path=/; SameSite=Lax; Max-Age=7776000${location.protocol === "https:" ? "; Secure" : ""}`;
-    // Reload unloads already-loaded vendor scripts when consent is withdrawn.
-    location.reload();
-  }
   return <>
-    {ready && <div
-      role="region"
-      aria-label={t("Optional usage analytics")}
-      className={decided
-        ? "border-t border-slate-200 bg-white px-4 py-3 text-center text-xs text-slate-600"
-        : "fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-lg sm:flex-row sm:items-center sm:justify-between"}
-    >
-      <span>{t(decided ? "Optional usage analytics" : "Allow optional usage analytics to help improve RubriCheck? Assignment content is never included.")}</span>{" "}
-      <div className={decided ? "inline" : "flex shrink-0 flex-wrap gap-2"}>
-        <button type="button" className={decided ? "ml-2 underline" : "min-h-11 rounded-lg border border-slate-400 px-4 py-2 font-medium focus-visible:outline-2 focus-visible:outline-offset-2"} onClick={() => choose(!allowed)}>{t(allowed ? "Turn off analytics" : "Allow analytics")}</button>
-        {!decided && <button type="button" className="min-h-11 rounded-lg border border-slate-400 px-4 py-2 font-medium focus-visible:outline-2 focus-visible:outline-offset-2" onClick={() => choose(false)}>{t("No thanks")}</button>}
-      </div>
-    </div>}
     {allowed && publicGrowthPath(pathname) !== "unknown" && <>
       <Analytics beforeSend={event => analyticsAllowed() && publicGrowthPath(new URL(event.url).pathname) !== "unknown" ? { ...event, url: new URL(event.url).origin + new URL(event.url).pathname } : null} />
       <SpeedInsights beforeSend={event => analyticsAllowed() && publicGrowthPath(new URL(event.url).pathname) !== "unknown" ? { ...event, url: new URL(event.url).origin + new URL(event.url).pathname } : null} />
