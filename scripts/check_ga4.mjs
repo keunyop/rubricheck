@@ -1,4 +1,4 @@
-// Verify consent visibility and real gtag.js payloads without writing growth data.
+// Verify automatic collection and real gtag.js payloads without writing growth data.
 // Collection is intercepted; GA4_VERIFY_DELIVERY=true delivers one page view.
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -57,29 +57,7 @@ async function context({ consent, signal, width = 390 } = {}) {
   return context;
 }
 
-async function inViewport(locator, page) {
-  const box = await locator.boundingBox(), viewport = page.viewportSize();
-  assert.ok(box && box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height, "Consent choice is visible without scrolling");
-}
-
 try {
-  for (const width of [390, 1440]) {
-    const ctx = await context({ width }), page = await ctx.newPage();
-    await page.goto(base + "/pricing", { waitUntil: "networkidle" });
-    const allow = page.getByRole("button", { name: "Allow analytics", exact: true });
-    await allow.waitFor();
-    await inViewport(allow, page);
-    await inViewport(page.getByRole("button", { name: "No thanks", exact: true }), page);
-    await page.screenshot({ path: `.growth-local/ga4-consent-${width}.png` });
-    assert.equal(await page.locator("#rubricheck-ga4").count(), 0);
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
-    await Promise.all([page.waitForEvent("load"), page.getByRole("button", { name: "No thanks", exact: true }).click()]);
-    await page.waitForLoadState("networkidle");
-    assert.equal(await page.locator("#rubricheck-ga4").count(), 0);
-    assert.equal((await ctx.cookies()).find(cookie => cookie.name === "rubricheck_analytics")?.value, "denied");
-    checks.push(`Visible, equal consent choices and working refusal at ${width}px`);
-    await ctx.close();
-  }
   for (const signal of ["globalPrivacyControl", "doNotTrack"]) {
     const ctx = await context({ consent: "granted", signal }), page = await ctx.newPage();
     await page.goto(base + "/pricing", { waitUntil: "networkidle" });
@@ -87,13 +65,22 @@ try {
     await ctx.close();
     checks.push(`${signal} prevents collection`);
   }
+  const optedOut = await context({ consent: "denied", width: 1440 }), optedOutPage = await optedOut.newPage();
+  await optedOutPage.goto(base + "/pricing", { waitUntil: "networkidle" });
+  assert.equal(await optedOutPage.locator("#rubricheck-ga4").count(), 0);
+  assert.equal(await optedOutPage.getByRole("button", { name: /Allow analytics|No thanks|Turn off analytics/ }).count(), 0);
+  await optedOut.close();
+  checks.push("Saved refusals prevent collection without showing a prompt");
+
   const ctx = await context(), page = await ctx.newPage();
   page.on("pageerror", error => errors.push({ reason: error.message }));
   await page.goto(base + "/pricing?email=ga4-private-sentinel&checkout_session_id=ga4-private-sentinel#private", { waitUntil: "networkidle" });
-  await Promise.all([page.waitForEvent("load"), page.getByRole("button", { name: "Allow analytics", exact: true }).click()]);
   await page.waitForFunction(() => document.getElementById("rubricheck-ga4"));
   await assertPageView("/pricing", 0);
-  checks.push("Opt-in enables one sanitized page view using real gtag.js");
+  assert.equal(await page.getByRole("button", { name: /Allow analytics|No thanks|Turn off analytics/ }).count(), 0);
+  assert.equal((await ctx.cookies()).some(cookie => cookie.name === "rubricheck_analytics"), false, "Automatic collection must not fabricate consent");
+  await page.screenshot({ path: ".growth-local/ga4-automatic-mobile.png" });
+  checks.push("Fresh visit sends one sanitized page view automatically, with no consent UI or choice cookie");
 
   // Client navigation must send one further manual page view.
   let before = payloads.length;
@@ -107,7 +94,7 @@ try {
     await assertPageView(`/${locale}/pricing`, before);
     checks.push(`${locale} public page is measured`);
   }
-  await page.goto(base + "/pricing", { waitUntil: "networkidle" });
+  await page.goto(base + "/legal/privacy", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Turn off analytics", exact: true }).waitFor();
   await Promise.all([page.waitForEvent("load"), page.getByRole("button", { name: "Turn off analytics", exact: true }).click()]);
   // The hydrated preference control is the relevant completion signal; vendor
@@ -115,8 +102,16 @@ try {
   await page.getByRole("button", { name: "Allow analytics", exact: true }).waitFor();
   assert.equal(await page.locator("#rubricheck-ga4").count(), 0);
   assert.equal((await ctx.cookies()).find(cookie => cookie.name === "rubricheck_analytics")?.value, "denied");
+  await page.goto(base + "/pricing", { waitUntil: "networkidle" });
+  assert.equal(await page.locator("#rubricheck-ga4").count(), 0);
+  checks.push("Privacy-page opt-out persists on public pages");
+  await page.goto(base + "/legal/privacy", { waitUntil: "networkidle" });
+  await Promise.all([page.waitForEvent("load"), page.getByRole("button", { name: "Allow analytics", exact: true }).click()]);
+  before = payloads.length;
+  await page.goto(base + "/pricing", { waitUntil: "networkidle" });
+  await assertPageView("/pricing", before);
   await ctx.close();
-  checks.push("Withdrawal unloads Google analytics");
+  checks.push("Privacy-page preference can re-enable collection");
 
   const privateContext = await context({ consent: "granted" }), privatePage = await privateContext.newPage();
   await privatePage.goto(base + "/billing/manage?email=ga4-private-sentinel", { waitUntil: "networkidle" });

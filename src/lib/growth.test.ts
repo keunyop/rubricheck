@@ -34,9 +34,13 @@ test("acquisition distinguishes organic, approved UTM, direct and unknown referr
   assert.equal(acquisitionTouch("https://rubricheck.com/?utm_source=reddit&utm_medium=social&utm_campaign=malaysia-students","").campaign,"malaysia-students");
   assert.equal(acquisitionTouch("https://rubricheck.com/","https://rubricheck.com/pricing").source,"direct");
 });
-test("consent honors DNT and GPC even with an opt-in cookie",()=>{
-  assert.equal(growthConsent(new Request("http://localhost")),false);
-  for(const signal of ["dnt","sec-gpc"]) assert.equal(growthConsent(new Request("http://localhost",{headers:{cookie:"rubricheck_analytics=granted",[signal]:"1"}})),false);
+test("automatic analytics requires no opt-in but honors saved refusals, DNT and GPC",()=>{
+  assert.equal(growthConsent(new Request("http://localhost")),true);
+  assert.equal(growthConsent(new Request("http://localhost",{headers:{cookie:"rubricheck_analytics=denied"}})),false);
+  for(const signal of ["dnt","sec-gpc"]) {
+    assert.equal(growthConsent(new Request("http://localhost",{headers:{[signal]:"1"}})),false);
+    assert.equal(growthConsent(new Request("http://localhost",{headers:{cookie:"rubricheck_analytics=granted",[signal]:"1"}})),false);
+  }
   assert.equal(growthConsent(new Request("http://localhost",{headers:{cookie:"rubricheck_analytics=granted"}})),true);
 });
 test("same-origin validation handles Next internal rewrites but rejects cross-site and absent origins",()=>{
@@ -45,13 +49,13 @@ test("same-origin validation handles Next internal rewrites but rejects cross-si
   assert.equal(sameGrowthOrigin(new Request("https://rubricheck.com/api/analytics",{headers:{origin:"https://evil.example"}})),false);
   assert.equal(sameGrowthOrigin(new Request("https://rubricheck.com/api/analytics")),false);
 });
-test("visitor identity is signed, expires and cannot be forged or set without consent",()=>{
+test("visitor identity is signed, expires and cannot be forged or used after opting out",()=>{
   const keys=["GROWTH_HASH_SECRET","GROWTH_ANALYTICS_ENABLED","SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY"];
   const old=keys.map(k=>process.env[k]);
   try {
     process.env.GROWTH_HASH_SECRET="test-secret";process.env.GROWTH_ANALYTICS_ENABLED="true";process.env.SUPABASE_URL="http://localhost";process.env.SUPABASE_SERVICE_ROLE_KEY="test";
     const id="55555555-5555-4555-8555-555555555555";
-    const request=(value:string,consent=true)=>new Request("http://localhost",{headers:{cookie:`rubricheck_growth=${value}; ${consent?"rubricheck_analytics=granted":""}`}});
+    const request=(value:string,allowed=true)=>new Request("http://localhost",{headers:{cookie:`rubricheck_growth=${value}; ${allowed?"":"rubricheck_analytics=denied"}`}});
     const token=visitorCookie(id);
     assert.equal(growthVisitor(request(token)),id);
     assert.equal(growthVisitor(request(token.replace("55555555","66666666"))),null);

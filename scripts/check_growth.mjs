@@ -44,7 +44,7 @@ try{
   browser=await chromium.launch({headless:true});
   async function context(consent,gpc=false){
     const context=await browser.newContext({viewport:{width:390,height:844}});
-    if(consent)await context.addCookies([{name:"rubricheck_analytics",value:"granted",url:base}]);
+    if(consent!==undefined)await context.addCookies([{name:"rubricheck_analytics",value:consent?"granted":"denied",url:base}]);
     if(gpc)await context.addInitScript(()=>Object.defineProperty(navigator,"globalPrivacyControl",{value:true}));
     await context.route("**/*",async route=>{
       const url=new URL(route.request().url());if(url.origin!==base)return route.abort();
@@ -53,9 +53,9 @@ try{
     });return context;
   }
   const off=await context(false),offPage=await off.newPage();await offPage.goto(base+"/pricing");await offPage.getByText("Occasional assignment checks",{exact:false}).waitFor();await delay(500);
-  assert.equal(seen.filter(x=>x.name==="rubricheck_growth_event").length,0,"no collection without consent");await off.close();
+  assert.equal(seen.filter(x=>x.name==="rubricheck_growth_event").length,0,"no collection after an explicit refusal");await off.close();
   const gpc=await context(true,true),gpcPage=await gpc.newPage();await gpcPage.goto(base+"/pricing");await delay(500);assert.equal(seen.filter(x=>x.name==="rubricheck_growth_event").length,0,"GPC blocks consented tracking");await gpc.close();
-  const on=await context(true),page=await on.newPage();const statuses=[];page.on("response",r=>{if(r.url().includes("/api/analytics"))statuses.push(r.status());});await page.goto(base+"/pricing?utm_source=google&utm_medium=organic&utm_campaign=malaysia-students&email=private-sentinel@example.invalid&checkout_session_id=private-sentinel");
+  const on=await context(),page=await on.newPage();const statuses=[];page.on("response",r=>{if(r.url().includes("/api/analytics"))statuses.push(r.status());});await page.goto(base+"/pricing?utm_source=google&utm_medium=organic&utm_campaign=malaysia-students&email=private-sentinel@example.invalid&checkout_session_id=private-sentinel");
   for(let i=0;i<30&&!seen.some(x=>x.value?.p_event_name==="pricing_viewed");i++)await delay(300);
   if(!seen.some(x=>x.value?.p_event_name==="page_view"))console.log("DEBUG",JSON.stringify({statuses,enabled:await page.getAttribute("html","data-growth-enabled"),cookie:(await on.cookies()).map(c=>c.name),server:serverOutput.slice(-1200)}));
   assert.ok(seen.some(x=>x.value?.p_event_name==="page_view"),"browser -> API -> database page view");
@@ -70,6 +70,7 @@ try{
   assert.equal((await fetch(base+"/api/admin/growth")).status,401);
   const admin=await fetch(base+"/api/admin/growth",{headers:{"x-admin-secret":"local-admin-only"}});const report=await admin.json();assert.equal(report.available,true);assert.ok(report.funnel.some(r=>r.pending>0));assert.ok(report.funnel.every(r=>r.rate===null));
   const forged=await on.request.post(base+"/api/analytics",{headers:{origin:base},data:{name:"purchase_completed",id:crypto.randomUUID()}});assert.equal(forged.status(),400,"browser cannot invent purchases");
+  await page.goto(base+"/legal/privacy");
   await Promise.all([page.waitForEvent("load"),page.getByRole("button",{name:"Turn off analytics"}).click()]);assert.ok(!(await on.cookies()).some(c=>c.name==="rubricheck_growth"),"withdrawal clears visitor cookie");
-  await on.close();console.log("PASS growth: consent, GPC, real browser/API/local SQL path, safe attribution, mobile credit positioning, admin authorization, mature cohorts, forged purchases and opt-out.");
+  await on.close();console.log("PASS growth: automatic collection, GPC, real browser/API/local SQL path, safe attribution, mobile credit positioning, admin authorization, mature cohorts, forged purchases and opt-out.");
 }finally{if(browser)await browser.close();server.kill();adapter.close();}

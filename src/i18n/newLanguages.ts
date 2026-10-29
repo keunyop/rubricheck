@@ -1,5 +1,17 @@
 // Localized product UI messages, in Hindi, Urdu, Vietnamese, and Simplified Chinese.
 export const newLanguages: Record<string, readonly [string, string, string, string]> = {
+  "Usage analytics starts automatically on public pages. We measure page visits and evaluation, signup and checkout steps using pseudonymous identifiers. Assignment content, names, emails and payment secrets are not sent to analytics providers. URLs are stripped of queries and fragments. You can turn analytics off on this privacy page. Existing opt-outs, Do Not Track and Global Privacy Control are respected.": [
+    "सार्वजनिक पृष्ठों पर उपयोग विश्लेषण अपने आप शुरू होता है। हम छद्मनाम वाले पहचानकर्ताओं से पृष्ठ विज़िट तथा मूल्यांकन, पंजीकरण और भुगतान के चरण मापते हैं। असाइनमेंट की सामग्री, नाम, ईमेल और भुगतान संबंधी गोपनीय जानकारी विश्लेषण प्रदाताओं को नहीं भेजी जाती। URL से क्वेरी और फ़्रैगमेंट हटा दिए जाते हैं। आप इस गोपनीयता पृष्ठ पर विश्लेषण बंद कर सकते हैं। पहले से चुने गए इनकार, Do Not Track और Global Privacy Control का सम्मान किया जाता है।",
+    "عوامی صفحات پر استعمال کے تجزیات خودکار طور پر شروع ہوتے ہیں۔ ہم فرضی شناختی کوڈز سے صفحات کے دورے اور جانچ، اندراج اور ادائیگی کے مراحل کی پیمائش کرتے ہیں۔ اسائنمنٹ کا مواد، نام، ای میل اور ادائیگی کی خفیہ معلومات تجزیاتی فراہم کنندگان کو نہیں بھیجی جاتیں۔ URL سے کوئری اور فریگمنٹ ہٹا دیے جاتے ہیں۔ آپ اس رازداری کے صفحے پر تجزیات بند کر سکتے ہیں۔ پہلے سے کیے گئے انکار، Do Not Track اور Global Privacy Control کا احترام کیا جاتا ہے۔",
+    "Phân tích sử dụng tự động bắt đầu trên các trang công khai. Chúng tôi đo lượt truy cập trang và các bước đánh giá, đăng ký, thanh toán bằng mã định danh giả danh. Nội dung bài tập, tên, email và thông tin thanh toán bí mật không được gửi đến nhà cung cấp phân tích. Tham số truy vấn và phần fragment được loại khỏi URL. Bạn có thể tắt phân tích trên trang quyền riêng tư này. Các lựa chọn từ chối trước đó, Do Not Track và Global Privacy Control được tôn trọng.",
+    "公开页面会自动开始使用情况分析。我们使用假名标识符统计页面访问以及评估、注册和结账步骤。作业内容、姓名、电子邮件和支付机密不会发送给分析服务商。URL 中的查询参数和片段会被移除。您可以在本隐私页面关闭分析。我们尊重之前的拒绝选择、Do Not Track 和 Global Privacy Control 设置。"
+  ],
+  "Last updated: October 28, 2026. This Privacy Policy explains what information RubriCheck processes, why we process it, and the choices available to you.": [
+    "अंतिम अपडेट: 28 अक्टूबर, 2026। यह गोपनीयता नीति बताती है कि RubriCheck कौन सी जानकारी संसाधित करता है, क्यों करता है और आपके पास कौन से विकल्प हैं।",
+    "آخری تازہ کاری: 28 اکتوبر 2026۔ یہ رازداری کی پالیسی بتاتی ہے کہ RubriCheck کون سی معلومات استعمال کرتا ہے، کیوں کرتا ہے اور آپ کے پاس کون سے اختیارات ہیں۔",
+    "Cập nhật lần cuối: ngày 28 tháng 10 năm 2026. Chính sách quyền riêng tư này giải thích thông tin RubriCheck xử lý, lý do xử lý và các lựa chọn dành cho bạn.",
+    "最后更新：2026年10月28日。本隐私政策说明 RubriCheck 处理哪些信息、处理原因以及您可作出的选择。"
+  ],
   "Free": [
     "निःशुल्क",
     "مفت",

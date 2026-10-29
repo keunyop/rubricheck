@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 import { GROWTH_CLIENT_EVENTS, sameGrowthOrigin, sanitizeTouch, validGrowthId } from "../../../src/lib/growth";
-import { GROWTH_COOKIE, growthAccount, growthConsent, growthEnabled, growthHash, growthRpc, growthVisitor, recordGrowthEvent, setGrowthVisitor } from "../../../src/lib/growthServer";
+import { CONSENT_COOKIE, GROWTH_COOKIE, growthAccount, growthConsent, growthEnabled, growthHash, growthRpc, growthVisitor, recordGrowthEvent, setGrowthVisitor } from "../../../src/lib/growthServer";
 
 export async function DELETE(request: Request) {
   if (!sameGrowthOrigin(request)) return new NextResponse(null, {status:403});
@@ -12,6 +12,7 @@ export async function DELETE(request: Request) {
   }
   const response = new NextResponse(null, {status:204,headers:{"Cache-Control":"private, no-store"}});
   response.cookies.set(GROWTH_COOKIE,"",{httpOnly:true,path:"/",maxAge:0,sameSite:"lax",secure:process.env.NODE_ENV==="production"});
+  response.cookies.set(CONSENT_COOKIE,"denied",{path:"/",maxAge:90*86400,sameSite:"lax",secure:process.env.NODE_ENV==="production"});
   return response;
 }
 
