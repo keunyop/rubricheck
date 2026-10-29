@@ -1,3 +1,5 @@
+import { stripLocale } from "../i18n/config";
+
 // Shared, closed vocabulary. Never send user input, email, full URLs or Stripe IDs.
 export const GROWTH_CLIENT_EVENTS = ["page_view", "pricing_viewed", "evaluation_result_viewed", "evaluation_network_failed"] as const;
 export type GrowthClientEvent = (typeof GROWTH_CLIENT_EVENTS)[number];
@@ -12,7 +14,7 @@ const CAMPAIGNS = ["rubric-checker", "essay-feedback", "assignment-feedback", "m
 const REFERRERS: Record<string, string> = { "google.com": "google", "google.com.my": "google", "google.co.kr": "google", "google.ca": "google", "bing.com": "bing", "duckduckgo.com": "duckduckgo", "search.yahoo.com": "yahoo", "reddit.com": "reddit", "facebook.com": "facebook", "instagram.com": "instagram", "youtube.com": "youtube", "tiktok.com": "tiktok", "linkedin.com": "linkedin" };
 export function publicGrowthPath(value: unknown): string {
   if (typeof value !== "string") return "unknown";
-  const path = value.split(/[?#]/)[0].replace(/^\/(ko|ms)(?=\/|$)/, "") || "/";
+  const path = stripLocale(value.split(/[?#]/)[0]) || "/";
   return PUBLIC_PATHS.includes(path) ? path : "unknown";
 }
 const pick = (value: unknown, allowed: string[], fallback = "unknown") => typeof value === "string" && allowed.includes(value.toLowerCase()) ? value.toLowerCase() : fallback;

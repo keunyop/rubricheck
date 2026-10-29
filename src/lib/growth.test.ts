@@ -2,6 +2,23 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { acquisitionTouch, publicGrowthPath, sanitizeTouch, validGrowthId, growthFailureCategory, sameGrowthOrigin } from "./growth.ts";
 import { growthConsent, growthVisitor, visitorCookie, growthHash, growthCountry } from "./growthServer.ts";
+import { LOCALES, localizedPath } from "../i18n/config.ts";
+
+test("all supported languages keep public analytics paths and suppress private routes", () => {
+  for (const locale of LOCALES) {
+    for (const path of ["/", "/pricing", "/workspace", "/help", "/essay-rubric-checker"]) {
+      const url = localizedPath(path, locale) + "?email=private&checkout_session_id=secret#assignment";
+      assert.equal(publicGrowthPath(url), path, `${locale}: ${path}`);
+      assert.equal(acquisitionTouch("https://rubricheck.com" + url, "").landing, path);
+    }
+    for (const path of ["/admin", "/billing/restore", "/api/analytics", "/workspace/private"]) {
+      const prefix = locale === "en" ? "" : `/${locale}`;
+      assert.equal(publicGrowthPath(prefix + path), "unknown", `${locale}: ${path}`);
+    }
+  }
+  assert.equal(publicGrowthPath("/vi-private/pricing"), "unknown");
+  assert.equal(publicGrowthPath("/unsupported/pricing"), "unknown");
+});
 
 test("attribution drops PII, secrets, private paths and arbitrary campaign values",()=>{
   const touch=acquisitionTouch("https://rubricheck.com/?utm_source=student@example.com&utm_campaign=secret_person&utm_medium=email&assignment=secret&checkout_session_id=cs_live_secret#private","https://student.example.com/private?email=student@example.com");
