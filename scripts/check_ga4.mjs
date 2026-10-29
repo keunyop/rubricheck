@@ -17,6 +17,7 @@ const measurementId = "G-S7M12R54DP";
 const googleHost = hostname => /(^|\.)(google-analytics\.com|googletagmanager\.com|analytics\.google\.com|doubleclick\.net)$/.test(hostname);
 const browser = await chromium.launch({ headless: true });
 const errors = [], checks = [], payloads = [], delivered = [];
+let passed = false;
 const output = ".growth-local/ga4-regression.json";
 mkdirSync(".growth-local", { recursive: true });
 
@@ -109,8 +110,11 @@ try {
   await page.goto(base + "/pricing", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Turn off analytics", exact: true }).waitFor();
   await Promise.all([page.waitForEvent("load"), page.getByRole("button", { name: "Turn off analytics", exact: true }).click()]);
-  await page.waitForLoadState("networkidle");
+  // The hydrated preference control is the relevant completion signal; vendor
+  // background requests from the previous document need not reach network idle.
+  await page.getByRole("button", { name: "Allow analytics", exact: true }).waitFor();
   assert.equal(await page.locator("#rubricheck-ga4").count(), 0);
+  assert.equal((await ctx.cookies()).find(cookie => cookie.name === "rubricheck_analytics")?.value, "denied");
   await ctx.close();
   checks.push("Withdrawal unloads Google analytics");
 
@@ -121,6 +125,7 @@ try {
   checks.push("Private billing route is excluded");
   assert.deepEqual(errors, []);
   if (process.env.GA4_VERIFY_DELIVERY === "true") assert.ok(delivered.length === 1 && [200, 204].includes(delivered[0].status));
+  passed = true;
   console.log(JSON.stringify({ passed: true, checks, delivered }));
 
   async function assertPageView(path, after) {
@@ -135,5 +140,5 @@ try {
   }
 } finally {
   await browser.close();
-  writeFileSync(output, JSON.stringify({ at: new Date().toISOString(), base, checks, payloads, delivered, errors }, null, 2));
+  writeFileSync(output, JSON.stringify({ at: new Date().toISOString(), passed, base, checks, payloads, delivered, errors }, null, 2));
 }
