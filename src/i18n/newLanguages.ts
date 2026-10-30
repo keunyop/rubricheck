@@ -1,5 +1,12 @@
 // Localized product UI messages, in Hindi, Urdu, Vietnamese, and Simplified Chinese.
 export const newLanguages: Record<string, readonly [string, string, string, string]> = {
+  'No grading criteria were found in the rubric input. Check whether your rubric and assignment are swapped. Use the assessment instructions as your rubric, or choose "{noRubric}".': [
+    'रूब्रिक के इनपुट में मूल्यांकन मानदंड नहीं मिले। जाँचें कि रूब्रिक और असाइनमेंट आपस में बदल तो नहीं गए हैं। मूल्यांकन निर्देशों को रूब्रिक के रूप में इस्तेमाल करें, या "{noRubric}" चुनें।',
+    'روبرک کے اندراج میں جانچ کے معیار نہیں ملے۔ دیکھیں کہ روبرک اور اسائنمنٹ کی جگہیں آپس میں بدل تو نہیں گئیں۔ جانچ کی ہدایات کو روبرک کے طور پر استعمال کریں، یا "{noRubric}" منتخب کریں۔',
+    'Không tìm thấy tiêu chí chấm điểm trong phần nhập tiêu chí. Hãy kiểm tra xem tiêu chí và bài tập có bị đảo chỗ không. Dùng hướng dẫn đánh giá làm tiêu chí, hoặc chọn "{noRubric}".',
+    '评分标准输入中未找到评分要求。请检查评分标准和作业是否放反了。请使用评估说明作为评分标准，或选择“{noRubric}”。',
+  ],
+  "Swap rubric and assignment": ["रूब्रिक और असाइनमेंट की जगह बदलें", "روبرک اور اسائنمنٹ کی جگہیں بدلیں", "Đổi chỗ tiêu chí và bài tập", "交换评分标准和作业"],
   "Last updated: October 29, 2026.": ["अंतिम अपडेट: 29 अक्टूबर 2026।", "آخری تازہ کاری: 29 اکتوبر 2026۔", "Cập nhật lần cuối: 29 tháng 10 năm 2026.", "最后更新：2026年10月29日。"],
   "Failed grading diagnostics": ["मूल्यांकन विफलता का निदान", "جانچ کی ناکامی کی تشخیص", "Chẩn đoán lỗi chấm điểm", "评分失败诊断"],
   "If grading fails, we may keep your submitted text and files for up to 7 days to diagnose and fix the error. Only authorized administrators can access them.": [

@@ -10,7 +10,8 @@ mock.module("../../../src/lib/gradingFailureCapture.ts", { namedExports: {
   queueGradingFailure: (input: GradingFailureInput) => { capturedFailures.push(input); },
 } });
 
-let failure: "rubric" | "rubricProvider" | "rubricTimeout" | "evaluation" | "timeout" | "finalization" | null = null;
+let failure: "rubric" | "missingCriteria" | "rubricProvider" | "rubricTimeout" | "evaluation" | "timeout" | "finalization" | null = null;
+let evaluationCalls = 0;
 const rubric = { criteria: [{ name: "Thesis", max_score: 10, description: "Clarity" }] };
 const evaluation = {
   summary: "Clear argument", top_improvements: ["Add evidence", "Add detail", "Revise conclusion"],
@@ -22,12 +23,14 @@ mock.module("../../../lib/openai.ts", { namedExports: {
   callStructureModel: async () => {
     if (failure === "rubricProvider") throw new Error("upstream unavailable");
     if (failure === "rubricTimeout") throw new Error("OPENAI_TIMEOUT");
-    return failure === "rubric" ? { criteria: [] } : rubric;
+    if (failure === "missingCriteria") return { criteria: [] };
+    return failure === "rubric" ? { criteria: [{ ...rubric.criteria[0], max_score: 0 }] } : rubric;
   },
   callEvaluationModel: async () => evaluation,
 } });
 mock.module("../../../lib/evaluation.ts", { namedExports: {
   evaluateAssignment: async () => {
+    evaluationCalls++;
     if (failure === "timeout") throw new Error("OPENAI_TIMEOUT");
     if (failure === "evaluation") throw new Error("EVALUATION_FAILED");
     return failure === "finalization" ? { ...evaluation, criteria_scores: [] } : evaluation;
@@ -114,6 +117,32 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(payload.criteria.length, 1);
       assert.equal(capturedFailures.length, 0);
       assert.equal(payload.score_calculation.mode_adjustment, 0);
+    });
+    await t.test("no criteria gives input guidance, releases free/paid reservations, and permits a corrected retry", async () => {
+      for (const paid of [false, true]) {
+        calls.length = 0; capturedFailures.length = 0; failure = "missingCriteria";
+        reserveStatus = paid ? "exhausted" : "reserved"; credits = paid ? 5 : 0;
+        const previousEvaluations = evaluationCalls;
+        const response = await POST(request());
+        assert.equal(response.status, 400);
+        const payload = await response.json();
+        assert.equal(payload.code, "RUBRIC_CRITERIA_NOT_FOUND");
+        assert.equal(payload.details.field, "rubric");
+        assert.match(payload.message, /swapped/);
+        assert.equal(evaluationCalls, previousEvaluations);
+        assert.equal(capturedFailures.length, 0, "input validation does not archive student originals again");
+        if (paid) {
+          assert.equal(response.headers.get("x-credits-balance"), "5");
+          assert.equal(calls.filter(c => c.name === "rubricheck_refund_credit_reservation").length, 1);
+        } else {
+          assert.equal(response.headers.get("x-ratelimit-remaining"), "3");
+          assert.equal(settlements().length, 1);
+          assert.equal(settlements()[0].body.p_succeeded, false);
+        }
+        failure = null;
+        assert.equal((await POST(request())).status, 200);
+      }
+      reserveStatus = "reserved"; credits = 0;
     });
     await t.test("confirmation response loss retries the same reservation and preserves result", async () => {
       calls.length = 0; confirmationFailures = 1;

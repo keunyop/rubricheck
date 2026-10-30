@@ -185,13 +185,26 @@ test("cache accepts the deserialized objects returned by Upstash", async () => {
   assert.equal(redis.setCalls.length, 0);
 });
 
-test("empty criteria and invalid scores are still rejected", async () => {
-  for (const criteria of [[], ...[0, -1, NaN, Infinity, "100"].map(max_score => [{
+test("empty criteria produce actionable input validation, never a fabricated or cached rubric", async () => {
+  const redis = createRedisStub();
+  const prompts: string[] = [];
+  assert.equal(RubricSchema.safeParse({ criteria: [] }).success, false);
+  await assert.rejects(structureRubric("An essay about a social issue, without assessment instructions.", {
+    cacheIdentity: { userIdType: "emailhash", userIdValue: "empty-test" },
+    cacheRedisOverride: redis,
+    modelCaller: async prompt => { prompts.push(prompt); return { criteria: [] }; },
+  }), { message: "RUBRIC_CRITERIA_NOT_FOUND" });
+  assert.equal(redis.setCalls.length, 0);
+  assert.match(prompts[0], /Do not invent criteria/);
+});
+
+test("invalid model shapes and invalid scores are still technical rubric failures", async () => {
+  for (const invalid of [null, {}, { criteria: null }, { criteria: "" }, ...[0, -1, NaN, Infinity, "100"].map(max_score => ({ criteria: [{
     ...holisticRubric.criteria[0], max_score,
-  }])]) {
-    assert.equal(RubricSchema.safeParse({ criteria }).success, false);
+  }] }))]) {
+    assert.equal(RubricSchema.safeParse(invalid).success, false);
     await assert.rejects(structureRubric("Unusable rubric", {
-      cacheRedisOverride: null, modelCaller: async () => ({ criteria }),
+      cacheRedisOverride: null, modelCaller: async () => invalid,
     }), /RUBRIC_STRUCTURE_FAILED/);
   }
 });

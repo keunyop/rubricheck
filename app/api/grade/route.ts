@@ -516,6 +516,15 @@ async function runGrade(request: Request) {
       diagnosticCode = gradingFailureCode(error, "RUBRIC_STRUCTURE_FAILED");
       await releaseReservation();
 
+      if (error instanceof Error && error.message === "RUBRIC_CRITERIA_NOT_FOUND") {
+        // This is input validation, not a failed grading job. Do not archive student
+        // originals again or evaluate against invented criteria.
+        diagnosticCode = undefined;
+        return errorResponse(context, 400, "RUBRIC_CRITERIA_NOT_FOUND",
+          "No grading criteria were found in the rubric input. Check whether the rubric and assignment were swapped, or provide the assessment instructions.",
+          { field: "rubric" }, usageHeaders);
+      }
+
       if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
         return errorResponse(
           context,

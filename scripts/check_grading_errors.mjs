@@ -68,6 +68,8 @@ try {
       nextCode = code;
       await submit.click();
       await page.getByText(message).waitFor();
+      assert.equal(await page.getByRole("button", { name: locale === "en" ? "Swap rubric and assignment" : "루브릭과 과제 서로 바꾸기", exact: true }).count(), 0,
+        "technical failures must not suggest swapping inputs");
       assert.equal(await rubric.inputValue(), attempts[0].input.rubricText);
       assert.equal(await assignment.inputValue(), attempts[0].input.assignmentText);
       assert.ok(attempts[0].key);

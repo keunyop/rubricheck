@@ -1964,6 +1964,23 @@ export default function Home() {
     setAssignmentText("");
   }
 
+  function swapRubricAndAssignment() {
+    if (isLoading || (rubricMode !== "text" && rubricMode !== "file")) return;
+    // Swap the active modes and all draft contents together. The mode-switch
+    // helpers intentionally clear inputs, so they must not be used here.
+    setRubricMode(assignmentMode);
+    setAssignmentMode(rubricMode);
+    setRubricText(assignmentText);
+    setAssignmentText(rubricText);
+    setRubricFiles(assignmentFiles);
+    setAssignmentFiles(rubricFiles);
+    for (const ref of [rubricInputRef, rubricCameraInputRef, assignmentInputRef, assignmentCameraInputRef]) {
+      if (ref.current) ref.current.value = "";
+    }
+    setError("");
+    setErrorCode("");
+  }
+
   function applyFileSelection(field: InputField, selectedFiles: File[], mode: "replace" | "append" = "replace") {
     const existingFiles = field === "rubric" ? rubricFiles : assignmentFiles;
     const nextFiles = mode === "append" ? [...existingFiles, ...selectedFiles] : selectedFiles;
@@ -2041,6 +2058,10 @@ export default function Home() {
 
     if (message === "RUBRIC_STRUCTURE_FAILED") {
       return t('We could not read the grading criteria. Paste the rubric text or upload a clearer copy. If you do not have a rubric, choose "{noRubric}".', { noRubric: t("No rubric") });
+    }
+
+    if (message === "RUBRIC_CRITERIA_NOT_FOUND") {
+      return t('No grading criteria were found in the rubric input. Check whether your rubric and assignment are swapped. Use the assessment instructions as your rubric, or choose "{noRubric}".', { noRubric: t("No rubric") });
     }
 
     if (message === "EVALUATION_FAILED") {
@@ -3111,7 +3132,13 @@ export default function Home() {
             ) : null}
             {error && errorCode !== "OPENAI_TIMEOUT" && errorCode !== "FILE_PARSE_FAILED" ? (
               <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {t(error)}
+                <p>{t(error)}</p>
+                {errorCode === "RUBRIC_CRITERIA_NOT_FOUND" && (rubricMode === "text" || rubricMode === "file") ? (
+                  <button type="button" onClick={swapRubricAndAssignment} disabled={isLoading}
+                    className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold disabled:opacity-50">
+                    {t("Swap rubric and assignment")}
+                  </button>
+                ) : null}
               </div>
             ) : null}
             {draftRestoreNotice ? (

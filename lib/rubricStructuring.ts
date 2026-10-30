@@ -134,6 +134,9 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     '{ "criteria": [{ "name": "string", "max_score": number, "description": "string" }] }',
     "Rules:",
     "- Include all identifiable criteria.",
+    "- Assessment instructions and assignment requirements are valid criteria, even without points or a scoring table.",
+    '- If the text contains no assessment criteria or requirements (for example, only a student essay), return { "criteria": [] }.',
+    "- Do not invent criteria from an essay's topic, headings, claims, or citations.",
     "- Each criterion must include name, max_score, description.",
     "- max_score must be numeric. If missing, infer from rubric scale; if unclear, use 1.",
     "- description must be short and faithful.",
@@ -163,6 +166,11 @@ export async function structureRubric(rubricText: string, options: StructureRubr
   const parsed = RubricSchema.safeParse(modelResult);
 
   if (!parsed.success) {
+    if (parsed.error.issues.length === 1 && parsed.error.issues[0].code === "too_small" &&
+        parsed.error.issues[0].path.length === 1 && parsed.error.issues[0].path[0] === "criteria") {
+      console.info("RUBRIC_CRITERIA_NOT_FOUND", { requestId });
+      throw new Error("RUBRIC_CRITERIA_NOT_FOUND");
+    }
     console.error("RUBRIC_SCHEMA_VALIDATION_FAILED", {
       requestId,
       issues: parsed.error.issues.map(issue => ({ code: issue.code, path: issue.path.join(".") })),

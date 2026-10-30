@@ -51,7 +51,11 @@ const evaluation = { summary: "Your argument is clear.", top_improvements: ["Use
   criteria_scores: [{ name: "Evidence", score: 75, rationale: "Private rationale", estimated_range: [70, 80], feedback: "Private criterion feedback", evidence: ["Private quote"] }] };
 mock.module("../../../lib/rubricStructuring.ts", { namedExports: {
   hashNormalizedEmail: () => "hash",
-  structureRubric: async () => { if (failure === "rubric") throw Error("RUBRIC_STRUCTURE_FAILED"); return rubric; },
+  structureRubric: async () => {
+    if (failure === "rubric") throw Error("RUBRIC_STRUCTURE_FAILED");
+    if (failure === "missingCriteria") throw Error("RUBRIC_CRITERIA_NOT_FOUND");
+    return rubric;
+  },
 } });
 mock.module("../../../lib/evaluation.ts", { namedExports: {
   evaluateAssignment: async () => { modelCalls++; if (gate) await gate; if (failure === "model") throw Error("OPENAI_TIMEOUT"); return failure === "finalization" ? { ...evaluation, criteria_scores: [] } : evaluation; },
@@ -85,6 +89,17 @@ test("guest previews enforce access, one use, retries and account ownership with
   globalThis.fetch = async () => { throw Error("Unexpected external network or billing call"); };
   const reset = () => { values.clear(); ttls.clear(); modelCalls = 0; archived = 0; failure = ""; gate = null; dropReserve = false; dropComplete = false; storageDown = false; };
   try {
+    await t.test("no criteria releases the guest preview for a corrected retry", async () => {
+      reset(); failure = "missingCriteria";
+      const response = await grade(request());
+      assert.equal(response.status, 400);
+      assert.equal((await response.json()).code, "RUBRIC_CRITERIA_NOT_FOUND");
+      assert.equal(modelCalls, 0);
+      assert.equal(values.size, 0);
+      failure = "";
+      assert.equal((await grade(request())).status, 200);
+      assert.equal(modelCalls, 1);
+    });
     await t.test("sample-independent status creates a secure opaque cookie without using a check", async () => {
       reset();
       const response = await status(new Request("https://example.com/api/trial"));
