@@ -321,8 +321,8 @@ export function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
               <StatCard label="Credits Left" value={String(dashboard.summary.remainingCredits)} />
             </section>
 
-            <section className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,0.8fr)]">
-              <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,0.8fr)]">
+              <section className="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-slate-900">Subscriber roster</h2>

@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Redis } from "@upstash/redis";
 import { z } from "zod";
-import { MAX_FEEDBACK_LENGTH, type ProductFeedback, type FeedbackPage } from "./productFeedbackTypes";
+import { MAX_FEEDBACK_LENGTH, type ProductFeedback, type FeedbackPage, type FeedbackReply } from "./productFeedbackTypes";
+import { getFeedbackMailSettings } from "./productFeedbackMail";
 
 export const feedbackSchema = z.object({
   category: z.enum(["issue", "idea", "other"]),
@@ -11,7 +12,7 @@ export const feedbackSchema = z.object({
 });
 const INBOX_KEY = "rubricheck:{feedback}:inbox";
 const PAGE_SIZE = 25;
-function feedbackRedis() {
+export function feedbackRedis() {
   const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
   const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
   if (!url || !token) throw new Error("FEEDBACK_STORE_UNAVAILABLE");
@@ -40,6 +41,27 @@ export async function submitFeedback(input: z.infer<typeof feedbackSchema>, acco
 }
 
 export async function listFeedback(offset: number): Promise<FeedbackPage> {
-  const items = await feedbackRedis().lrange<ProductFeedback>(INBOX_KEY, offset, offset + PAGE_SIZE);
-  return { items: items.slice(0, PAGE_SIZE), nextOffset: items.length > PAGE_SIZE ? offset + PAGE_SIZE : null };
+  const redis = feedbackRedis();
+  const items = await redis.lrange<ProductFeedback>(INBOX_KEY, offset, offset + PAGE_SIZE);
+  const page = items.slice(0, PAGE_SIZE);
+  const pipeline = redis.pipeline();
+  for (const item of page) pipeline.hgetall<Record<string, FeedbackReply>>(feedbackRepliesKey(item.id));
+  const histories = page.length ? await pipeline.exec<(Record<string, FeedbackReply> | null)[]>() : [];
+  return {
+    items: page.map((item, index) => ({ ...item, replies: Object.values(histories[index] ?? {}).sort((a, b) => b.createdAt.localeCompare(a.createdAt)) })),
+    nextOffset: items.length > PAGE_SIZE ? offset + PAGE_SIZE : null,
+    mailSettings: getFeedbackMailSettings(),
+  };
+}
+
+export const feedbackRepliesKey = (id: string) => "rubricheck:{feedback}:replies:" + id;
+
+// Existing inbox entries predate replies, so lookup also supports the original list format.
+export async function getFeedback(id: string): Promise<ProductFeedback | null> {
+  for (let offset = 0; ; offset += 100) {
+    const items = await feedbackRedis().lrange<ProductFeedback>(INBOX_KEY, offset, offset + 99);
+    const item = items.find(item => item.id === id);
+    if (item) return item;
+    if (items.length < 100) return null;
+  }
 }

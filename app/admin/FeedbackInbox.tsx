@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FEEDBACK_CATEGORIES, type FeedbackPage, type ProductFeedback } from "../../src/lib/productFeedbackTypes";
+import { FEEDBACK_CATEGORIES, type FeedbackPage, type FeedbackInboxItem, type FeedbackMailSettings, type FeedbackReply } from "../../src/lib/productFeedbackTypes";
+import { FeedbackReplyPanel } from "./FeedbackReplyPanel";
 
 export function FeedbackInbox() {
-  const [items, setItems] = useState<ProductFeedback[]>([]);
+  const [items, setItems] = useState<FeedbackInboxItem[]>([]);
+  const [mailSettings, setMailSettings] = useState<FeedbackMailSettings | null>(null);
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -21,17 +23,25 @@ export function FeedbackInbox() {
       if (!response.ok) throw new Error(data.message || "Unable to load feedback.");
       setItems(previous => offset === 0 ? data.items : [...previous, ...data.items.filter(item => !previous.some(existing => existing.id === item.id))]);
       setNextOffset(data.nextOffset); setLoaded(true);
+      setMailSettings(data.mailSettings ?? null);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Unable to load feedback.");
     } finally { pending.current = false; setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
 
+  function updateReply(feedbackId: string, reply: FeedbackReply) {
+    setItems(previous => previous.map(item => item.id === feedbackId
+      ? { ...item, replies: [reply, ...(item.replies ?? []).filter(existing => existing.id !== reply.id)] }
+      : item));
+  }
+
   return <section aria-labelledby="feedback-inbox-title" className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h2 id="feedback-inbox-title" className="text-lg font-semibold text-slate-900">Feedback inbox</h2><p className="mt-1 text-sm text-slate-600">Messages from users, newest first.</p></div>
       <button type="button" onClick={() => void load()} disabled={loading} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">Refresh feedback</button>
     </div>
+    {loaded && mailSettings && !mailSettings.ready && <p role="status" className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Email replies need a valid sender, a reply-to inbox and a Resend API key in the server configuration.</p>}
     {error && <div role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error} <button type="button" className="font-semibold underline" disabled={loading} onClick={() => void load(retryOffset.current)}>Try again</button></div>}
     {loaded && !items.length && !loading && !error && <p className="py-10 text-center text-sm text-slate-500">No feedback yet. New messages will appear here.</p>}
     <div className="mt-4 space-y-3">
@@ -46,6 +56,7 @@ export function FeedbackInbox() {
           <div className="min-w-0"><dt className="font-medium text-slate-600">Reply email</dt><dd className="mt-1 break-all">{item.replyEmail ?? "Not provided"}</dd></div>
           <div><dt className="font-medium text-slate-600">Page</dt><dd className="mt-1">{item.page}</dd></div>
         </dl>
+        <FeedbackReplyPanel item={item} mailSettings={mailSettings} onReply={reply => updateReply(item.id, reply)} />
       </article>)}
     </div>
     {loading && <p role="status" className="py-5 text-center text-sm text-slate-500">Loading feedback...</p>}

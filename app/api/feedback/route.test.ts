@@ -33,6 +33,7 @@ test("feedback validates input, binds verified accounts, limits submissions and 
         return 1;
       }
       if (String(parts[0]).toLowerCase() === "lrange") return inbox.slice(Number(parts[2]), Number(parts[3]) + 1).map(item => JSON.stringify(item));
+      if (String(parts[0]).toLowerCase() === "hgetall") return [];
       throw new Error("Unexpected Redis command");
     }
     return Response.json(Array.isArray(body[0]) ? body.map((parts: unknown[]) => ({ result: command(parts) })) : { result: command(body) });

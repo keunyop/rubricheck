@@ -111,6 +111,41 @@ Keys and provider error messages are excluded. Check deployment configuration wh
 the reason indicates an invalid key; asking the student to upload another image
 will not resolve an authentication failure. See [OCR incident verification](doc/verification/ocr-api-key-failures.md).
 
+## Feedback replies
+
+In `/admin`, open **Feedback inbox**, choose **Reply**, review the recipient,
+enter a subject and message, and select **Send reply**. The recipient is the
+submitted reply email, falling back to the signed-in account email. Feedback
+without either address cannot receive a reply. **Reply history** retains each
+message, sender, recipient, reply-to address, timestamp and Resend email ID.
+“Sent” means Resend accepted the email for delivery; delivery and bounce status
+can be checked in Resend. Customer responses go to the configured reply-to inbox.
+
+Configure these server-only variables locally and in the deployment environment:
+
+- `RESEND_API_KEY`: existing Resend API key with sending permission.
+- `FEEDBACK_FROM_EMAIL`: defaults to `RubriCheck Support <support@mail.rubricheck.com>`;
+  the sender domain must be verified in Resend.
+- `FEEDBACK_REPLY_TO_EMAIL`: a real inbox that receives customer responses (required).
+- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`: existing feedback storage.
+
+Restart the local server or redeploy after configuration changes. These settings
+do not change the separate OTP sender. Reply bodies are plain text, so typed HTML
+is displayed literally. No email is sent until an administrator selects **Send reply**.
+
+Identical subject/message pairs for a feedback item share a permanent send record
+and a Resend idempotency key. Concurrent submissions cannot send the same reply
+twice. If a response is lost, choose **Retry same reply**; the stored sender,
+recipient and body remain unchanged. A pending or unconfirmed reply blocks new
+replies to that feedback. After 23 hours, automatic retry stops before Resend's
+24-hour idempotency window expires: check the provider logs before any manual
+reconciliation. Failed and unconfirmed attempts remain in the history even after
+a reload. A successful provider send followed by a storage failure remains
+pending and can be reconciled by retrying the same reply within that window.
+
+References: [sending email](https://resend.com/docs/api-reference/emails/send-email),
+[idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys).
+
 ## What This Project Demonstrates
 
 As a portfolio project, RubriCheck shows experience across both product thinking and implementation:
