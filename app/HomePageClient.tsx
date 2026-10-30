@@ -3165,7 +3165,6 @@ export default function Home() {
                 <span>{t("Strict Mode")}</span>
               </button> : null}
             </div>
-            <p className="text-xs leading-5 text-slate-500">{t("If grading fails, we may keep your submitted text and files for up to 7 days to diagnose and fix the error. Only authorized administrators can access them.")}</p>
             {isLoading ? (
               <div role="status" className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 md:text-sm">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
