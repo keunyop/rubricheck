@@ -49,8 +49,11 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
   let releaseFails = false;
   let credits = 0;
   let pro = false;
+  let visionResponse: unknown = { responses: [] };
+  let visionStatus = 200;
   globalThis.fetch = async (input, init) => {
     const url = String(input);
+    if (url.startsWith("https://vision.googleapis.com/")) return Response.json(visionResponse, { status: visionStatus });
     const name = url.split("/").pop()!;
     const body = JSON.parse(String(init?.body ?? "{}"));
     calls.push({ name, body });
@@ -167,6 +170,46 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(capturedFailures[0].stage, "file_parsing");
       assert.equal(capturedFailures[0].files[0].file.name, "rubric.xyz");
       assert.equal(await capturedFailures[0].files[0].file.text(), "unparseable");
+    });
+    await t.test("OCR failures do not charge, retain originals, and retry successfully with one or multiple images", async () => {
+      process.env.GOOGLE_CLOUD_VISION_API_KEY = "test-only";
+      failure = null; reserveStatus = "reserved"; credits = 5;
+      const imageRequest = (count = 1) => {
+        const form = new FormData();
+        form.set("rubricText", "Thesis 10 points");
+        for (let i = 0; i < count; i++) form.append("assignment", new File(["synthetic image " + i], `page-${i}.png`, { type: "image/png" }));
+        const req = request();
+        return new Request(req.url, { method: "POST", headers: { cookie: req.headers.get("cookie")!, "idempotency-key": "image-retry" }, body: form });
+      };
+      for (const [status, body, expectedCode] of [
+        [400, { error: { details: [{ reason: "API_KEY_INVALID" }] } }, "OCR_UNAVAILABLE"],
+        [200, { responses: [{ error: { code: 3 } }] }, "FILE_PARSE_FAILED"],
+        [200, { responses: [{ error: { code: 8 } }] }, "OCR_UNAVAILABLE"],
+      ] as const) {
+        calls.length = 0; capturedFailures.length = 0; visionStatus = status; visionResponse = body;
+        const response = await POST(imageRequest());
+        assert.equal(response.status, expectedCode === "OCR_UNAVAILABLE" ? 503 : 400);
+        const payload = await response.json();
+        assert.equal(payload.code, expectedCode);
+        assert.equal(payload.details.field, "assignment");
+        assert.ok(!calls.some(c => /reserve|settle|refund/.test(c.name)));
+        assert.equal(capturedFailures.length, 1);
+        assert.equal(capturedFailures[0].stage, "file_parsing");
+        assert.equal(capturedFailures[0].code, expectedCode);
+        assert.equal(await capturedFailures[0].files[0].file.text(), "synthetic image 0");
+      }
+      visionStatus = 200;
+      for (const count of [1, 2]) {
+        calls.length = 0; capturedFailures.length = 0;
+        visionResponse = { responses: [{ fullTextAnnotation: { text: count === 1 ? "A well supported synthetic assignment. ".repeat(10) : "One short image page." } }] };
+        const response = await POST(imageRequest(count));
+        assert.equal(response.status, 200);
+        assert.equal((await response.json()).criteria.length, 1);
+        assert.equal(settlements().length, 1);
+        assert.equal(settlements()[0].body.p_succeeded, true);
+        assert.equal(capturedFailures.length, 0);
+      }
+      credits = 0;
     });
     await t.test("diagnostics preserve exact text and exclude validation and quota rejections", async () => {
       capturedFailures.length = 0; failure = "rubric";

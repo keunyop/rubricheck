@@ -98,12 +98,18 @@ RubriCheck was designed as a practical SaaS-style AI product rather than a proto
 - `OPENAI_API_KEY`: API key for rubric structuring, grading, and rewrite suggestions
 - `STRUCTURE_MODEL=gpt-6-luna`: rubric structuring, with `reasoning.effort=low`
 - `EVALUATION_MODEL=gpt-6-luna`: Standard/Strict grading (including guest previews) and rewrite suggestions, with `reasoning.effort=medium`
-- `GOOGLE_CLOUD_VISION_API_KEY`: API key for Google Vision OCR
+- `GOOGLE_CLOUD_VISION_API_KEY`: valid API key for Google Vision OCR; configure it in Vercel as well as locally, and redeploy after changing it
 - `GOOGLE_VISION_LANGUAGE_HINTS` (optional): comma-separated OCR language hints (default: `en,ko`)
 
 Set both model variables in `.env.local` and in the deployment environment. Restart
 the local server or redeploy after changing them; `.env.local` is not committed.
 Reasoning effort is set explicitly by workload in `lib/openai.ts`.
+
+Image OCR failures log `GOOGLE_VISION_OCR_FAILED` with the field, failure category,
+HTTP/RPC status, and recognized provider reason (for example `API_KEY_INVALID`).
+Keys and provider error messages are excluded. Check deployment configuration when
+the reason indicates an invalid key; asking the student to upload another image
+will not resolve an authentication failure. See [OCR incident verification](doc/verification/ocr-api-key-failures.md).
 
 ## What This Project Demonstrates
 
