@@ -1,5 +1,31 @@
 // Localized product UI messages, in Hindi, Urdu, Vietnamese, and Simplified Chinese.
 export const newLanguages: Record<string, readonly [string, string, string, string]> = {
+  "Last updated: October 29, 2026.": ["अंतिम अपडेट: 29 अक्टूबर 2026।", "آخری تازہ کاری: 29 اکتوبر 2026۔", "Cập nhật lần cuối: 29 tháng 10 năm 2026.", "最后更新：2026年10月29日。"],
+  "Failed grading diagnostics": ["मूल्यांकन विफलता का निदान", "جانچ کی ناکامی کی تشخیص", "Chẩn đoán lỗi chấm điểm", "评分失败诊断"],
+  "If grading fails, we may keep your submitted text and files for up to 7 days to diagnose and fix the error. Only authorized administrators can access them.": [
+    "यदि मूल्यांकन विफल होता है, तो त्रुटि का पता लगाने और उसे ठीक करने के लिए आपके भेजे गए टेक्स्ट और फ़ाइलों को अधिकतम 7 दिनों तक रखा जा सकता है। केवल अधिकृत प्रशासक इन्हें देख सकते हैं।",
+    "اگر جانچ ناکام ہو جائے تو خرابی کی تشخیص اور اصلاح کے لیے آپ کا جمع کردہ متن اور فائلیں زیادہ سے زیادہ 7 دن تک محفوظ رکھی جا سکتی ہیں۔ صرف مجاز منتظمین ان تک رسائی حاصل کر سکتے ہیں۔",
+    "Nếu chấm điểm thất bại, chúng tôi có thể lưu văn bản và tệp bạn đã gửi tối đa 7 ngày để chẩn đoán và sửa lỗi. Chỉ quản trị viên được ủy quyền mới có thể truy cập.",
+    "如果评分失败，我们可能会将您提交的文本和文件保留最多7天，以诊断并修复错误。只有授权管理员可以访问这些内容。",
+  ],
+  "When file extraction or grading fails, we may retain original inputs, uploaded files, extracted text, and error details for up to 7 days to troubleshoot the failure. Diagnostic records are encrypted, accessible only to authorized administrators, and automatically deleted after 7 days. They are not used for model training. Contact support to request earlier deletion.": [
+    "फ़ाइल से टेक्स्ट निकालने या मूल्यांकन में विफलता होने पर समस्या का समाधान करने के लिए मूल इनपुट, अपलोड की गई फ़ाइलें, निकाला गया टेक्स्ट और त्रुटि विवरण अधिकतम 7 दिनों तक रखे जा सकते हैं। निदान रिकॉर्ड एन्क्रिप्ट किए जाते हैं, केवल अधिकृत प्रशासक उन्हें देख सकते हैं और वे 7 दिनों के बाद अपने आप मिटा दिए जाते हैं। इनका उपयोग मॉडल प्रशिक्षण के लिए नहीं होता। पहले हटाने का अनुरोध करने के लिए सहायता से संपर्क करें।",
+    "فائل سے متن نکالنے یا جانچ میں ناکامی پر مسئلہ حل کرنے کے لیے اصل مواد، اپ لوڈ کردہ فائلیں، نکالا گیا متن اور خرابی کی تفصیلات زیادہ سے زیادہ 7 دن تک محفوظ رکھی جا سکتی ہیں۔ تشخیصی ریکارڈ خفیہ کیے جاتے ہیں، صرف مجاز منتظمین ان تک رسائی حاصل کر سکتے ہیں اور 7 دن بعد خودکار طور پر حذف ہو جاتے ہیں۔ انہیں ماڈل کی تربیت میں استعمال نہیں کیا جاتا۔ پہلے حذف کروانے کے لیے معاونت سے رابطہ کریں۔",
+    "Khi trích xuất tệp hoặc chấm điểm thất bại, chúng tôi có thể lưu dữ liệu đầu vào gốc, tệp đã tải lên, văn bản đã trích xuất và chi tiết lỗi tối đa 7 ngày để xử lý sự cố. Hồ sơ chẩn đoán được mã hóa, chỉ quản trị viên được ủy quyền mới có thể truy cập và được tự động xóa sau 7 ngày. Chúng không được dùng để huấn luyện mô hình. Hãy liên hệ bộ phận hỗ trợ để yêu cầu xóa sớm hơn.",
+    "如果文件提取或评分失败，我们可能会保留原始输入、上传文件、提取的文本和错误详情最多7天，用于排查故障。诊断记录经过加密，仅供授权管理员访问，并在7天后自动删除。这些记录不用于模型训练。如需提前删除，请联系支持团队。",
+  ],
+  'We could not read the grading criteria. Paste the rubric text or upload a clearer copy. If you do not have a rubric, choose "{noRubric}".': [
+    'मूल्यांकन मानदंड पढ़े नहीं जा सके। रूब्रिक का टेक्स्ट पेस्ट करें या अधिक स्पष्ट प्रति अपलोड करें। यदि आपके पास रूब्रिक नहीं है, तो "{noRubric}" चुनें।',
+    'جانچ کے معیار پڑھے نہیں جا سکے۔ روبرک کا متن پیسٹ کریں یا زیادہ واضح نقل اپ لوڈ کریں۔ اگر آپ کے پاس روبرک نہیں ہے تو "{noRubric}" منتخب کریں۔',
+    'Không thể đọc tiêu chí chấm điểm. Hãy dán văn bản tiêu chí hoặc tải lên bản rõ hơn. Nếu không có tiêu chí, hãy chọn "{noRubric}".',
+    '无法读取评分标准。请粘贴评分标准文本或上传更清晰的文件。如果没有评分标准，请选择“{noRubric}”。',
+  ],
+  "We could not finish grading this assignment. Please try again in a moment.": [
+    "इस असाइनमेंट का मूल्यांकन पूरा नहीं हो सका। कृपया थोड़ी देर बाद फिर से प्रयास करें।",
+    "اس اسائنمنٹ کی جانچ مکمل نہیں ہو سکی۔ براہ کرم کچھ دیر بعد دوبارہ کوشش کریں۔",
+    "Không thể hoàn tất việc chấm điểm bài tập này. Vui lòng thử lại sau giây lát.",
+    "未能完成此作业的评分。请稍后重试。",
+  ],
   "Usage analytics starts automatically on public pages. We measure page visits and evaluation, signup and checkout steps using pseudonymous identifiers. Assignment content, names, emails and payment secrets are not sent to analytics providers. URLs are stripped of queries and fragments. You can turn analytics off on this privacy page. Existing opt-outs, Do Not Track and Global Privacy Control are respected.": [
     "सार्वजनिक पृष्ठों पर उपयोग विश्लेषण अपने आप शुरू होता है। हम छद्मनाम वाले पहचानकर्ताओं से पृष्ठ विज़िट तथा मूल्यांकन, पंजीकरण और भुगतान के चरण मापते हैं। असाइनमेंट की सामग्री, नाम, ईमेल और भुगतान संबंधी गोपनीय जानकारी विश्लेषण प्रदाताओं को नहीं भेजी जाती। URL से क्वेरी और फ़्रैगमेंट हटा दिए जाते हैं। आप इस गोपनीयता पृष्ठ पर विश्लेषण बंद कर सकते हैं। पहले से चुने गए इनकार, Do Not Track और Global Privacy Control का सम्मान किया जाता है।",
     "عوامی صفحات پر استعمال کے تجزیات خودکار طور پر شروع ہوتے ہیں۔ ہم فرضی شناختی کوڈز سے صفحات کے دورے اور جانچ، اندراج اور ادائیگی کے مراحل کی پیمائش کرتے ہیں۔ اسائنمنٹ کا مواد، نام، ای میل اور ادائیگی کی خفیہ معلومات تجزیاتی فراہم کنندگان کو نہیں بھیجی جاتیں۔ URL سے کوئری اور فریگمنٹ ہٹا دیے جاتے ہیں۔ آپ اس رازداری کے صفحے پر تجزیات بند کر سکتے ہیں۔ پہلے سے کیے گئے انکار، Do Not Track اور Global Privacy Control کا احترام کیا جاتا ہے۔",

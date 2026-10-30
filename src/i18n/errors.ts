@@ -1,4 +1,12 @@
 export const errors: Record<string, readonly [string, string]> = {
+  'We could not read the grading criteria. Paste the rubric text or upload a clearer copy. If you do not have a rubric, choose "{noRubric}".': [
+    '채점 기준을 읽지 못했습니다. 기준을 텍스트로 붙여 넣거나 더 선명한 파일을 올려 주세요. 채점 기준이 없다면 "{noRubric}"을 선택하세요.',
+    'Kriteria pemarkahan tidak dapat dibaca. Tampal teks rubrik atau muat naik salinan yang lebih jelas. Jika tiada rubrik, pilih "{noRubric}".',
+  ],
+  "We could not finish grading this assignment. Please try again in a moment.": [
+    "과제 채점을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    "Penilaian tugasan ini tidak dapat diselesaikan. Sila cuba lagi sebentar nanti.",
+  ],
   "Uploading...": ["업로드 중…", "Sedang memuat naik…"],
   "Parsing files...": ["파일 내용을 읽는 중…", "Sedang membaca fail…"],
   "Structuring rubric...": ["채점 기준을 정리하는 중…", "Sedang menyusun rubrik…"],

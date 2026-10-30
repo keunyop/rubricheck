@@ -177,6 +177,29 @@ Validation: `npm run test:all` and `node scripts/check_assignment_workspace.mjs`
 The browser check uses mocked API responses; set `TEST_BASE_URL` for a local Next server and
 `PLAYWRIGHT_MODULE` if Playwright is installed outside this repository.
 
+## Failed grading diagnostics
+
+The admin dashboard's **Grading failures** inbox lists processing failures from the
+last seven days. Authorized administrators can open the original text, download
+uploaded files, inspect the request ID and failing stage, and delete a record early.
+Successful checks and expected authentication, validation and quota rejections do
+not create diagnostic archives. The workspace and privacy/retention pages disclose
+the collection before submission.
+
+Records use the existing Upstash Redis configuration and are encrypted with a key
+derived specifically for diagnostics from `ENTITLEMENT_SESSION_SECRET`. No migration
+or additional service is needed. Changing that secret makes existing archives
+unreadable. TTLs remove originals after seven days, including interrupted writes.
+Up to five failures per account (or guest network) per hour retain originals; later
+failures remain listed with metadata only. Archives over 64 MiB of input data also
+retain metadata only. Capture runs after the error response and cannot change
+usage refunds or the original failure response.
+
+See [implementation and verification](doc/verification/grading-failure-retention.md).
+Run `npm run test:all` and `node scripts/check_grading_failures.mjs` against a local
+server started with `ADMIN_SECRET=local-grading-failures-test` (or set matching
+`TEST_ADMIN_SECRET` for the browser script). Browser APIs are mocked.
+
 ## Product feedback
 
 The home and pricing Feedback buttons open an in-app form for guests and signed-in users.

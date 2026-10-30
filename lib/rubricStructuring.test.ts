@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { RubricSchema } from "./schema";
 
 import {
   RUBRIC_CACHE_TTL_SECONDS,
@@ -153,4 +154,85 @@ test("email hashing uses normalized email and key never stores raw email", async
 test("ttl and cache version constants match policy", () => {
   assert.equal(RUBRIC_CACHE_TTL_SECONDS, 604800);
   assert.equal(RUBRIC_CACHE_VERSION, "v1");
+});
+
+const holisticRubric = {
+  criteria: [{ name: "Overall quality", max_score: 100, description: "Clarity and support of the argument." }],
+};
+
+test("a single holistic criterion is a valid rubric and can be reused from cache", async () => {
+  const redis = createRedisStub();
+  const options = {
+    cacheIdentity: { userIdType: "emailhash" as const, userIdValue: "test-user" },
+    cacheRedisOverride: redis,
+    modelCaller: async () => holisticRubric,
+  };
+  assert.deepEqual(await structureRubric("Overall quality: 100 points", options), holisticRubric);
+  assert.deepEqual(await structureRubric("Overall quality: 100 points", {
+    ...options, modelCaller: async () => { throw new Error("Cache should skip the model"); },
+  }), holisticRubric);
+});
+
+test("cache accepts the deserialized objects returned by Upstash", async () => {
+  const redis = createRedisStub();
+  const result = await structureRubric("Overall quality: 100 points", {
+    cacheIdentity: { userIdType: "emailhash", userIdValue: "test-user" },
+    cacheRedisOverride: { ...redis, get: async () => holisticRubric },
+    modelCaller: async () => { throw new Error("Cache should skip the model"); },
+  });
+  assert.deepEqual(result, holisticRubric);
+  assert.ok(redis.incrCalls.includes("rubric_cache_hit"));
+  assert.equal(redis.setCalls.length, 0);
+});
+
+test("empty criteria and invalid scores are still rejected", async () => {
+  for (const criteria of [[], ...[0, -1, NaN, Infinity, "100"].map(max_score => [{
+    ...holisticRubric.criteria[0], max_score,
+  }])]) {
+    assert.equal(RubricSchema.safeParse({ criteria }).success, false);
+    await assert.rejects(structureRubric("Unusable rubric", {
+      cacheRedisOverride: null, modelCaller: async () => ({ criteria }),
+    }), /RUBRIC_STRUCTURE_FAILED/);
+  }
+});
+
+test("invalid cached rubrics are replaced by validated model output", async () => {
+  for (const cached of [{ criteria: [] }, "not JSON"]) {
+    const redis = createRedisStub();
+    const result = await structureRubric("Overall quality: 100 points", {
+      cacheIdentity: { userIdType: "emailhash", userIdValue: "test-user" },
+      cacheRedisOverride: { ...redis, get: async () => cached },
+      modelCaller: async () => holisticRubric,
+    });
+    assert.deepEqual(result, holisticRubric);
+    assert.equal(redis.setCalls.length, 1);
+  }
+});
+
+test("model failures remain distinguishable and diagnostics do not log private inputs", async t => {
+  const logs = t.mock.method(console, "error", () => {});
+  const secret = "private rubric text and provider response";
+  for (const [error, code] of [
+    [Object.assign(new Error(secret), { status: 429 }), "RUBRIC_MODEL_UNAVAILABLE"],
+    [new Error("MODEL_JSON_PARSE_FAILED"), "RUBRIC_MODEL_UNAVAILABLE"],
+    [new Error("OPENAI_TIMEOUT"), "OPENAI_TIMEOUT"],
+  ] as const) {
+    await assert.rejects(structureRubric(secret, {
+      requestId: "diagnostic-test", cacheRedisOverride: null,
+      modelCaller: async () => { throw error; },
+    }), { message: code });
+  }
+  await assert.rejects(structureRubric(secret, {
+    requestId: "diagnostic-test", cacheRedisOverride: null,
+    modelCaller: async () => ({ criteria: [{ name: secret, max_score: secret, description: secret }] }),
+  }), /RUBRIC_STRUCTURE_FAILED/);
+  const diagnostics = logs.mock.calls.map(call => call.arguments);
+  assert.equal(diagnostics.length, 3);
+  assert.deepEqual(diagnostics[0], ["RUBRIC_MODEL_CALL_FAILED", {
+    requestId: "diagnostic-test", reason: "provider_error", upstreamStatus: 429,
+  }]);
+  assert.deepEqual(diagnostics[2], ["RUBRIC_SCHEMA_VALIDATION_FAILED", {
+    requestId: "diagnostic-test", issues: [{ code: "invalid_type", path: "criteria.0.max_score" }],
+  }]);
+  assert.ok(!JSON.stringify(diagnostics).includes(secret));
 });

@@ -1,16 +1,30 @@
 ﻿import assert from "node:assert/strict";
 import { mock, test } from "node:test";
 import { createCreditSessionToken, CREDIT_SESSION_COOKIE_NAME } from "../../../src/lib/creditSession.ts";
+import { gradingFailureCode } from "../../../src/lib/gradingFailureCapture.ts";
+import type { GradingFailureInput } from "../../../src/lib/gradingFailures.ts";
 
-let failure: "rubric" | "evaluation" | "timeout" | "finalization" | null = null;
+const capturedFailures: GradingFailureInput[] = [];
+mock.module("../../../src/lib/gradingFailureCapture.ts", { namedExports: {
+  gradingFailureCode,
+  queueGradingFailure: (input: GradingFailureInput) => { capturedFailures.push(input); },
+} });
+
+let failure: "rubric" | "rubricProvider" | "rubricTimeout" | "evaluation" | "timeout" | "finalization" | null = null;
 const rubric = { criteria: [{ name: "Thesis", max_score: 10, description: "Clarity" }] };
 const evaluation = {
   summary: "Clear argument", top_improvements: ["Add evidence", "Add detail", "Revise conclusion"],
   criteria_scores: [{ name: "Thesis", score: 8, rationale: "Clear", estimated_range: [7, 9], feedback: "Add detail" }],
 };
-mock.module("../../../lib/rubricStructuring.ts", { namedExports: {
-  hashNormalizedEmail: () => "test-hash",
-  structureRubric: async () => { if (failure === "rubric") throw new Error("RUBRIC_STRUCTURE_FAILED"); return rubric; },
+// Keep the real rubric parser/schema in the route test: a model response with one
+// valid criterion previously failed here even though the mocked route passed.
+mock.module("../../../lib/openai.ts", { namedExports: {
+  callStructureModel: async () => {
+    if (failure === "rubricProvider") throw new Error("upstream unavailable");
+    if (failure === "rubricTimeout") throw new Error("OPENAI_TIMEOUT");
+    return failure === "rubric" ? { criteria: [] } : rubric;
+  },
+  callEvaluationModel: async () => evaluation,
 } });
 mock.module("../../../lib/evaluation.ts", { namedExports: {
   evaluateAssignment: async () => {
@@ -60,19 +74,31 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
   }
   const settlements = () => calls.filter(c => c.name === "rubricheck_settle_free_evaluate");
   try {
-    for (const [kind, status] of [["rubric", 400], ["evaluation", 500], ["timeout", 504], ["finalization", 500]] as const) {
+    for (const [kind, status, code] of [
+      ["rubric", 400, "RUBRIC_STRUCTURE_FAILED"],
+      ["rubricProvider", 503, "RUBRIC_MODEL_UNAVAILABLE"],
+      ["rubricTimeout", 504, "OPENAI_TIMEOUT"],
+      ["evaluation", 500, "EVALUATION_FAILED"],
+      ["timeout", 504, "OPENAI_TIMEOUT"],
+      ["finalization", 500, "EVALUATION_FAILED"],
+    ] as const) {
       await t.test(kind + " failure releases free usage and reports restored remaining", async () => {
-        calls.length = 0; failure = kind;
+        calls.length = 0; capturedFailures.length = 0; failure = kind;
         const response = await POST(request());
         assert.equal(response.status, status);
+        assert.equal((await response.json()).code, code);
         assert.equal(response.headers.get("x-ratelimit-remaining"), "3");
         assert.equal(settlements().length, 1);
         assert.equal(settlements()[0].body.p_succeeded, false);
         assert.ok(!calls.some(c => c.name === "rubricheck_reserve_one_credit"));
+        assert.equal(capturedFailures.length, 1);
+        assert.equal(capturedFailures[0].code, code);
+        assert.equal(capturedFailures[0].inputs.rubricText, "Thesis 10 points");
+        assert.equal(capturedFailures[0].inputs.assignmentText, "A clear argument with support.");
       });
     }
-    await t.test("successful retry confirms once even if result recovery is unavailable", async () => {
-      calls.length = 0; failure = null;
+    await t.test("a single-criterion rubric grades successfully and confirms once on retry", async () => {
+      calls.length = 0; capturedFailures.length = 0; failure = null;
       const response = await POST(request());
       assert.equal(response.status, 200);
       assert.equal(response.headers.get("x-recovery-unavailable"), "1");
@@ -82,6 +108,8 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(payload.access_tier, "free");
       assert.deepEqual(payload.top_improvements, ["Add evidence"]);
       assert.deepEqual(payload.overall_range, [70, 90]);
+      assert.equal(payload.criteria.length, 1);
+      assert.equal(capturedFailures.length, 0);
       assert.equal(payload.score_calculation.mode_adjustment, 0);
     });
     await t.test("confirmation response loss retries the same reservation and preserves result", async () => {
@@ -127,7 +155,7 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.ok(!calls.some(c => c.name.includes("reserve")));
     });
     await t.test("file parsing failure happens before reservation", async () => {
-      calls.length = 0;
+      calls.length = 0; capturedFailures.length = 0;
       const form = new FormData();
       form.set("rubric", new File(["unparseable"], "rubric.xyz"));
       form.set("assignmentText", "A clear argument.");
@@ -135,6 +163,23 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       const response = await POST(new Request(req.url, { method: "POST", headers: { cookie: req.headers.get("cookie")! }, body: form }));
       assert.equal(response.status, 400);
       assert.ok(!calls.some(c => c.name.includes("reserve")));
+      assert.equal(capturedFailures.length, 1);
+      assert.equal(capturedFailures[0].stage, "file_parsing");
+      assert.equal(capturedFailures[0].files[0].file.name, "rubric.xyz");
+      assert.equal(await capturedFailures[0].files[0].file.text(), "unparseable");
+    });
+    await t.test("diagnostics preserve exact text and exclude validation and quota rejections", async () => {
+      capturedFailures.length = 0; failure = "rubric";
+      const original = request();
+      const text = "  An original draft.\r\n\n";
+      await POST(new Request(original.url, { method: "POST", headers: original.headers, body: JSON.stringify({ rubricText: "Thesis 10 points", assignmentText: text }) }));
+      assert.equal(capturedFailures[0].inputs.assignmentText, text);
+      capturedFailures.length = 0;
+      await POST(new Request(original.url, { method: "POST", headers: original.headers, body: "{}" }));
+      reserveStatus = "exhausted"; credits = 0;
+      await POST(request());
+      assert.equal(capturedFailures.length, 0);
+      reserveStatus = "reserved";
     });
     await t.test("failed release preserves the original model error", async () => {
       calls.length = 0; releaseFails = true; failure = "timeout";

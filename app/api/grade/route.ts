@@ -1,4 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
+import { gradingFailureCode, queueGradingFailure } from "../../../src/lib/gradingFailureCapture";
+import type { GradingFailureInput } from "../../../src/lib/gradingFailures";
+import type { GradingFailureStage } from "../../../src/lib/gradingFailureTypes";
+import { getRequestIp } from "../../../src/lib/freeUsageActor";
 import { instrumentGrade } from "../../../src/lib/growthServer";
 import { LOCALES, type Locale } from "../../../src/i18n/config";
 import { getLanguagePreferences } from "../../../src/lib/languagePreferences";
@@ -218,6 +222,8 @@ async function runGrade(request: Request) {
   let evaluationSucceeded = false;
   let reservationReleased = false;
   let stage = "validation";
+  let diagnosticInput: GradingFailureInput | undefined;
+  let diagnosticCode: string | undefined;
   const usageHeaders: Record<string, string> = {};
   const releaseReservation = async () => {
     if (!usage?.allowed || evaluationSucceeded || reservationReleased || (!usage.freeReservation && !usage.creditReservation)) return;
@@ -255,6 +261,9 @@ async function runGrade(request: Request) {
     let assignmentFiles: File[] = [];
     let rubricTextInput: string | null = null;
     let assignmentTextInput: string | null = null;
+    let originalRubricText: string | null = null;
+    let originalAssignmentText: string | null = null;
+    let originalInstructions = "";
 
     if (contentType.includes("application/json")) {
       let payload: unknown;
@@ -276,6 +285,10 @@ async function runGrade(request: Request) {
       assignmentInstructions = parsedRequest.data.assignmentInstructions;
       rubricTextInput = parsedRequest.data.rubricText || null;
       assignmentTextInput = parsedRequest.data.assignmentText;
+      const original = payload as Record<string, unknown>;
+      originalRubricText = typeof original.rubricText === "string" ? original.rubricText : null;
+      originalAssignmentText = typeof original.assignmentText === "string" ? original.assignmentText : null;
+      originalInstructions = typeof original.assignmentInstructions === "string" ? original.assignmentInstructions : "";
     } else {
       const formData = await request.formData();
       const modeInput = formData.get("mode");
@@ -302,6 +315,10 @@ async function runGrade(request: Request) {
       assignmentFiles = getUploadedFiles(formData, "assignment");
       rubricTextInput = getTextInput(formData, "rubricText");
       assignmentTextInput = getTextInput(formData, "assignmentText");
+      const originalRubric = formData.get("rubricText"), originalAssignment = formData.get("assignmentText"), instructions = formData.get("assignmentInstructions");
+      originalRubricText = typeof originalRubric === "string" ? originalRubric : null;
+      originalAssignmentText = typeof originalAssignment === "string" ? originalAssignment : null;
+      originalInstructions = typeof instructions === "string" ? instructions : "";
     }
 
     if (!resultLanguage && signedInEmail) {
@@ -396,6 +413,18 @@ async function runGrade(request: Request) {
     }
 
     stage = "file_parsing";
+    // Keep references in memory only. Persistence is scheduled only from a failing
+    // processing path, after quota restoration and the error response are ready.
+    diagnosticInput = {
+      requestId: context.requestId, stage: "file_parsing", code: "INTERNAL_SERVER_ERROR",
+      accountEmail: signedInEmail, clientIp: getRequestIp(request), mode, language: resultLanguage,
+      inputs: {
+        rubricSource, rubricId: rubricId ?? null, rubricText: savedRubric?.text ?? originalRubricText,
+        assignmentText: originalAssignmentText, assignmentInstructions: originalInstructions,
+        extractedRubricText: null, extractedAssignmentText: null,
+      },
+      files: [...rubricFiles.map(file => ({ field: "rubric" as const, file })), ...assignmentFiles.map(file => ({ field: "assignment" as const, file }))],
+    };
     const cacheIdentityPromise = (signedInEmail ? resolveRubricCacheIdentity(request) : Promise.resolve(null)).catch((error) => {
       console.warn("RUBRIC_CACHE_IDENTITY_RESOLUTION_FAILED", {
         requestId: context.requestId,
@@ -408,6 +437,8 @@ async function runGrade(request: Request) {
         savedRubric ? Promise.resolve(savedRubric.text) : resolveFieldText("rubric", rubricTextInput, rubricFiles),
       resolveFieldText("assignment", assignmentTextInput, assignmentFiles),
     ]);
+    diagnosticInput.inputs.extractedRubricText = rubricText;
+    diagnosticInput.inputs.extractedAssignmentText = assignmentText;
     if (!signedInEmail && (rubricText.length > TRIAL_TEXT_LIMIT || assignmentText.length > TRIAL_TEXT_LIMIT)) {
       return errorResponse(context, 400, "TRIAL_INPUT_TOO_LONG", "Keep each preview input under 20,000 characters, or sign up to evaluate a longer assignment.");
     }
@@ -482,6 +513,7 @@ async function runGrade(request: Request) {
         requestId: context.requestId,
       });
     } catch (error) {
+      diagnosticCode = gradingFailureCode(error, "RUBRIC_STRUCTURE_FAILED");
       await releaseReservation();
 
       if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
@@ -493,6 +525,9 @@ async function runGrade(request: Request) {
           undefined, usageHeaders,
         );
       }
+      if (error instanceof Error && error.message === "RUBRIC_MODEL_UNAVAILABLE") {
+        return errorResponse(context, 503, "RUBRIC_MODEL_UNAVAILABLE", "The AI rubric reader is temporarily unavailable. Please try again shortly.", undefined, usageHeaders);
+      }
       console.error("RUBRIC_STRUCTURE_FAILED", { requestId: context.requestId, error });
       return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.", undefined, usageHeaders);
     }
@@ -503,6 +538,7 @@ async function runGrade(request: Request) {
         detailLevel: feedbackTier === "free" ? "diagnostic" : "detailed",
         language: resultLanguage,
       });
+      stage = "finalization";
       const finalEvaluation = {
         ...buildFinalEvaluation(structuredRubric, evaluation, mode, feedbackTier, resultLanguage),
         language: resultLanguage,
@@ -510,6 +546,7 @@ async function runGrade(request: Request) {
         title: assignmentTitle(assignmentText, assignmentFiles.map(file => file.name)),
       };
       if (!signedInEmail && trialReservation) {
+        stage = "trial_result_storage";
         const preview = await completeTrial(trialReservation, { rubric: structuredRubric, assignmentText, result: hiddenAiAlert ? { ...finalEvaluation, hidden_ai_alert: hiddenAiAlert } : finalEvaluation });
         evaluationSucceeded = true;
         return setTrialCookie(NextResponse.json(preview, { headers: { "x-request-id": context.requestId } }), trialReservation);
@@ -554,6 +591,7 @@ async function runGrade(request: Request) {
         return NextResponse.json(result, { headers });
       }
     } catch (error) {
+      diagnosticCode = gradingFailureCode(error, "EVALUATION_FAILED");
       await releaseReservation();
 
       if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
@@ -571,6 +609,7 @@ async function runGrade(request: Request) {
       return errorResponse(context, 500, "EVALUATION_FAILED", "We hit an unexpected error while grading. Please retry.", undefined, usageHeaders);
     }
   } catch (error) {
+    diagnosticCode = gradingFailureCode(error, error instanceof FileParseValidationError ? "FILE_PARSE_FAILED" : "INTERNAL_SERVER_ERROR");
     await releaseReservation();
     console.error("GRADE_REQUEST_FAILED", { requestId: context.requestId, stage, billingSource: usage?.billingSource, error });
     if (error instanceof Error && error.message === "UPSTASH_REDIS_CONFIG_MISSING") {
@@ -627,6 +666,10 @@ async function runGrade(request: Request) {
     if (trialReservation && !evaluationSucceeded) {
       try { await releaseTrial(trialReservation); }
       catch { console.error("TRIAL_RELEASE_FAILED", { requestId: context.requestId }); }
+    }
+    if (diagnosticInput && diagnosticCode && !evaluationSucceeded &&
+        ["file_parsing", "rubric_structuring", "ai_evaluation", "finalization", "trial_result_storage"].includes(stage)) {
+      queueGradingFailure({ ...diagnosticInput, code: diagnosticCode, stage: stage as GradingFailureStage });
     }
   }
 }

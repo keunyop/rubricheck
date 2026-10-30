@@ -2035,8 +2035,16 @@ export default function Home() {
       return t("We are temporarily verifying limits in safe mode. Please retry shortly.");
     }
 
-    if (message === "SERVICE_UNAVAILABLE") {
+    if (message === "SERVICE_UNAVAILABLE" || message === "RUBRIC_MODEL_UNAVAILABLE") {
       return t("Service is temporarily unavailable. Please try again shortly.");
+    }
+
+    if (message === "RUBRIC_STRUCTURE_FAILED") {
+      return t('We could not read the grading criteria. Paste the rubric text or upload a clearer copy. If you do not have a rubric, choose "{noRubric}".', { noRubric: t("No rubric") });
+    }
+
+    if (message === "EVALUATION_FAILED") {
+      return t("We could not finish grading this assignment. Please try again in a moment.");
     }
 
     if (message === "MISSING_INPUT") {
@@ -3130,6 +3138,7 @@ export default function Home() {
                 <span>{t("Strict Mode")}</span>
               </button> : null}
             </div>
+            <p className="text-xs leading-5 text-slate-500">{t("If grading fails, we may keep your submitted text and files for up to 7 days to diagnose and fix the error. Only authorized administrators can access them.")}</p>
             {isLoading ? (
               <div role="status" className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] text-slate-600 md:text-sm">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />

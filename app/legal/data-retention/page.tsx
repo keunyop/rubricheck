@@ -17,7 +17,7 @@ export default async function DataRetentionPolicyPage() {
       <section className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">{t("Data Retention Policy")}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-700"> {t("Last updated: October 22, 2026. This policy summarizes default retention windows for RubriCheck data categories.")} </p>
+        <p className="mt-3 text-sm leading-6 text-slate-700">{t("Last updated: October 29, 2026.")}</p>
         <p className="mt-3 text-sm leading-6 text-slate-700"> {t("Actual retention may vary by legal obligations, fraud prevention needs, and incident response requirements.")} </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Evaluation Data")}</h2>
@@ -33,6 +33,8 @@ export default async function DataRetentionPolicyPage() {
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Guest Previews")}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700"> {t("Guest preview inputs and results are stored for 24 hours so you can recover the summary and link the feedback to your account after email verification. Linked results follow the account history retention described above. A browser cookie and hashed browser usage marker last up to one year to enforce the one-preview limit. A hashed IP usage marker lasts 24 hours to limit repeat previews from the same network.")} </p>
 
+        <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Failed grading diagnostics")}</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-700">{t("When file extraction or grading fails, we may retain original inputs, uploaded files, extracted text, and error details for up to 7 days to troubleshoot the failure. Diagnostic records are encrypted, accessible only to authorized administrators, and automatically deleted after 7 days. They are not used for model training. Contact support to request earlier deletion.")}</p>
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Usage and Security Logs")}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700"> {t("Technical logs and rate-limit counters may be retained for operational security, reliability analysis, and abuse detection, then deleted or anonymized according to system policies.")} </p>
 

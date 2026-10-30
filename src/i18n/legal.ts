@@ -1,4 +1,14 @@
 export const legal: Record<string, readonly [string, string]> = {
+  "Last updated: October 29, 2026.": ["최종 수정: 2026년 10월 29일.", "Kemas kini terakhir: 29 Oktober 2026."],
+  "Failed grading diagnostics": ["채점 오류 진단", "Diagnostik kegagalan penilaian"],
+  "If grading fails, we may keep your submitted text and files for up to 7 days to diagnose and fix the error. Only authorized administrators can access them.": [
+    "채점 오류의 원인을 분석하고 수정하기 위해 실패한 요청의 입력 텍스트와 파일을 최대 7일간 보관할 수 있습니다. 권한이 있는 관리자만 접근할 수 있습니다.",
+    "Jika penilaian gagal, teks dan fail yang anda hantar mungkin disimpan sehingga 7 hari untuk mengenal pasti dan membetulkan ralat. Hanya pentadbir yang diberi kuasa boleh mengaksesnya.",
+  ],
+  "When file extraction or grading fails, we may retain original inputs, uploaded files, extracted text, and error details for up to 7 days to troubleshoot the failure. Diagnostic records are encrypted, accessible only to authorized administrators, and automatically deleted after 7 days. They are not used for model training. Contact support to request earlier deletion.": [
+    "파일 해석이나 채점이 실패한 경우 오류 해결을 위해 원본 입력, 업로드 파일, 추출된 텍스트와 오류 정보를 최대 7일간 보관할 수 있습니다. 진단 기록은 암호화되며 권한이 있는 관리자만 접근할 수 있고 7일 후 자동 삭제됩니다. 모델 학습에는 사용하지 않습니다. 조기 삭제를 원하시면 고객지원에 요청해 주세요.",
+    "Jika pengekstrakan fail atau penilaian gagal, input asal, fail yang dimuat naik, teks yang diekstrak dan butiran ralat mungkin disimpan sehingga 7 hari untuk menyelesaikan kegagalan itu. Rekod diagnostik disulitkan, hanya boleh diakses oleh pentadbir yang diberi kuasa dan dipadam secara automatik selepas 7 hari. Rekod ini tidak digunakan untuk latihan model. Hubungi sokongan untuk meminta pemadaman lebih awal.",
+  ],
   "Last updated: October 28, 2026. This Privacy Policy explains what information RubriCheck processes, why we process it, and the choices available to you.": ["최종 수정: 2026년 10월 28일. 이 방침은 RubriCheck가 처리하는 정보, 처리 목적, 이용자가 선택할 수 있는 사항을 설명합니다.", "Kemas kini terakhir: 28 Oktober 2026. Dasar ini menerangkan maklumat yang diproses oleh RubriCheck, tujuan pemprosesan dan pilihan anda."],
   "Privacy Policy": ["개인정보 처리방침", "Dasar Privasi"],
   "How RubriCheck collects, uses, and protects personal data.": ["RubriCheck의 개인정보 수집, 이용 및 보호 방법을 안내합니다.", "Cara RubriCheck mengumpul, menggunakan dan melindungi data peribadi."],

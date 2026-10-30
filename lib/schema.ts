@@ -67,7 +67,7 @@ export const RubricSchema = z.object({
       max_score: z.number().positive(),
       description: z.string(),
     }),
-  ).min(2),
+  ).min(1),
 });
 
 export const EvaluationSchema = z.object({

@@ -97,8 +97,9 @@ export async function structureRubric(rubricText: string, options: StructureRubr
   if (cacheRedis && cacheKey) {
     try {
       const cached = await cacheRedis.get(cacheKey);
-      if (typeof cached === "string") {
-        const parsedCached = RubricSchema.safeParse(JSON.parse(cached));
+      if (cached !== null && cached !== undefined) {
+        // Upstash deserializes JSON by default; older clients may return a string.
+        const parsedCached = RubricSchema.safeParse(typeof cached === "string" ? JSON.parse(cached) : cached);
         if (parsedCached.success) {
           incrementCounter(cacheRedis, "rubric_cache_hit");
           console.info("RUBRIC_STRUCT_CACHE", {
@@ -119,7 +120,7 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     } catch (cacheGetError) {
       console.warn("RUBRIC_STRUCT_CACHE_GET_FAILED", {
         requestId,
-        reason: cacheGetError instanceof Error ? cacheGetError.message : "unknown",
+        reason: cacheGetError instanceof SyntaxError ? "invalid_json" : "redis_error",
         keyPrefix: cacheKey.slice(0, 32),
       });
       incrementCounter(cacheRedis, "rubric_cache_miss");
@@ -142,34 +143,47 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     rubricText,
   ].join("\n");
 
+  let modelResult: unknown;
   try {
-    const modelResult = await (options.modelCaller ?? callStructureModel)(prompt);
-    const parsed = RubricSchema.safeParse(modelResult);
-
-    if (!parsed.success) {
-      throw new Error("RUBRIC_STRUCTURE_FAILED");
-    }
-
-    if (cacheRedis && cacheKey) {
-      try {
-        await cacheRedis.set(cacheKey, JSON.stringify(parsed.data), { ex: RUBRIC_CACHE_TTL_SECONDS });
-      } catch (cacheSetError) {
-        const reason = classifyCacheSetFailure(cacheSetError);
-        incrementCounter(cacheRedis, "rubric_cache_set_failed");
-        console.warn("RUBRIC_STRUCT_CACHE_SET_FAILED", {
-          requestId,
-          reason,
-          keyPrefix: cacheKey.slice(0, 32),
-        });
-        // Ignore cache write errors and return fresh model output.
-      }
-    }
-
-    return parsed.data;
+    modelResult = await (options.modelCaller ?? callStructureModel)(prompt);
   } catch (error) {
     if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
       throw error;
     }
+    const invalidJson = error instanceof Error && error.message === "MODEL_JSON_PARSE_FAILED";
+    const status = error && typeof error === "object" && "status" in error ? error.status : undefined;
+    // Never log provider error bodies: they can contain input text or credentials.
+    console.error("RUBRIC_MODEL_CALL_FAILED", {
+      requestId,
+      reason: invalidJson ? "invalid_json" : "provider_error",
+      ...(typeof status === "number" ? { upstreamStatus: status } : {}),
+    });
+    throw new Error("RUBRIC_MODEL_UNAVAILABLE");
+  }
+  const parsed = RubricSchema.safeParse(modelResult);
+
+  if (!parsed.success) {
+    console.error("RUBRIC_SCHEMA_VALIDATION_FAILED", {
+      requestId,
+      issues: parsed.error.issues.map(issue => ({ code: issue.code, path: issue.path.join(".") })),
+    });
     throw new Error("RUBRIC_STRUCTURE_FAILED");
   }
+
+  if (cacheRedis && cacheKey) {
+    try {
+      await cacheRedis.set(cacheKey, JSON.stringify(parsed.data), { ex: RUBRIC_CACHE_TTL_SECONDS });
+    } catch (cacheSetError) {
+      const reason = classifyCacheSetFailure(cacheSetError);
+      incrementCounter(cacheRedis, "rubric_cache_set_failed");
+      console.warn("RUBRIC_STRUCT_CACHE_SET_FAILED", {
+        requestId,
+        reason,
+        keyPrefix: cacheKey.slice(0, 32),
+      });
+      // Ignore cache write errors and return fresh model output.
+    }
+  }
+
+  return parsed.data;
 }

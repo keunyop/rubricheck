@@ -41,6 +41,7 @@ await context.route("**/api/**", async route => {
       json = { ok: true };
     }
   } else if (path === "/api/admin/dashboard") json = { summary: {}, subscribers: [] };
+  else if (path === "/api/admin/grading-failures") json = { items: [], nextOffset: null };
   else if (path === "/api/admin/feedback") {
     if (failInbox) { status = 503; json = { message: "Unable to load feedback. Please try again." }; }
     else {
