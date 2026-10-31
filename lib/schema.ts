@@ -61,6 +61,7 @@ const StrictEvaluationCriterionSchema = EvaluationCriterionSchema.extend({
 });
 
 export const RubricSchema = z.object({
+  total_score: z.number().positive().optional(),
   criteria: z.array(
     z.object({
       name: z.string(),
@@ -68,9 +69,26 @@ export const RubricSchema = z.object({
       description: z.string(),
     }),
   ).min(1),
+  adjustments: z.array(z.object({
+    name: z.string().trim().min(1),
+    kind: z.enum(["deduction", "bonus"]),
+    max_points: z.number().positive(),
+    description: z.string(),
+  })).optional(),
+}).refine(rubric => rubric.total_score === undefined || Math.abs(rubric.criteria.reduce((sum, row) => sum + row.max_score, 0) - rubric.total_score) < 0.000001, {
+  message: "base criterion weights must sum to total_score, excluding deductions and bonuses",
+  path: ["total_score"],
 });
 
+const scoreAdjustmentsSchema = z.array(z.object({
+  name: z.string().trim().min(1),
+  points: z.number().int().nonnegative(),
+  rationale: rationaleLineSchema,
+  evidence: evidenceArraySchema.optional(),
+})).optional();
+
 export const EvaluationSchema = z.object({
+  score_adjustments: scoreAdjustmentsSchema,
   summary: z.string().max(280).refine(oneToTwoSentences, {
     message: "summary must be 1-2 sentences",
   }),
@@ -81,6 +99,7 @@ export const EvaluationSchema = z.object({
 });
 
 export const StrictEvaluationSchema = z.object({
+  score_adjustments: scoreAdjustmentsSchema,
   summary: z.string().max(280).refine(oneToTwoSentences, {
     message: "summary must be 1-2 sentences",
   }),

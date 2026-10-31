@@ -108,6 +108,7 @@ type GradeResult = {
   access_tier: AccountFeatureTier;
   overall_range: [number, number];
   score_calculation?: FinalEvaluation["score_calculation"];
+  score_adjustments?: FinalEvaluation["score_adjustments"];
   grading_basis?: FinalEvaluation["grading_basis"];
   summary: string;
   top_improvements: string[];
@@ -3564,6 +3565,20 @@ export default function Home() {
                   <p className="mt-2 text-xs font-medium text-emerald-700 md:text-sm">{proRestoreNotice}</p>
                 ) : null}
               </div>
+            ) : null}
+
+            {displayedResult.score_adjustments?.length ? (
+              <section className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4" aria-label={t("Rubric point adjustments")}>
+                <h3 className="font-semibold text-slate-900">{t("Rubric point adjustments")}</h3>
+                <ul className="mt-3 space-y-3 text-sm">
+                  {displayedResult.score_adjustments.map((adjustment, index) => (
+                    <li key={`${index}-${adjustment.name}`}>
+                      <p className="flex justify-between gap-4 font-medium"><span>{adjustment.name}</span><span className="shrink-0">{adjustment.points === 0 ? "0" : `${adjustment.kind === "deduction" ? "−" : "+"}${adjustment.points}`}</span></p>
+                      <p className="mt-1 text-slate-600">{adjustment.rationale}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ) : null}
 
             <div className="mt-6 hidden overflow-x-auto rounded-xl border border-slate-200 md:block">

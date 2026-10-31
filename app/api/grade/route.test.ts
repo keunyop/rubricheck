@@ -3,6 +3,7 @@ import { mock, test } from "node:test";
 import { createCreditSessionToken, CREDIT_SESSION_COOKIE_NAME } from "../../../src/lib/creditSession.ts";
 import { gradingFailureCode } from "../../../src/lib/gradingFailureCapture.ts";
 import type { GradingFailureInput } from "../../../src/lib/gradingFailures.ts";
+import { makePdf } from "../../../lib/testFixtures/pdf.ts";
 
 const capturedFailures: GradingFailureInput[] = [];
 mock.module("../../../src/lib/gradingFailureCapture.ts", { namedExports: {
@@ -10,8 +11,9 @@ mock.module("../../../src/lib/gradingFailureCapture.ts", { namedExports: {
   queueGradingFailure: (input: GradingFailureInput) => { capturedFailures.push(input); },
 } });
 
-let failure: "rubric" | "missingCriteria" | "rubricProvider" | "rubricTimeout" | "evaluation" | "timeout" | "finalization" | null = null;
+let failure: "rubric" | "missingCriteria" | "rubricProvider" | "rubricTimeout" | "evaluation" | "timeout" | "finalization" | "negativeOnce" | "negativeAlways" | null = null;
 let evaluationCalls = 0;
+let negativeCalls = 0;
 const rubric = { criteria: [{ name: "Thesis", max_score: 10, description: "Clarity" }] };
 const evaluation = {
   summary: "Clear argument", top_improvements: ["Add evidence", "Add detail", "Revise conclusion"],
@@ -26,13 +28,13 @@ mock.module("../../../lib/openai.ts", { namedExports: {
     if (failure === "missingCriteria") return { criteria: [] };
     return failure === "rubric" ? { criteria: [{ ...rubric.criteria[0], max_score: 0 }] } : rubric;
   },
-  callEvaluationModel: async () => evaluation,
-} });
-mock.module("../../../lib/evaluation.ts", { namedExports: {
-  evaluateAssignment: async () => {
+  callEvaluationModel: async () => {
     evaluationCalls++;
     if (failure === "timeout") throw new Error("OPENAI_TIMEOUT");
     if (failure === "evaluation") throw new Error("EVALUATION_FAILED");
+    if (failure === "negativeAlways" || (failure === "negativeOnce" && negativeCalls++ === 0)) {
+      return { ...evaluation, criteria_scores: [{ ...evaluation.criteria_scores[0], score: -5 }] };
+    }
     return failure === "finalization" ? { ...evaluation, criteria_scores: [] } : evaluation;
   },
 } });
@@ -117,6 +119,28 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(payload.criteria.length, 1);
       assert.equal(capturedFailures.length, 0);
       assert.equal(payload.score_calculation.mode_adjustment, 0);
+    });
+    await t.test("invalid model output recovers within one free or paid reservation; repeated failure refunds", async () => {
+      for (const paid of [false, true]) {
+        reserveStatus = paid ? "exhausted" : "reserved"; credits = paid ? 5 : 0;
+        for (const persistent of [false, true]) {
+          calls.length = 0; capturedFailures.length = 0; negativeCalls = 0;
+          failure = persistent ? "negativeAlways" : "negativeOnce";
+          const before = evaluationCalls;
+          const response = await POST(request());
+          assert.equal(response.status, persistent ? 500 : 200);
+          assert.equal(evaluationCalls - before, 2);
+          const reservationName = paid ? "rubricheck_reserve_one_credit" : "rubricheck_reserve_free_evaluate";
+          assert.equal(calls.filter(c => c.name === reservationName).length, 1);
+          if (paid) assert.equal(calls.filter(c => c.name === "rubricheck_refund_credit_reservation").length, persistent ? 1 : 0);
+          else {
+            assert.equal(settlements().length, 1);
+            assert.equal(settlements()[0].body.p_succeeded, !persistent);
+          }
+          assert.equal(capturedFailures.length, persistent ? 1 : 0);
+        }
+      }
+      reserveStatus = "reserved"; credits = 0; failure = null;
     });
     await t.test("no criteria gives input guidance, releases free/paid reservations, and permits a corrected retry", async () => {
       for (const paid of [false, true]) {
@@ -239,6 +263,32 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
         assert.equal(capturedFailures.length, 0);
       }
       credits = 0;
+    });
+    await t.test("scanned PDF uses OCR before billing and preserves service error classification", async () => {
+      failure = null; reserveStatus = "reserved"; credits = 0;
+      process.env.GOOGLE_CLOUD_VISION_API_KEY = "test-only";
+      const pdfRequest = () => {
+        const form = new FormData();
+        form.set("rubric", makePdf(["", ""]));
+        form.set("assignmentText", "A clear argument.");
+        return new Request(request().url, { method: "POST", headers: { cookie: request().headers.get("cookie")! }, body: form });
+      };
+      calls.length = 0; capturedFailures.length = 0;
+      visionStatus = 403; visionResponse = { error: { details: [{ reason: "API_KEY_SERVICE_BLOCKED" }] } };
+      const unavailable = await POST(pdfRequest());
+      assert.equal(unavailable.status, 503);
+      assert.equal((await unavailable.json()).code, "OCR_UNAVAILABLE");
+      assert.ok(!calls.some(c => /reserve|settle|refund/.test(c.name)));
+      assert.equal(capturedFailures[0].stage, "file_parsing");
+      calls.length = 0; capturedFailures.length = 0;
+      visionStatus = 200;
+      visionResponse = { responses: [{ responses: [1, 2].map(pageNumber => ({ context: { pageNumber }, fullTextAnnotation: { text: "Synthetic rubric criteria and descriptions. ".repeat(8) } })) }] };
+      const response = await POST(pdfRequest());
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).criteria.length, 1);
+      assert.equal(settlements().length, 1);
+      assert.equal(settlements()[0].body.p_succeeded, true);
+      assert.equal(capturedFailures.length, 0);
     });
     await t.test("diagnostics preserve exact text and exclude validation and quota rejections", async () => {
       capturedFailures.length = 0; failure = "rubric";

@@ -139,6 +139,8 @@ function parseModelJsonFromResponse(response: unknown): unknown {
 
 type JsonModelOptions = {
   systemInstruction?: string;
+  // Re-evaluation shares the first attempt's deadline instead of resetting it.
+  startedAt?: number;
 };
 
 const DEFAULT_JSON_SYSTEM_INSTRUCTION =
@@ -170,7 +172,8 @@ async function callJsonModel(
     throw new Error(`${modelEnvKey}_MISSING`);
   }
 
-  const timeoutMs = resolveOpenAiTimeoutMs();
+  const timeoutMs = resolveOpenAiTimeoutMs() - (options?.startedAt === undefined ? 0 : Math.max(0, Date.now() - options.startedAt));
+  if (timeoutMs <= 0) throw new Error("OPENAI_TIMEOUT");
   const abortController = new AbortController();
   const timeoutHandle = setTimeout(() => {
     abortController.abort("OPENAI_TIMEOUT");

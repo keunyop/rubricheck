@@ -30,18 +30,42 @@ export type FinalEvaluation = {
   access_tier: FeedbackAccessTier;
   overall_range: [number, number];
   score_calculation?: {
-    version: "rubric-sum-v2";
+    version: "rubric-sum-v2" | "rubric-sum-v3";
     range_kind: "uncalibrated_estimate";
     grading_mode: GradingMode;
     rubric_total: number;
     criteria_range_sum: [number, number];
     mode_adjustment: 0;
+    rubric_adjustment?: number;
   };
   summary: string;
   top_improvements: string[];
   criteria: FinalCriterion[];
+  score_adjustments?: FinalScoreAdjustment[];
   hidden_ai_alert?: HiddenAiDocumentAlert;
 };
+
+type FinalScoreAdjustment = {
+  name: string;
+  kind: "deduction" | "bonus";
+  points: number;
+  rationale: string;
+  evidence?: string[];
+};
+
+export function buildScoreAdjustments(rubric: Rubric, evaluation: Evaluation): FinalScoreAdjustment[] {
+  const rules = rubric.adjustments ?? [];
+  const scores = evaluation.score_adjustments ?? [];
+  if (rules.length !== scores.length) throw new Error("EVALUATION_FAILED");
+  const byName = new Map(scores.map(score => [normalizeCriterionName(score.name), score]));
+  const names = new Set(rules.map(rule => normalizeCriterionName(rule.name)));
+  if (byName.size !== scores.length || names.size !== rules.length || names.has("")) throw new Error("EVALUATION_FAILED");
+  return rules.map(rule => {
+    const score = byName.get(normalizeCriterionName(rule.name));
+    if (!score || !Number.isInteger(score.points) || score.points < 0 || score.points > rule.max_points) throw new Error("EVALUATION_FAILED");
+    return { name: rule.name, kind: rule.kind, points: score.points, rationale: score.rationale, ...(score.evidence ? { evidence: score.evidence } : {}) };
+  });
+}
 
 type EvaluationCriterionScore = Evaluation["criteria_scores"][number];
 
@@ -116,12 +140,13 @@ function clampCriterionRange(
 function scaleOverallRawRange(
   criteria: Array<{ estimated_range: [number, number] }>,
   rubricTotal: number,
+  adjustment = 0,
 ): [number, number] {
   const overallRawLow = criteria.reduce((sum, criterion) => sum + criterion.estimated_range[0], 0);
   const overallRawHigh = criteria.reduce((sum, criterion) => sum + criterion.estimated_range[1], 0);
 
-  const scaledLow = clamp(Math.round((overallRawLow / rubricTotal) * 100), 0, 100);
-  const scaledHigh = clamp(Math.round((overallRawHigh / rubricTotal) * 100), 0, 100);
+  const scaledLow = clamp(Math.round(((overallRawLow + adjustment) / rubricTotal) * 100), 0, 100);
+  const scaledHigh = clamp(Math.round(((overallRawHigh + adjustment) / rubricTotal) * 100), 0, 100);
 
   return [scaledLow, scaledHigh];
 }
@@ -301,7 +326,9 @@ export function buildFinalEvaluation(
   }
 
   // Model output ranges are not empirically calibrated confidence intervals.
-  const overallRange = scaleOverallRawRange(criteria, rubricTotal);
+  const adjustments = buildScoreAdjustments(rubric, evaluation);
+  const adjustmentTotal = adjustments.reduce((sum, rule) => sum + (rule.kind === "deduction" ? -rule.points : rule.points), 0);
+  const overallRange = scaleOverallRawRange(criteria, rubricTotal, adjustmentTotal);
 
   if (evaluation.top_improvements.length < 3) {
     throw new Error("EVALUATION_FAILED");
@@ -318,7 +345,7 @@ export function buildFinalEvaluation(
     access_tier: tier,
     overall_range: overallRange,
     score_calculation: {
-      version: "rubric-sum-v2",
+      version: adjustments.length ? "rubric-sum-v3" : "rubric-sum-v2",
       range_kind: "uncalibrated_estimate",
       grading_mode: mode,
       rubric_total: rubricTotal,
@@ -327,10 +354,12 @@ export function buildFinalEvaluation(
         criteria.reduce((sum, criterion) => sum + criterion.estimated_range[1], 0),
       ],
       mode_adjustment: 0,
+      ...(adjustments.length ? { rubric_adjustment: adjustmentTotal } : {}),
     },
     summary: evaluation.summary,
     top_improvements: topImprovements,
     criteria,
+    ...(adjustments.length ? { score_adjustments: adjustments } : {}),
   };
 }
 

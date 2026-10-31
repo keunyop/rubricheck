@@ -9,12 +9,14 @@ let failLibrary = false, failEvaluation = false;
 let selected: Rubric | undefined;
 let selectedLanguage: string | undefined;
 let savedLanguage = "ko";
+let structureVersion: string | undefined = "v2";
 const settlements: boolean[] = [];
 const custom = { criteria: [{ name: "Custom focus", max_score: 60, description: "Focus" }, { name: "Sources", max_score: 40, description: "Sources" }] };
 const savedId = "a".repeat(64);
 mock.module("../../../src/lib/creditSession.ts", { namedExports: { getCreditEmailFromCookie: () => account } });
 mock.module("../../../src/lib/languagePreferences.ts", { namedExports: { getLanguagePreferences: async () => ({ siteLanguage: "en", resultLanguage: savedLanguage }) } });
 mock.module("../../../lib/rubricStructuring.ts", { namedExports: {
+  RUBRIC_CACHE_VERSION: "v2",
   hashNormalizedEmail: () => "hash", structureRubric: async () => { structures++; return custom; },
 } });
 mock.module("../../../lib/evaluation.ts", { namedExports: {
@@ -30,10 +32,10 @@ mock.module("../../../src/lib/rubricLibrary.ts", { namedExports: {
   validRubricId: (id: unknown) => typeof id === "string" && /^[a-f0-9]{64}$/.test(id),
   getSavedRubric: async (email: string, id: string) => {
     if (failLibrary) throw Error("offline");
-    return email === "student@example.com" && id === savedId ? { id, text: "Custom rubric", rubric: custom, files: [] } : null;
+    return email === "student@example.com" && id === savedId ? { id, text: "Custom rubric", rubric: custom, files: [], structureVersion } : null;
   },
   saveRubric: async () => { saves++; if (failLibrary) throw Error("offline"); return savedId; },
-  editSavedRubric: async () => { touches++; return !failLibrary; },
+  editSavedRubric: async (_email: string, _id: string, _action: string, _name: string, rubric: Rubric) => { touches++; assert.deepEqual(rubric, custom); structureVersion = "v2"; return !failLibrary; },
 } });
 mock.module("../../../src/lib/credits.ts", { namedExports: {
   getCreditBalanceForRequest: async () => 0, resolveCreditStorageTarget: async () => null,
@@ -112,6 +114,16 @@ test("rubric sources use existing evaluation, access, and billing paths", async 
     assert.equal((await POST(request({ rubricSource: "saved", rubricId: savedId }))).status, 503);
     failLibrary = false;
     assert.equal(reserves, before);
+  });
+  await t.test("older saved structures are rebuilt once, then reuse the corrected structure", async () => {
+    structureVersion = undefined;
+    const before = structures;
+    assert.equal((await POST(request({ rubricSource: "saved", rubricId: savedId }))).status, 200);
+    assert.equal(structures, before + 1);
+    assert.equal(structureVersion, "v2");
+    assert.equal((await POST(request({ rubricSource: "saved", rubricId: savedId }))).status, 200);
+    assert.equal(structures, before + 1);
+    structures = before;
   });
   await t.test("ordinary grading succeeds even if library persistence fails", async () => {
     failLibrary = true;

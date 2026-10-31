@@ -15,10 +15,15 @@ const base = process.env.TEST_BASE_URL ?? "http://127.0.0.1:3100";
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname), "Use a local server");
 const browser = await chromium.launch({ headless: true });
 const result = {
-  title: "Evaluation Summary", access_tier: "free", overall_range: [70, 85],
+  title: "Evaluation Summary", access_tier: "free", overall_range: [68, 88],
+  score_calculation: { version: "rubric-sum-v3", range_kind: "uncalibrated_estimate", grading_mode: "standard", rubric_total: 100, criteria_range_sum: [70, 90], mode_adjustment: 0, rubric_adjustment: -2 },
+  score_adjustments: [
+    { name: "Missing citation", kind: "deduction", points: 5, rationale: "The source has no citation." },
+    { name: "Community paragraph", kind: "bonus", points: 3, rationale: "The separate paragraph meets the bonus rule." },
+  ],
   summary: "A clear argument that would benefit from supporting evidence.",
   top_improvements: ["Add evidence to support the argument."],
-  criteria: [{ name: "Overall quality", max_score: 100, score: 78, estimated_range: [70, 85],
+  criteria: [{ name: "Overall quality", max_score: 100, score: 80, estimated_range: [70, 90],
     feedback: "Add evidence to support the argument.", detailed_breakdown_locked: true }],
 };
 
@@ -85,6 +90,14 @@ try {
     assert.equal(attempts.at(-1).key, attempts[0].key);
     assert.deepEqual(pageErrors, []);
     console.log(`PASS ${locale}: retry displays a single-criterion grading result`);
+    const adjustments = page.getByRole("region", { name: locale === "en" ? "Rubric point adjustments" : "루브릭 감점·가산점", exact: true });
+    await adjustments.waitFor();
+    assert.ok((await adjustments.innerText()).includes("−5"));
+    assert.ok((await adjustments.innerText()).includes("+3"));
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.equal(await adjustments.evaluate(element => element.scrollWidth <= element.clientWidth), true);
+    await adjustments.screenshot({ path: `.next/grading-adjustments-${locale}.png` });
+    console.log(`PASS ${locale}: separate deductions and bonuses render on desktop and mobile`);
     await context.close();
   }
 } finally {

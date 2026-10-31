@@ -4,8 +4,9 @@ import { Redis } from "@upstash/redis";
 
 import { callStructureModel } from "./openai";
 import { RubricSchema, type Rubric } from "./schema";
+import { RUBRIC_CACHE_VERSION } from "./rubricVersion";
 
-export const RUBRIC_CACHE_VERSION = "v1";
+export { RUBRIC_CACHE_VERSION } from "./rubricVersion";
 export const RUBRIC_CACHE_TTL_SECONDS = 604800;
 let cacheRedisClient: RubricCacheRedisClient | null | undefined;
 
@@ -131,9 +132,13 @@ export async function structureRubric(rubricText: string, options: StructureRubr
   const prompt = [
     "Extract rubric criteria from the text.",
     "Return JSON only, matching this schema exactly:",
-    '{ "criteria": [{ "name": "string", "max_score": number, "description": "string" }] }',
+    '{ "total_score": number, "criteria": [{ "name": "string", "max_score": number, "description": "string" }], "adjustments": [{ "name": "string", "kind": "deduction" | "bonus", "max_points": number, "description": "string" }] }',
     "Rules:",
     "- Include all identifiable criteria.",
+    "- If an explicit points table is present, criteria must contain only its base scoring categories with their exact point weights. Their sum must equal the stated base total. Incorporate supporting assignment requirements into those descriptions, not extra point-bearing categories.",
+    "- total_score is the stated base total (for example 100), excluding bonus and penalty points. If no total is stated, use the sum of base criterion weights. Check the sum before returning.",
+    "- Automatic deductions and optional bonus points are NOT base criteria and must never increase the base rubric total. Put them in adjustments, with a positive max_points magnitude and kind deduction or bonus. Include each rule once, even if repeated in the source.",
+    "- Preserve each adjustment condition and any proof requirements in its description. Plagiarism or AI-use penalties requiring evidence must keep that requirement. Use adjustments: [] if there are no explicit point adjustments.",
     "- Assessment instructions and assignment requirements are valid criteria, even without points or a scoring table.",
     '- If the text contains no assessment criteria or requirements (for example, only a student essay), return { "criteria": [] }.',
     "- Do not invent criteria from an essay's topic, headings, claims, or citations.",
@@ -178,6 +183,8 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     throw new Error("RUBRIC_STRUCTURE_FAILED");
   }
 
+  // Redis Lua cjson turns empty arrays into objects on a library metadata edit.
+  if (parsed.data.adjustments?.length === 0) delete parsed.data.adjustments;
   if (cacheRedis && cacheKey) {
     try {
       await cacheRedis.set(cacheKey, JSON.stringify(parsed.data), { ex: RUBRIC_CACHE_TTL_SECONDS });

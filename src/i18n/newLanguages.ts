@@ -1,5 +1,12 @@
 // Localized product UI messages, in Hindi, Urdu, Vietnamese, and Simplified Chinese.
 export const newLanguages: Record<string, readonly [string, string, string, string]> = {
+  "Rubric point adjustments": ["रूब्रिक अंक समायोजन", "روبرک کے نمبروں میں ردوبدل", "Điều chỉnh điểm theo tiêu chí", "评分规则加减分"],
+  "Criterion range totals {low}-{high}, plus rubric adjustments {adjustment}, divided by the base rubric total {total} x 100, give {range} / 100 (bounded to 0-100). Bonus and deduction rules do not increase the base total.": [
+    "मानदंडों के सीमा योग {low}-{high} में रूब्रिक समायोजन {adjustment} जोड़कर, मूल कुल {total} से भाग देकर 100 से गुणा करने पर {range} / 100 मिलता है (0-100 तक सीमित)। बोनस और कटौती मूल कुल नहीं बढ़ाते।",
+    "معیار کی حدود کا مجموعہ {low}-{high}، روبرک کی تبدیلی {adjustment} شامل کرکے، بنیادی کل {total} سے تقسیم اور 100 سے ضرب دینے پر {range} / 100 بنتا ہے (0-100 تک محدود)۔ بونس اور کٹوتی بنیادی کل نہیں بڑھاتے۔",
+    "Tổng khoảng điểm tiêu chí {low}-{high}, cộng điều chỉnh {adjustment}, chia tổng điểm cơ bản {total} x 100, cho {range} / 100 (giới hạn 0-100). Điểm thưởng và điểm trừ không làm tăng tổng điểm cơ bản.",
+    "各项分数区间之和 {low}-{high}，加上规则调整 {adjustment}，除以基础总分 {total} 并乘以 100，得到 {range} / 100（限制在 0-100）。加分和扣分规则不会增加基础总分。",
+  ],
   'No grading criteria were found in the rubric input. Check whether your rubric and assignment are swapped. Use the assessment instructions as your rubric, or choose "{noRubric}".': [
     'रूब्रिक के इनपुट में मूल्यांकन मानदंड नहीं मिले। जाँचें कि रूब्रिक और असाइनमेंट आपस में बदल तो नहीं गए हैं। मूल्यांकन निर्देशों को रूब्रिक के रूप में इस्तेमाल करें, या "{noRubric}" चुनें।',
     'روبرک کے اندراج میں جانچ کے معیار نہیں ملے۔ دیکھیں کہ روبرک اور اسائنمنٹ کی جگہیں آپس میں بدل تو نہیں گئیں۔ جانچ کی ہدایات کو روبرک کے طور پر استعمال کریں، یا "{noRubric}" منتخب کریں۔',

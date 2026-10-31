@@ -9,6 +9,7 @@ const original: FinalEvaluation & { evaluation_id: string } = {
   criteria: [{ name: "Argument", max_score: 100, score: 75, estimated_range: [70, 80],
     rationale: "Rationale", feedback: "Feedback", evidence: ["An exact source quote."],
     detailed_breakdown: "Details", example_revisions: ["Example one", "Example two"] }],
+  score_adjustments: [{ name: "Missing citation", kind: "deduction", points: 5, rationale: "No citation was included.", evidence: ["Exact evidence"] }],
 };
 test("translation replaces only feedback; scoring, evidence, identity and original stay intact", () => {
   const snapshot = structuredClone(original);
@@ -21,6 +22,8 @@ test("translation replaces only feedback; scoring, evidence, identity and origin
   assert.equal(result.title, original.title);
   assert.equal(result.access_tier, original.access_tier);
   assert.deepEqual(result.overall_range, original.overall_range);
+  for (const key of ["name", "kind", "points", "evidence"] as const)
+    assert.deepEqual(result.score_adjustments![0][key], original.score_adjustments![0][key]);
   for (const key of ["name", "score", "max_score", "estimated_range", "evidence"] as const)
     assert.deepEqual(result.criteria[0][key], original.criteria[0][key]);
 });

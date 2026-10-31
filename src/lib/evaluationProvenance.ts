@@ -9,7 +9,8 @@ const hash = (value: string) => createHash("sha256").update(value).digest("hex")
 // No documents or model calls are added to permanent storage.
 export function evaluationProvenance(rubric: Rubric, assignmentText: string, mode: GradingMode, fullDetail: boolean): EvaluationProvenance {
   const template = buildEvaluationPrompt(
-    { criteria: [{ name: "Provenance criterion", max_score: 100, description: "Provenance descriptor" }] },
+    { criteria: [{ name: "Provenance criterion", max_score: 100, description: "Provenance descriptor" }],
+      ...(rubric.adjustments?.length ? { adjustments: [{ name: "Provenance adjustment", kind: "deduction" as const, max_points: 5, description: "Provenance rule" }] } : {}) },
     "Provenance assignment", mode, fullDetail ? "detailed" : "diagnostic",
   );
   return {

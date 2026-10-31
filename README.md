@@ -111,6 +111,11 @@ Keys and provider error messages are excluded. Check deployment configuration wh
 the reason indicates an invalid key; asking the student to upload another image
 will not resolve an authentication failure. See [OCR incident verification](doc/verification/ocr-api-key-failures.md).
 
+Scanned PDF pages also use the existing Google Vision key. Native text is retained,
+and OCR requests explicitly cover the remaining pages in batches of at most five.
+Rubric deductions and bonuses are calculated separately from the base total and
+shown with their reasons. See [October 30 grading repair verification](doc/verification/grading-failures-2026-10-30.md).
+
 ## Feedback replies
 
 In `/admin`, open **Feedback inbox**, choose **Reply**, review the recipient,

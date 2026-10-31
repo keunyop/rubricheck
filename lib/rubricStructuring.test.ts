@@ -80,7 +80,7 @@ test("same user + same rubric hits cache and skips structuring model", async () 
   assert.equal(redis.getCalls.length, 2);
   assert.equal(redis.setCalls.length, 1);
   assert.equal(redis.setCalls[0]?.options?.ex, 604800);
-  assert.ok(redis.getCalls[0]?.startsWith("rubric_struct_cache:v1:customer:cus_123:"));
+  assert.ok(redis.getCalls[0]?.startsWith("rubric_struct_cache:v2:customer:cus_123:"));
 });
 
 test("different users + same rubric do not share cache", async () => {
@@ -153,7 +153,7 @@ test("email hashing uses normalized email and key never stores raw email", async
 
 test("ttl and cache version constants match policy", () => {
   assert.equal(RUBRIC_CACHE_TTL_SECONDS, 604800);
-  assert.equal(RUBRIC_CACHE_VERSION, "v1");
+  assert.equal(RUBRIC_CACHE_VERSION, "v2");
 });
 
 const holisticRubric = {

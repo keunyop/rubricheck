@@ -14,6 +14,7 @@ export function resultTextFields(result: TranslatableResult): string[] {
       if (criterion.detailed_breakdown) fields.push(criterion.detailed_breakdown);
       if (criterion.example_revisions) fields.push(...criterion.example_revisions);
     }
+    for (const adjustment of result.score_adjustments ?? []) fields.push(adjustment.rationale);
   }
   return fields;
 }
@@ -33,5 +34,6 @@ export function applyResultTranslation<T extends TranslatableResult>(result: T, 
       ...(criterion.detailed_breakdown ? { detailed_breakdown: translations[index++] } : {}),
       ...(criterion.example_revisions ? { example_revisions: criterion.example_revisions.map(() => translations[index++]) } : {}),
     })),
+    ...(result.score_adjustments ? { score_adjustments: result.score_adjustments.map(adjustment => ({ ...adjustment, rationale: translations[index++] })) } : {}),
   };
 }

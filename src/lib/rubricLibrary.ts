@@ -1,9 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import { RubricSchema, type Rubric } from "../../lib/schema";
+import { RUBRIC_CACHE_VERSION } from "../../lib/rubricVersion";
 import { ownerHash, recoveryRedis } from "./evaluationRecovery";
 import { RUBRIC_LIBRARY_LIMIT, type SavedRubric } from "./rubricLibraryTypes";
 
-type RubricRecord = { text: string; rubric: Rubric; chunks: number[] };
+type RubricRecord = { text: string; rubric: Rubric; chunks: number[]; structureVersion?: string };
 const CHUNK_BYTES = 192 * 1024;
 export const validRubricId = (id: unknown): id is string => typeof id === "string" && /^[a-f0-9]{64}$/.test(id);
 export const rubricLibraryKey = (email: string) => `rubricheck:rubrics:{${ownerHash(email)}}`;
@@ -26,7 +27,7 @@ export async function getSavedRubric(email: string, id: string) {
   return { ...item, files: Array.isArray(item.files) ? item.files : [], ...record };
 }
 
-export async function editSavedRubric(email: string, id: string, action: "touch" | "rename" | "delete", name = "") {
+export async function editSavedRubric(email: string, id: string, action: "touch" | "rename" | "delete", name = "", rubric?: Rubric) {
   if (!validRubricId(id)) return false;
   return Boolean(await recoveryRedis().eval(`
     local raw = redis.call('HGET', KEYS[1], ARGV[1])
@@ -35,10 +36,17 @@ export async function editSavedRubric(email: string, id: string, action: "touch"
       redis.call('HDEL', KEYS[1], ARGV[1]); redis.call('DEL', KEYS[2]); return 1
     end
     local item = cjson.decode(raw)
+    if ARGV[2] == 'touch' and ARGV[5] ~= '' then
+      local stored = redis.call('HGET', KEYS[2], 'record')
+      if not stored then return 0 end
+      local record = cjson.decode(stored)
+      record.rubric = cjson.decode(ARGV[5]); record.structureVersion = ARGV[6]
+      redis.call('HSET', KEYS[2], 'record', cjson.encode(record))
+    end
     if ARGV[2] == 'rename' then item.name = ARGV[3] else item.lastUsedAt = tonumber(ARGV[4]) end
     redis.call('HSET', KEYS[1], ARGV[1], cjson.encode(item))
     return 1
-  `, [rubricLibraryKey(email), dataKey(email, id)], [id, action, name, Date.now()]));
+  `, [rubricLibraryKey(email), dataKey(email, id)], [id, action, name, Date.now(), rubric ? JSON.stringify(rubric) : "", RUBRIC_CACHE_VERSION]));
 }
 
 export async function saveRubric(email: string, text: string, rubric: Rubric, files: File[]) {
@@ -46,14 +54,14 @@ export async function saveRubric(email: string, text: string, rubric: Rubric, fi
   const hash = createHash("sha256").update(JSON.stringify([text, files.map(file => [file.name, file.type, file.size])]));
   for (const buffer of buffers) hash.update(buffer);
   const id = hash.digest("hex");
-  if (await editSavedRubric(email, id, "touch")) return id;
+  if (await editSavedRubric(email, id, "touch", "", rubric)) return id;
   const item: SavedRubric = {
     id, name: (files[0]?.name || text.trim().split(/\r?\n/)[0] || "Untitled rubric").slice(0, 80),
     lastUsedAt: Date.now(), files: files.map(file => ({ name: file.name, size: file.size, type: file.type })),
   };
   const redis = recoveryRedis();
   const stagingKey = `${rubricLibraryKey(email)}:pending:${randomUUID()}`;
-  const record: RubricRecord = { text, rubric, chunks: buffers.map(buffer => Math.ceil(buffer.length / CHUNK_BYTES)) };
+  const record: RubricRecord = { text, rubric, chunks: buffers.map(buffer => Math.ceil(buffer.length / CHUNK_BYTES)), structureVersion: RUBRIC_CACHE_VERSION };
   // Incomplete uploads expire; only fully written records become visible.
   await redis.eval("redis.call('HSET',KEYS[1],'record',ARGV[1]); redis.call('EXPIRE',KEYS[1],3600); return 1", [stagingKey], [JSON.stringify(record)]);
   try {

@@ -20,6 +20,7 @@ import { buildFinalEvaluation, type FeedbackAccessTier } from "../../../lib/grad
 import { detectHiddenAiAlert } from "../../../lib/hiddenAiAlert";
 import { FileParseValidationError, parseFile } from "../../../lib/parse";
 import { hashNormalizedEmail, structureRubric } from "../../../lib/rubricStructuring";
+import { RUBRIC_CACHE_VERSION } from "../../../lib/rubricVersion";
 import { GradingModeSchema, type GradingMode } from "../../../lib/schema";
 import { createRequestContext, errorResponse } from "../../../src/lib/apiError";
 import { canUseStrictMode, resolveAccountFeatureTier } from "../../../src/lib/accountFeatureAccess";
@@ -508,7 +509,7 @@ async function runGrade(request: Request) {
     stage = "rubric_structuring";
     let structuredRubric;
     try {
-      structuredRubric = rubricSource === "general" ? generalRubric(assignmentInstructions) : savedRubric?.rubric ?? await structureRubric(rubricText, {
+      structuredRubric = rubricSource === "general" ? generalRubric(assignmentInstructions) : savedRubric?.structureVersion === RUBRIC_CACHE_VERSION ? savedRubric.rubric : await structureRubric(rubricText, {
         cacheIdentity,
         requestId: context.requestId,
       });
@@ -544,6 +545,7 @@ async function runGrade(request: Request) {
     try {
       stage = "ai_evaluation";
       const evaluation = await evaluateAssignment(structuredRubric, assignmentText, mode, {
+        requestId: context.requestId,
         detailLevel: feedbackTier === "free" ? "diagnostic" : "detailed",
         language: resultLanguage,
       });
@@ -580,7 +582,7 @@ async function runGrade(request: Request) {
       if (rubricSource !== "general") {
         try {
           if (savedRubric) {
-            if (!await editSavedRubric(signedInEmail, savedRubric.id, "touch")) throw new Error("RUBRIC_NOT_FOUND");
+            if (!await editSavedRubric(signedInEmail, savedRubric.id, "touch", "", structuredRubric)) throw new Error("RUBRIC_NOT_FOUND");
           } else {
             await saveRubric(signedInEmail, rubricText, structuredRubric, rubricTextInput ? [] : rubricFiles);
           }

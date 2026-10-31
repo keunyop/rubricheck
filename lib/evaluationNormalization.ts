@@ -91,12 +91,10 @@ function normalizeCriteriaScores(value: unknown): unknown {
     }
 
     const row = item as Record<string, unknown>;
-    const {
-      evidence: _rawEvidence,
-      detailed_breakdown: _rawDetailedBreakdown,
-      example_revisions: _rawExampleRevisions,
-      ...rest
-    } = row;
+    const rest = { ...row };
+    delete rest.evidence;
+    delete rest.detailed_breakdown;
+    delete rest.example_revisions;
     const estimated = Array.isArray(row.estimated_range) ? row.estimated_range : [];
 
     const low = toRoundedInteger(estimated[0]);
@@ -154,5 +152,14 @@ export function normalizeModelEvaluation(modelResult: unknown): unknown {
     summary: normalizeSummary(source.summary),
     top_improvements: normalizeTopImprovements(source.top_improvements),
     criteria_scores: normalizeCriteriaScores(source.criteria_scores),
+    ...(Array.isArray(source.score_adjustments) ? { score_adjustments: source.score_adjustments.map(item => {
+      if (!item || typeof item !== "object") return item;
+      const row = item as Record<string, unknown>;
+      const rest = { ...row };
+      delete rest.evidence;
+      const evidence = normalizeEvidence(row.evidence);
+      return { ...rest, rationale: typeof row.rationale === "string" ? sanitizeSingleLine(row.rationale, MAX_RATIONALE_LENGTH) : row.rationale,
+        ...(evidence ? { evidence } : {}) };
+    }) } : {}),
   };
 }
