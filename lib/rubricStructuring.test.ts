@@ -195,7 +195,102 @@ test("empty criteria produce actionable input validation, never a fabricated or 
     modelCaller: async prompt => { prompts.push(prompt); return { criteria: [] }; },
   }), { message: "RUBRIC_CRITERIA_NOT_FOUND" });
   assert.equal(redis.setCalls.length, 0);
+  assert.equal(prompts.length, 1);
   assert.match(prompts[0], /Do not invent criteria/);
+});
+
+test("inconsistent rubric totals are re-extracted once from the source and only valid output is cached", async t => {
+  const redis = createRedisStub();
+  const source = "Argument 60 points; Evidence 40 points. Total 100. Deduct 5 for missing citations.";
+  const correct = {
+    total_score: 100,
+    criteria: [
+      { name: "Argument", max_score: 60, description: "Reasoning" },
+      { name: "Evidence", max_score: 40, description: "Support with citations" },
+    ],
+    adjustments: [{ name: "Missing citations", kind: "deduction", max_points: 5, description: "Deduct 5 if citations are missing." }],
+  };
+  const invalid = { ...correct, criteria: [...correct.criteria, { name: "Total", max_score: 100, description: "Summary row" }] };
+  const prompts: string[] = [];
+  const starts: Array<number | undefined> = [];
+  let now = 100_000;
+  t.mock.method(Date, "now", () => now);
+  const result = await structureRubric(source, {
+    cacheIdentity: { userIdType: "emailhash", userIdValue: "recovery-test" },
+    cacheRedisOverride: redis,
+    modelCaller: async (prompt, options) => {
+      prompts.push(prompt); starts.push(options?.startedAt);
+      assert.equal(redis.setCalls.length, 0, "invalid extraction must never enter the cache");
+      now += 20_000;
+      return prompts.length === 1 ? invalid : correct;
+    },
+  });
+  assert.deepEqual(result, correct);
+  assert.equal(prompts.length, 2);
+  assert.deepEqual(starts, [100_000, 100_000]);
+  assert.ok(prompts.every(prompt => prompt.includes(source)));
+  assert.match(prompts[0], /Performance-level columns/);
+  assert.match(prompts[1], /total_score/);
+  assert.match(prompts[1], /Do not invent criteria or weights/);
+  assert.match(prompts[1], /Do not include total\/subtotal rows/);
+  assert.equal(redis.setCalls.length, 1);
+  assert.deepEqual(JSON.parse(redis.setCalls[0].value), correct);
+});
+
+test("persistent total mismatch fails without changing weights, replacing totals, or caching output", async () => {
+  const redis = createRedisStub();
+  const invalid = { total_score: 100, criteria: [{ ...holisticRubric.criteria[0], max_score: 110 }] };
+  let calls = 0;
+  await assert.rejects(structureRubric("Overall quality 100 points. Total 100.", {
+    cacheIdentity: { userIdType: "emailhash", userIdValue: "persistent-test" },
+    cacheRedisOverride: redis,
+    modelCaller: async () => { calls++; return invalid; },
+  }), /RUBRIC_STRUCTURE_FAILED/);
+  assert.equal(calls, 2);
+  assert.equal(redis.setCalls.length, 0);
+  assert.equal(invalid.total_score, 100);
+  assert.equal(invalid.criteria[0].max_score, 110);
+});
+
+test("numeric strings and malformed JSON can recover, while provider failures and timeouts keep their classifications", async () => {
+  const invalidNumber = { criteria: [{ ...holisticRubric.criteria[0], max_score: "100" }] };
+  for (const invalid of [invalidNumber, new Error("MODEL_JSON_PARSE_FAILED")]) {
+    let calls = 0;
+    const result = await structureRubric("Overall quality: 100 points", {
+      cacheRedisOverride: null,
+      modelCaller: async () => {
+        calls++;
+        if (calls === 1) {
+          if (invalid instanceof Error) throw invalid;
+          return invalid;
+        }
+        return holisticRubric;
+      },
+    });
+    assert.equal(calls, 2);
+    assert.deepEqual(result, holisticRubric);
+  }
+  for (const [error, expected] of [
+    [new Error("MODEL_JSON_PARSE_FAILED"), "RUBRIC_MODEL_UNAVAILABLE"],
+    [Object.assign(new Error("upstream unavailable"), { status: 429 }), "RUBRIC_MODEL_UNAVAILABLE"],
+    [new Error("OPENAI_TIMEOUT"), "OPENAI_TIMEOUT"],
+  ] as const) {
+    for (const invalidFirst of [false, true]) {
+      const redis = createRedisStub();
+      let calls = 0;
+      await assert.rejects(structureRubric("Overall quality: 100 points", {
+        cacheIdentity: { userIdType: "emailhash", userIdValue: "service-error-test" },
+        cacheRedisOverride: redis,
+        modelCaller: async () => {
+          calls++;
+          if (invalidFirst && calls === 1) return invalidNumber;
+          throw error;
+        },
+      }), { message: expected });
+      assert.equal(calls, invalidFirst || error.message === "MODEL_JSON_PARSE_FAILED" ? 2 : 1);
+      assert.equal(redis.setCalls.length, 0);
+    }
+  }
 });
 
 test("invalid model shapes and invalid scores are still technical rubric failures", async () => {
@@ -224,6 +319,7 @@ test("invalid cached rubrics are replaced by validated model output", async () =
 
 test("model failures remain distinguishable and diagnostics do not log private inputs", async t => {
   const logs = t.mock.method(console, "error", () => {});
+  const warnings = t.mock.method(console, "warn", () => {});
   const secret = "private rubric text and provider response";
   for (const [error, code] of [
     [Object.assign(new Error(secret), { status: 429 }), "RUBRIC_MODEL_UNAVAILABLE"],
@@ -248,4 +344,6 @@ test("model failures remain distinguishable and diagnostics do not log private i
     requestId: "diagnostic-test", issues: [{ code: "invalid_type", path: "criteria.0.max_score" }],
   }]);
   assert.ok(!JSON.stringify(diagnostics).includes(secret));
+  assert.equal(warnings.mock.calls.length, 2);
+  assert.ok(!JSON.stringify(warnings.mock.calls.map(call => call.arguments)).includes(secret));
 });

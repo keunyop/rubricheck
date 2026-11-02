@@ -30,7 +30,7 @@ type StructureRubricOptions = {
   cacheIdentity?: RubricCacheIdentity | null;
   requestId?: string;
   cacheRedisOverride?: RubricCacheRedisClient | null;
-  modelCaller?: (prompt: string) => Promise<unknown>;
+  modelCaller?: typeof callStructureModel;
 };
 
 function getOptionalCacheRedisClient(): RubricCacheRedisClient | null {
@@ -136,6 +136,8 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     "Rules:",
     "- Include all identifiable criteria.",
     "- If an explicit points table is present, criteria must contain only its base scoring categories with their exact point weights. Their sum must equal the stated base total. Incorporate supporting assignment requirements into those descriptions, not extra point-bearing categories.",
+    "- Total and subtotal rows summarize existing categories; never count them again as criteria. Performance-level columns describe alternative scores for the same criterion, not additional criteria or point weights.",
+    "- Preserve explicit point weights and the stated base total. Never rescale weights or change a stated total to hide a mismatch. Re-read the source to distinguish base categories, subtotals, performance levels, and adjustments before returning.",
     "- total_score is the stated base total (for example 100), excluding bonus and penalty points. If no total is stated, use the sum of base criterion weights. Check the sum before returning.",
     "- Automatic deductions and optional bonus points are NOT base criteria and must never increase the base rubric total. Put them in adjustments, with a positive max_points magnitude and kind deduction or bonus. Include each rule once, even if repeated in the source.",
     "- Preserve each adjustment condition and any proof requirements in its description. Plagiarism or AI-use penalties requiring evidence must keep that requirement. Use adjustments: [] if there are no explicit point adjustments.",
@@ -151,43 +153,66 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     rubricText,
   ].join("\n");
 
-  let modelResult: unknown;
-  try {
-    modelResult = await (options.modelCaller ?? callStructureModel)(prompt);
-  } catch (error) {
-    if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
-      throw error;
+  const startedAt = Date.now();
+  let rubric: Rubric | undefined;
+  let retryInstruction = "";
+  const prepareRetry = (issues: { code: string; path: string }[]): string => {
+    console.warn("RUBRIC_OUTPUT_RETRY", { requestId, attempt: 1, issues });
+    return [
+      "", "", "Re-extract the complete rubric from the original text: the previous response failed validation.",
+      `Invalid fields: ${JSON.stringify(issues)}.`,
+      "Return valid JSON with numeric point values, preserving the original base categories, explicit weights, stated total, and adjustment conditions.",
+      "Check that base criterion weights sum to the stated total. Do not include total/subtotal rows or alternative performance levels as extra criteria. Keep deductions and bonuses separate.",
+      "Do not invent criteria or weights, rescale explicit weights, or replace a stated total to make validation pass. Re-read the original source and return the complete corrected extraction.",
+    ].join("\n");
+  };
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let modelResult: unknown;
+    try {
+      modelResult = await (options.modelCaller ?? callStructureModel)(prompt + retryInstruction, { startedAt });
+    } catch (error) {
+      if (error instanceof Error && error.message === "OPENAI_TIMEOUT") {
+        throw error;
+      }
+      const invalidJson = error instanceof Error && error.message === "MODEL_JSON_PARSE_FAILED";
+      if (invalidJson && attempt === 0) {
+        retryInstruction = prepareRetry([{ code: "invalid_json", path: "" }]);
+        continue;
+      }
+      const status = error && typeof error === "object" && "status" in error ? error.status : undefined;
+      // Never log provider error bodies: they can contain input text or credentials.
+      console.error("RUBRIC_MODEL_CALL_FAILED", {
+        requestId,
+        reason: invalidJson ? "invalid_json" : "provider_error",
+        ...(typeof status === "number" ? { upstreamStatus: status } : {}),
+      });
+      throw new Error("RUBRIC_MODEL_UNAVAILABLE");
     }
-    const invalidJson = error instanceof Error && error.message === "MODEL_JSON_PARSE_FAILED";
-    const status = error && typeof error === "object" && "status" in error ? error.status : undefined;
-    // Never log provider error bodies: they can contain input text or credentials.
-    console.error("RUBRIC_MODEL_CALL_FAILED", {
-      requestId,
-      reason: invalidJson ? "invalid_json" : "provider_error",
-      ...(typeof status === "number" ? { upstreamStatus: status } : {}),
-    });
-    throw new Error("RUBRIC_MODEL_UNAVAILABLE");
-  }
-  const parsed = RubricSchema.safeParse(modelResult);
-
-  if (!parsed.success) {
+    const parsed = RubricSchema.safeParse(modelResult);
+    if (parsed.success) {
+      rubric = parsed.data;
+      break;
+    }
     if (parsed.error.issues.length === 1 && parsed.error.issues[0].code === "too_small" &&
         parsed.error.issues[0].path.length === 1 && parsed.error.issues[0].path[0] === "criteria") {
       console.info("RUBRIC_CRITERIA_NOT_FOUND", { requestId });
       throw new Error("RUBRIC_CRITERIA_NOT_FOUND");
     }
-    console.error("RUBRIC_SCHEMA_VALIDATION_FAILED", {
-      requestId,
-      issues: parsed.error.issues.map(issue => ({ code: issue.code, path: issue.path.join(".") })),
-    });
+    const issues = parsed.error.issues.map(issue => ({ code: issue.code, path: issue.path.join(".") }));
+    if (attempt === 0) {
+      retryInstruction = prepareRetry(issues);
+      continue;
+    }
+    console.error("RUBRIC_SCHEMA_VALIDATION_FAILED", { requestId, issues });
     throw new Error("RUBRIC_STRUCTURE_FAILED");
   }
+  if (!rubric) throw new Error("RUBRIC_STRUCTURE_FAILED");
 
   // Redis Lua cjson turns empty arrays into objects on a library metadata edit.
-  if (parsed.data.adjustments?.length === 0) delete parsed.data.adjustments;
+  if (rubric.adjustments?.length === 0) delete rubric.adjustments;
   if (cacheRedis && cacheKey) {
     try {
-      await cacheRedis.set(cacheKey, JSON.stringify(parsed.data), { ex: RUBRIC_CACHE_TTL_SECONDS });
+      await cacheRedis.set(cacheKey, JSON.stringify(rubric), { ex: RUBRIC_CACHE_TTL_SECONDS });
     } catch (cacheSetError) {
       const reason = classifyCacheSetFailure(cacheSetError);
       incrementCounter(cacheRedis, "rubric_cache_set_failed");
@@ -200,5 +225,5 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     }
   }
 
-  return parsed.data;
+  return rubric;
 }

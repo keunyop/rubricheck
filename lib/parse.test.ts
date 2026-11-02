@@ -3,8 +3,13 @@ import test from "node:test";
 
 import { cleanupOcrText, ensureMeaningfulText, parseFile } from "./parse.ts";
 
-test("ensureMeaningfulText throws for near-empty extracted text", () => {
-  assert.throws(() => ensureMeaningfulText("short text", "sample.pdf"), /TEXT_EXTRACTION_FAILED/);
+test("extraction accepts short readable text while rejecting blank and nontext content", () => {
+  for (const text of ["Explain the reasoning and support it with evidence.", "근거를 제시하세요.", "支持论点。", "x = 2 + 3"]) {
+    assert.equal(ensureMeaningfulText(text, "sample.pdf"), text);
+  }
+  for (const text of ["", " \n\t", "--- ... !!!", "- ".repeat(200), "x" + "-".repeat(200)]) {
+    assert.throws(() => ensureMeaningfulText(text, "sample.pdf"), /TEXT_EXTRACTION_FAILED/);
+  }
 });
 
 test("cleanupOcrText keeps rubric lines and normalizes bullets", () => {
@@ -33,4 +38,14 @@ test("parseFile supports image OCR path with injected client", async () => {
   });
 
   assert.equal(parsed, ocrText.trim());
+});
+
+test("a short single-image rubric uses the same readable-text validation as other input", async () => {
+  const text = "Explain the proposal clearly; evaluate its strengths and limitations.";
+  assert.ok(text.length < 200);
+  for (const field of ["rubric", "assignment"] as const) {
+    assert.equal(await parseFile(new File(["synthetic"], "short.png"), {
+      field, visionOcrClient: { extractText: async () => text },
+    }), text);
+  }
 });

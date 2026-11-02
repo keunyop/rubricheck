@@ -81,11 +81,11 @@ test("Google Vision request and failure handling", async (t) => {
         await assert.rejects(parseFile(file), /GOOGLE_VISION_OCR_UNAVAILABLE/);
       }
     });
-    await t.test("empty and short text remain unreadable while multi-image parts can be short", async () => {
+    await t.test("empty OCR is rejected and short readable single or multipart text is accepted", async () => {
       reply = async () => Response.json({ responses: [{}] });
       await assert.rejects(parseFile(file), /TEXT_EXTRACTION_FAILED/);
       reply = async () => Response.json({ responses: [{ textAnnotations: [{ description: "Short image text" }] }] });
-      await assert.rejects(parseFile(file), /TEXT_EXTRACTION_FAILED/);
+      assert.equal(await parseFile(file), "Short image text");
       assert.equal(await parseFile(file, { requireMeaningfulText: false }), "Short image text");
     });
     await t.test("fallback annotations and explicit language hints are preserved", async () => {

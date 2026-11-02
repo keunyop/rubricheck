@@ -46,6 +46,36 @@ test("PDF extraction recovers scanned pages without truncating or changing nativ
       assert.ok(text.startsWith(longText));
       assert.deepEqual(batches, [[2]]);
     });
+    await t.test("short readable OCR is valid and sparse native page labels still trigger OCR", async () => {
+      const shortText = "Explain the proposal clearly and support it with examples.";
+      const previousReply = reply;
+      reply = pages => ({ responses: [{ responses: pages.map(pageNumber => ({ context: { pageNumber }, fullTextAnnotation: { text: shortText } })) }] });
+      try {
+        for (const native of ["", "1", shortText]) {
+          batches.length = 0;
+          assert.equal(await parseFile(makePdf([native]), { field: "rubric" }), shortText);
+          assert.deepEqual(batches, [[1]]);
+        }
+      } finally { reply = previousReply; }
+    });
+    await t.test("page labels cannot replace unreadable OCR and mixed scans still read numbered pages", async () => {
+      const previousReply = reply;
+      try {
+        for (const ocrText of ["", "1", "Page 1", "1 / 2"]) {
+          reply = pages => ({ responses: [{ responses: pages.map(pageNumber => ({ context: { pageNumber }, fullTextAnnotation: { text: ocrText } })) }] });
+          for (const label of ["1", "Page 1", "1 / 2", "Page 1 of 2"]) {
+            await assert.rejects(parseFile(makePdf([label])), /TEXT_EXTRACTION_FAILED/);
+          }
+          await assert.rejects(parseFile(makePdf([""])), /TEXT_EXTRACTION_FAILED/);
+        }
+        const shortText = "Use evidence to support the conclusion.";
+        assert.equal(await parseFile(makePdf([shortText]), { field: "rubric" }), shortText);
+        batches.length = 0;
+        reply = pages => ({ responses: [{ responses: pages.map(pageNumber => ({ context: { pageNumber }, fullTextAnnotation: { text: shortText } })) }] });
+        assert.equal(await parseFile(makePdf([longText, "Page 2"])), longText + "\n\n" + shortText);
+        assert.deepEqual(batches, [[2]]);
+      } finally { reply = previousReply; }
+    });
     await t.test("missing pages and page-level outages never become a partial success", async () => {
       for (const result of [{ responses: [{ responses: [] }] }, { responses: [{ responses: [{ error: { code: 8 } }] }] }]) {
         reply = () => result;

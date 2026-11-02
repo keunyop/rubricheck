@@ -11,7 +11,9 @@ mock.module("../../../src/lib/gradingFailureCapture.ts", { namedExports: {
   queueGradingFailure: (input: GradingFailureInput) => { capturedFailures.push(input); },
 } });
 
-let failure: "rubric" | "missingCriteria" | "rubricProvider" | "rubricTimeout" | "evaluation" | "timeout" | "finalization" | "negativeOnce" | "negativeAlways" | null = null;
+let failure: "rubric" | "missingCriteria" | "rubricProvider" | "rubricTimeout" | "rubricMismatchOnce" | "rubricMismatchAlways" | "rubricJsonOnce" | "rubricRetryTimeout" | "evaluation" | "timeout" | "finalization" | "negativeOnce" | "negativeAlways" | null = null;
+let structureCalls = 0;
+let rubricFailureCalls = 0;
 let evaluationCalls = 0;
 let negativeCalls = 0;
 const rubric = { criteria: [{ name: "Thesis", max_score: 10, description: "Clarity" }] };
@@ -23,9 +25,16 @@ const evaluation = {
 // valid criterion previously failed here even though the mocked route passed.
 mock.module("../../../lib/openai.ts", { namedExports: {
   callStructureModel: async () => {
+    structureCalls++;
     if (failure === "rubricProvider") throw new Error("upstream unavailable");
     if (failure === "rubricTimeout") throw new Error("OPENAI_TIMEOUT");
     if (failure === "missingCriteria") return { criteria: [] };
+    if (failure === "rubricMismatchAlways" ||
+        ((failure === "rubricMismatchOnce" || failure === "rubricRetryTimeout") && rubricFailureCalls++ === 0)) {
+      return { ...rubric, total_score: 20 };
+    }
+    if (failure === "rubricRetryTimeout") throw new Error("OPENAI_TIMEOUT");
+    if (failure === "rubricJsonOnce" && rubricFailureCalls++ === 0) throw new Error("MODEL_JSON_PARSE_FAILED");
     return failure === "rubric" ? { criteria: [{ ...rubric.criteria[0], max_score: 0 }] } : rubric;
   },
   callEvaluationModel: async () => {
@@ -119,6 +128,34 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(payload.criteria.length, 1);
       assert.equal(capturedFailures.length, 0);
       assert.equal(payload.score_calculation.mode_adjustment, 0);
+    });
+    await t.test("rubric output recovery shares one free or paid reservation and never archives a recovered attempt", async () => {
+      for (const paid of [false, true]) {
+        reserveStatus = paid ? "exhausted" : "reserved"; credits = paid ? 5 : 0;
+        for (const kind of ["rubricMismatchOnce", "rubricMismatchAlways", "rubricJsonOnce", "rubricRetryTimeout"] as const) {
+          calls.length = 0; capturedFailures.length = 0; rubricFailureCalls = 0; failure = kind;
+          const previousStructures = structureCalls;
+          const previousEvaluations = evaluationCalls;
+          const persistent = kind === "rubricMismatchAlways" || kind === "rubricRetryTimeout";
+          const response = await POST(request());
+          assert.equal(response.status, kind === "rubricRetryTimeout" ? 504 : persistent ? 400 : 200);
+          const payload = await response.json();
+          if (persistent) assert.equal(payload.code, kind === "rubricRetryTimeout" ? "OPENAI_TIMEOUT" : "RUBRIC_STRUCTURE_FAILED");
+          else assert.equal(payload.criteria[0].max_score, 10);
+          assert.equal(structureCalls - previousStructures, 2);
+          assert.equal(evaluationCalls - previousEvaluations, persistent ? 0 : 1);
+          const reservationName = paid ? "rubricheck_reserve_one_credit" : "rubricheck_reserve_free_evaluate";
+          assert.equal(calls.filter(call => call.name === reservationName).length, 1);
+          if (paid) assert.equal(calls.filter(call => call.name === "rubricheck_refund_credit_reservation").length, persistent ? 1 : 0);
+          else {
+            assert.equal(settlements().length, 1);
+            assert.equal(settlements()[0].body.p_succeeded, !persistent);
+          }
+          assert.equal(capturedFailures.length, persistent ? 1 : 0);
+          if (persistent) assert.equal(capturedFailures[0].stage, "rubric_structuring");
+        }
+      }
+      reserveStatus = "reserved"; credits = 0; failure = null;
     });
     await t.test("invalid model output recovers within one free or paid reservation; repeated failure refunds", async () => {
       for (const paid of [false, true]) {
@@ -263,6 +300,49 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
         assert.equal(capturedFailures.length, 0);
       }
       credits = 0;
+    });
+    await t.test("a short rubric image grades once while empty or punctuation-only OCR fails before billing", async () => {
+      failure = null; reserveStatus = "reserved"; credits = 0;
+      process.env.GOOGLE_CLOUD_VISION_API_KEY = "test-only";
+      visionStatus = 200;
+      const shortRubric = "Thesis: 10 points. State a clear argument and support it with relevant evidence.";
+      assert.ok(shortRubric.length < 200);
+      const rubricImageRequest = () => {
+        const form = new FormData();
+        form.set("rubric", new File(["synthetic short rubric image"], "short-rubric.png", { type: "image/png" }));
+        form.set("assignmentText", "A clear argument with support.");
+        const req = request();
+        return new Request(req.url, { method: "POST", headers: { cookie: req.headers.get("cookie")! }, body: form });
+      };
+      calls.length = 0; capturedFailures.length = 0;
+      visionResponse = { responses: [{ fullTextAnnotation: { text: shortRubric } }] };
+      const previousStructures = structureCalls;
+      const previousEvaluations = evaluationCalls;
+      const response = await POST(rubricImageRequest());
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).criteria[0].name, "Thesis");
+      assert.equal(structureCalls - previousStructures, 1);
+      assert.equal(evaluationCalls - previousEvaluations, 1);
+      assert.equal(calls.filter(call => call.name === "rubricheck_reserve_free_evaluate").length, 1);
+      assert.equal(settlements().length, 1);
+      assert.equal(settlements()[0].body.p_succeeded, true);
+      assert.equal(capturedFailures.length, 0);
+      for (const unusable of ["", " \n\t ", "!?".repeat(150)]) {
+        calls.length = 0; capturedFailures.length = 0;
+        visionResponse = { responses: [{ fullTextAnnotation: { text: unusable } }] };
+        const beforeStructures = structureCalls;
+        const beforeEvaluations = evaluationCalls;
+        const rejected = await POST(rubricImageRequest());
+        assert.equal(rejected.status, 400);
+        const payload = await rejected.json();
+        assert.equal(payload.code, "FILE_PARSE_FAILED");
+        assert.equal(payload.details.field, "rubric");
+        assert.equal(structureCalls, beforeStructures);
+        assert.equal(evaluationCalls, beforeEvaluations);
+        assert.ok(!calls.some(call => /reserve|settle|refund/.test(call.name)));
+        assert.equal(capturedFailures.length, 1);
+        assert.equal(capturedFailures[0].stage, "file_parsing");
+      }
     });
     await t.test("scanned PDF uses OCR before billing and preserves service error classification", async () => {
       failure = null; reserveStatus = "reserved"; credits = 0;

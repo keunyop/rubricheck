@@ -216,6 +216,10 @@ type PdfPage = {
   getTextContent: (options: { normalizeWhitespace: boolean; disableCombineTextItems: boolean }) => Promise<{ items: { str: string; transform: number[] }[] }>;
 };
 
+function isPdfPageLabel(text: string): boolean {
+  return /^(?:page\s*)?\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(text.trim());
+}
+
 async function parsePdf(buffer: Buffer, fileName: string, field: ParsedField, requireMeaningfulText: boolean): Promise<string> {
   const nativePages = new Map<number, string>();
   let pageCount: number;
@@ -243,12 +247,21 @@ async function parsePdf(buffer: Buffer, fileName: string, field: ParsedField, re
   const nativeText = normalizeText(pages.map(page => nativePages.get(page) ?? "").join("\n\n"));
   let needsFullOcr = false;
   if (requireMeaningfulText) {
+    // Sparse PDF text can be just a page label over a scan. Keep that OCR hint
+    // separate from validity: a short, readable rubric is still valid input.
+    needsFullOcr = nativeText.length < 200;
     try { ensureMeaningfulText(nativeText, fileName); } catch { needsFullOcr = true; }
   }
-  const missingPages = pages.filter(page => needsFullOcr || !nativePages.get(page)?.trim());
+  const missingPages = pages.filter(page => needsFullOcr || !nativePages.get(page)?.trim() || isPdfPageLabel(nativePages.get(page) ?? ""));
   if (missingPages.length === 0) return nativeText;
   const ocrPages = await readPdfPagesWithOcr(buffer, missingPages, field);
-  const text = normalizeText(pages.map(page => ocrPages.get(page) || nativePages.get(page) || "").join("\n\n"));
+  const text = normalizeText(pages.map(page => {
+    const native = nativePages.get(page) ?? "";
+    const recognized = ocrPages.get(page);
+    // A page number alone must not turn blank OCR into a successful document.
+    return recognized && !isPdfPageLabel(recognized) ? recognized
+      : ocrPages.has(page) && isPdfPageLabel(native) ? "" : native;
+  }).join("\n\n"));
   return requireMeaningfulText ? ensureMeaningfulText(text, fileName) : text;
 }
 
@@ -256,7 +269,7 @@ export function ensureMeaningfulText(text: string, fileName: string): string {
   void fileName;
   const trimmedText = text.trim();
 
-  if (trimmedText.length < 200) {
+  if (trimmedText.length === 0) {
     throw new Error("TEXT_EXTRACTION_FAILED");
   }
 
