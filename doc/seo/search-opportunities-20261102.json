@@ -1,0 +1,3079 @@
+{
+  "researched_on": "2026-11-02",
+  "period": [
+    "2026-08-01",
+    "2026-10-31"
+  ],
+  "search_type": "Web",
+  "totals": {
+    "clicks": 2051,
+    "impressions": 13440,
+    "ctr_percent": 15.26,
+    "approximate_impression_weighted_position": 6.77
+  },
+  "windows": [
+    {
+      "start": "2026-10-04",
+      "end": "2026-10-31",
+      "clicks": 1140,
+      "impressions": 7211,
+      "ctr_percent": 15.81,
+      "approximate_impression_weighted_position": 5.72
+    },
+    {
+      "start": "2026-09-06",
+      "end": "2026-10-03",
+      "clicks": 549,
+      "impressions": 3630,
+      "ctr_percent": 15.12,
+      "approximate_impression_weighted_position": 5.57
+    }
+  ],
+  "strict_brand_matching": "rubricheck",
+  "strict_brand_observed": {
+    "clicks": 47,
+    "impressions": 58,
+    "ctr_percent": 81.03,
+    "approximate_impression_weighted_position": 1.0
+  },
+  "strict_brand_queries": [
+    {
+      "label": "rubricheck",
+      "clicks": 47,
+      "impressions": 58,
+      "ctr_percent": 81.03,
+      "position": 1.0
+    }
+  ],
+  "new_topic_observed_queries": [],
+  "dimensions": {
+    "검색 노출": [
+      {
+        "label": "번역된 검색결과",
+        "clicks": 1,
+        "impressions": 24,
+        "ctr_percent": 4.17,
+        "position": 3.38
+      }
+    ],
+    "검색어 수": [
+      {
+        "label": "rubric checker",
+        "clicks": 922,
+        "impressions": 2132,
+        "ctr_percent": 43.25,
+        "position": 4.15
+      },
+      {
+        "label": "rubrik checker",
+        "clicks": 66,
+        "impressions": 110,
+        "ctr_percent": 60.0,
+        "position": 1.0
+      },
+      {
+        "label": "rubric check",
+        "clicks": 51,
+        "impressions": 168,
+        "ctr_percent": 30.36,
+        "position": 1.18
+      },
+      {
+        "label": "rubricheck",
+        "clicks": 47,
+        "impressions": 58,
+        "ctr_percent": 81.03,
+        "position": 1.0
+      },
+      {
+        "label": "rubric grader",
+        "clicks": 38,
+        "impressions": 345,
+        "ctr_percent": 11.01,
+        "position": 5.21
+      },
+      {
+        "label": "rubric checker ai",
+        "clicks": 34,
+        "impressions": 51,
+        "ctr_percent": 66.67,
+        "position": 1.0
+      },
+      {
+        "label": "grade my assignment with rubric",
+        "clicks": 12,
+        "impressions": 92,
+        "ctr_percent": 13.04,
+        "position": 4.18
+      },
+      {
+        "label": "check rubric",
+        "clicks": 10,
+        "impressions": 30,
+        "ctr_percent": 33.33,
+        "position": 1.8
+      },
+      {
+        "label": "rubric ai",
+        "clicks": 8,
+        "impressions": 330,
+        "ctr_percent": 2.42,
+        "position": 14.17
+      },
+      {
+        "label": "rubric ai checker",
+        "clicks": 7,
+        "impressions": 123,
+        "ctr_percent": 5.69,
+        "position": 6.67
+      },
+      {
+        "label": "assignment rubric checker",
+        "clicks": 4,
+        "impressions": 64,
+        "ctr_percent": 6.25,
+        "position": 5.34
+      },
+      {
+        "label": "essay rubric checker",
+        "clicks": 4,
+        "impressions": 57,
+        "ctr_percent": 7.02,
+        "position": 9.26
+      },
+      {
+        "label": "free rubric checker",
+        "clicks": 4,
+        "impressions": 18,
+        "ctr_percent": 22.22,
+        "position": 1.0
+      },
+      {
+        "label": "check assignment against rubric",
+        "clicks": 2,
+        "impressions": 67,
+        "ctr_percent": 2.99,
+        "position": 7.43
+      },
+      {
+        "label": "ai rubric checker",
+        "clicks": 2,
+        "impressions": 5,
+        "ctr_percent": 40.0,
+        "position": 1.0
+      },
+      {
+        "label": "criteria checker",
+        "clicks": 2,
+        "impressions": 4,
+        "ctr_percent": 50.0,
+        "position": 2.5
+      },
+      {
+        "label": "assignment checker",
+        "clicks": 2,
+        "impressions": 4,
+        "ctr_percent": 50.0,
+        "position": 7.5
+      },
+      {
+        "label": "grade my essay with rubric",
+        "clicks": 1,
+        "impressions": 33,
+        "ctr_percent": 3.03,
+        "position": 7.91
+      },
+      {
+        "label": "ai rubric",
+        "clicks": 1,
+        "impressions": 28,
+        "ctr_percent": 3.57,
+        "position": 7.82
+      },
+      {
+        "label": "grade my paper with rubric",
+        "clicks": 1,
+        "impressions": 17,
+        "ctr_percent": 5.88,
+        "position": 7.65
+      },
+      {
+        "label": "online rubric grader",
+        "clicks": 1,
+        "impressions": 9,
+        "ctr_percent": 11.11,
+        "position": 10.0
+      },
+      {
+        "label": "rubric checker free",
+        "clicks": 1,
+        "impressions": 1,
+        "ctr_percent": 100.0,
+        "position": 2.0
+      },
+      {
+        "label": "rubric",
+        "clicks": 0,
+        "impressions": 1154,
+        "ctr_percent": 0.0,
+        "position": 10.19
+      },
+      {
+        "label": "check my essay against rubric",
+        "clicks": 0,
+        "impressions": 159,
+        "ctr_percent": 0.0,
+        "position": 22.08
+      },
+      {
+        "label": "assignment criteria checker",
+        "clicks": 0,
+        "impressions": 54,
+        "ctr_percent": 0.0,
+        "position": 8.44
+      },
+      {
+        "label": "ai rubric grader",
+        "clicks": 0,
+        "impressions": 48,
+        "ctr_percent": 0.0,
+        "position": 9.58
+      },
+      {
+        "label": "assignment instructions checker",
+        "clicks": 0,
+        "impressions": 46,
+        "ctr_percent": 0.0,
+        "position": 11.39
+      },
+      {
+        "label": "assignment requirements checker",
+        "clicks": 0,
+        "impressions": 44,
+        "ctr_percent": 0.0,
+        "position": 5.48
+      },
+      {
+        "label": "rubric marking tool",
+        "clicks": 0,
+        "impressions": 40,
+        "ctr_percent": 0.0,
+        "position": 47.92
+      },
+      {
+        "label": "rubric feedback",
+        "clicks": 0,
+        "impressions": 39,
+        "ctr_percent": 0.0,
+        "position": 9.38
+      },
+      {
+        "label": "check paper against rubric",
+        "clicks": 0,
+        "impressions": 38,
+        "ctr_percent": 0.0,
+        "position": 10.11
+      },
+      {
+        "label": "rubri",
+        "clicks": 0,
+        "impressions": 38,
+        "ctr_percent": 0.0,
+        "position": 20.87
+      },
+      {
+        "label": "rubriccheck.org",
+        "clicks": 0,
+        "impressions": 37,
+        "ctr_percent": 0.0,
+        "position": 9.86
+      },
+      {
+        "label": "check assignment",
+        "clicks": 0,
+        "impressions": 31,
+        "ctr_percent": 0.0,
+        "position": 7.1
+      },
+      {
+        "label": "assignment check",
+        "clicks": 0,
+        "impressions": 31,
+        "ctr_percent": 0.0,
+        "position": 9.35
+      },
+      {
+        "label": "rubric alignment checker",
+        "clicks": 0,
+        "impressions": 31,
+        "ctr_percent": 0.0,
+        "position": 28.84
+      },
+      {
+        "label": "rubric feedback service",
+        "clicks": 0,
+        "impressions": 31,
+        "ctr_percent": 0.0,
+        "position": 39.48
+      },
+      {
+        "label": "check essay against rubric",
+        "clicks": 0,
+        "impressions": 30,
+        "ctr_percent": 0.0,
+        "position": 10.13
+      },
+      {
+        "label": "rubrics ai",
+        "clicks": 0,
+        "impressions": 16,
+        "ctr_percent": 0.0,
+        "position": 8.62
+      },
+      {
+        "label": "ai grader with rubric",
+        "clicks": 0,
+        "impressions": 15,
+        "ctr_percent": 0.0,
+        "position": 20.13
+      },
+      {
+        "label": "rubric.ai",
+        "clicks": 0,
+        "impressions": 14,
+        "ctr_percent": 0.0,
+        "position": 9.07
+      },
+      {
+        "label": "my rubric",
+        "clicks": 0,
+        "impressions": 14,
+        "ctr_percent": 0.0,
+        "position": 10.36
+      },
+      {
+        "label": "rubric-based evaluation software",
+        "clicks": 0,
+        "impressions": 14,
+        "ctr_percent": 0.0,
+        "position": 53.29
+      },
+      {
+        "label": "rubric feedback tool for students",
+        "clicks": 0,
+        "impressions": 12,
+        "ctr_percent": 0.0,
+        "position": 15.83
+      },
+      {
+        "label": "rubric review",
+        "clicks": 0,
+        "impressions": 11,
+        "ctr_percent": 0.0,
+        "position": 18.73
+      },
+      {
+        "label": "루브릭 ai",
+        "clicks": 0,
+        "impressions": 10,
+        "ctr_percent": 0.0,
+        "position": 6.7
+      },
+      {
+        "label": "루 브릭 ai",
+        "clicks": 0,
+        "impressions": 7,
+        "ctr_percent": 0.0,
+        "position": 5.71
+      },
+      {
+        "label": "rubric to checklist converter",
+        "clicks": 0,
+        "impressions": 7,
+        "ctr_percent": 0.0,
+        "position": 42.14
+      },
+      {
+        "label": "표하기,채점",
+        "clicks": 0,
+        "impressions": 6,
+        "ctr_percent": 0.0,
+        "position": 7.5
+      },
+      {
+        "label": "studylah rubric checker",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 6.4
+      },
+      {
+        "label": "rubric official website",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 8.8
+      },
+      {
+        "label": "follow the rubric",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 34.6
+      },
+      {
+        "label": "assignment readiness checker",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 36.8
+      },
+      {
+        "label": "assignment checking",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 1.5
+      },
+      {
+        "label": "does this follow the rubric",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 2.0
+      },
+      {
+        "label": "yes",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 3.25
+      },
+      {
+        "label": "check my assignment",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 5.75
+      },
+      {
+        "label": "assignment rubric",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 8.5
+      },
+      {
+        "label": "루브릭채점",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 9.75
+      },
+      {
+        "label": "suggest an ib coursework grading service that offers detailed rubric-based \r\nfeedback.",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 10.0
+      },
+      {
+        "label": "wriq score",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 13.25
+      },
+      {
+        "label": "rubriq",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 49.5
+      },
+      {
+        "label": "ai essay grader with rubric",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 71.0
+      },
+      {
+        "label": "this is my rubric",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 2.33
+      },
+      {
+        "label": "ruchecker",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 5.0
+      },
+      {
+        "label": "review rubric",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 6.33
+      },
+      {
+        "label": "grade my work",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 8.0
+      },
+      {
+        "label": "rubric marker",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 9.67
+      },
+      {
+        "label": "ruberic",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 25.67
+      },
+      {
+        "label": "rubrix ai login",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 32.33
+      },
+      {
+        "label": "rubric test",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 50.33
+      },
+      {
+        "label": "rubric checklist generator",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 53.0
+      },
+      {
+        "label": "online rubrics",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 53.67
+      },
+      {
+        "label": "confirmation hacking assistant grading rubric",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 55.0
+      },
+      {
+        "label": "rubric evaluation tool",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 76.67
+      },
+      {
+        "label": "rubric evaluator",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "checking assignment",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 1.5
+      },
+      {
+        "label": "ai rubrics",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 5.0
+      },
+      {
+        "label": "roughcheck",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 5.5
+      },
+      {
+        "label": "rubrik tu apa",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 5.5
+      },
+      {
+        "label": "루브릭 채점",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 6.0
+      },
+      {
+        "label": "rubrik score",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 7.0
+      },
+      {
+        "label": "get rubric",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 7.5
+      },
+      {
+        "label": "채점됩니다",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 7.5
+      },
+      {
+        "label": "check the assignment",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 8.0
+      },
+      {
+        "label": "gorubric ai",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 8.0
+      },
+      {
+        "label": "rubriccore ai",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 8.0
+      },
+      {
+        "label": "rubric.com",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "what is the best way to check if an essay meets professor requirements?",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "ai rubic",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 9.5
+      },
+      {
+        "label": "rubric scores",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 17.0
+      },
+      {
+        "label": "assignment review tool",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 22.0
+      },
+      {
+        "label": "rubrix ai",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 23.0
+      },
+      {
+        "label": "rubric labs",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 30.0
+      },
+      {
+        "label": "notebook check rubric",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 40.0
+      },
+      {
+        "label": "i rubric",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 46.5
+      },
+      {
+        "label": "ai evaluation rubric",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 67.5
+      },
+      {
+        "label": "confirmation hacking clarification question assistant grading rubric",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 73.5
+      },
+      {
+        "label": "am i right tho?",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "college",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "fore free",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "rubric ai evaluation",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "verifie tout",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "what affordable tools or templates help format papers to match a \r\nprofessor's grading style?",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "what do you mean?",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "what else is missing",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "yes to the questions above",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "checking assignment type...",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 2.0
+      },
+      {
+        "label": "college level",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 2.0
+      },
+      {
+        "label": "does it detect ai",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 2.0
+      },
+      {
+        "label": "does this exist?",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 2.0
+      },
+      {
+        "label": "rubbing ai",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 2.0
+      },
+      {
+        "label": "rubrik ai",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 2.0
+      },
+      {
+        "label": "this is the rubric",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 2.0
+      },
+      {
+        "label": "vérifier",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 2.0
+      },
+      {
+        "label": "which tone tools are best for matching my writing to assignment guidelines?",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 3.0
+      },
+      {
+        "label": "ready to submit?",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "what about copilot",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "rubric based feedback",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 5.0
+      },
+      {
+        "label": "ai과제",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 6.0
+      },
+      {
+        "label": "for free",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 6.0
+      },
+      {
+        "label": "apa itu rubrik",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 7.0
+      },
+      {
+        "label": "free version",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 7.0
+      },
+      {
+        "label": "rubric website",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 7.0
+      },
+      {
+        "label": "ai 루브릭",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 8.0
+      },
+      {
+        "label": "rubrix.ai login",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 8.0
+      },
+      {
+        "label": "ruburic",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 8.0
+      },
+      {
+        "label": "\"rubric\"",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "can you grade my work",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "rubric's",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "yest",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "grade my assignment",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 10.0
+      },
+      {
+        "label": "rubric in ai",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 10.0
+      },
+      {
+        "label": "rubric.",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 10.0
+      },
+      {
+        "label": "rubrik penilaian",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 10.0
+      },
+      {
+        "label": "maksud rubrik pemarkahan",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 11.0
+      },
+      {
+        "label": "rubricai",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 15.0
+      },
+      {
+        "label": "screening rubric",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 16.0
+      },
+      {
+        "label": "rubricsmaken",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 17.0
+      },
+      {
+        "label": "work checker",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 18.0
+      },
+      {
+        "label": "rubricmind",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 19.0
+      },
+      {
+        "label": "채점기준표",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 19.0
+      },
+      {
+        "label": "r u b r i c",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 22.0
+      },
+      {
+        "label": "rubric editor",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 27.0
+      },
+      {
+        "label": "grade based on rubric",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 28.0
+      },
+      {
+        "label": "루브릭",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 28.0
+      },
+      {
+        "label": "feedback rubric",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 32.0
+      },
+      {
+        "label": "turn rubric into checklist",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 33.0
+      },
+      {
+        "label": "rubric executive login",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 37.0
+      },
+      {
+        "label": "openai assistant grading accuracy honesty instruction following rubric",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 46.0
+      },
+      {
+        "label": "ai rubric genertor",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 47.0
+      },
+      {
+        "label": "grammarly rubric checker",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 49.0
+      },
+      {
+        "label": "rubric evaluation",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 50.0
+      },
+      {
+        "label": "rubric tool",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 55.0
+      },
+      {
+        "label": "ai graders",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 57.0
+      },
+      {
+        "label": "rubrical",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 59.0
+      },
+      {
+        "label": "rubrics online",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 67.0
+      },
+      {
+        "label": "rubaric",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 68.0
+      },
+      {
+        "label": "rubric assignment",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 76.0
+      },
+      {
+        "label": "rubric for assignment",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 78.0
+      },
+      {
+        "label": "rubric assessment tool",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 92.0
+      }
+    ],
+    "국가": [
+      {
+        "label": "말레이시아",
+        "clicks": 1040,
+        "impressions": 2176,
+        "ctr_percent": 47.79,
+        "position": 1.78
+      },
+      {
+        "label": "미국",
+        "clicks": 561,
+        "impressions": 5364,
+        "ctr_percent": 10.46,
+        "position": 6.38
+      },
+      {
+        "label": "호주",
+        "clicks": 125,
+        "impressions": 1129,
+        "ctr_percent": 11.07,
+        "position": 10.22
+      },
+      {
+        "label": "캐나다",
+        "clicks": 84,
+        "impressions": 607,
+        "ctr_percent": 13.84,
+        "position": 3.91
+      },
+      {
+        "label": "영국",
+        "clicks": 36,
+        "impressions": 297,
+        "ctr_percent": 12.12,
+        "position": 5.47
+      },
+      {
+        "label": "인도",
+        "clicks": 26,
+        "impressions": 363,
+        "ctr_percent": 7.16,
+        "position": 10.85
+      },
+      {
+        "label": "필리핀",
+        "clicks": 23,
+        "impressions": 184,
+        "ctr_percent": 12.5,
+        "position": 9.9
+      },
+      {
+        "label": "파키스탄",
+        "clicks": 16,
+        "impressions": 104,
+        "ctr_percent": 15.38,
+        "position": 5.39
+      },
+      {
+        "label": "남아프리카",
+        "clicks": 15,
+        "impressions": 107,
+        "ctr_percent": 14.02,
+        "position": 4.64
+      },
+      {
+        "label": "한국",
+        "clicks": 13,
+        "impressions": 214,
+        "ctr_percent": 6.07,
+        "position": 5.93
+      },
+      {
+        "label": "아랍에미리트 연합",
+        "clicks": 10,
+        "impressions": 63,
+        "ctr_percent": 15.87,
+        "position": 4.62
+      },
+      {
+        "label": "싱가포르",
+        "clicks": 7,
+        "impressions": 53,
+        "ctr_percent": 13.21,
+        "position": 3.64
+      },
+      {
+        "label": "뉴질랜드",
+        "clicks": 6,
+        "impressions": 79,
+        "ctr_percent": 7.59,
+        "position": 3.67
+      },
+      {
+        "label": "태국",
+        "clicks": 6,
+        "impressions": 48,
+        "ctr_percent": 12.5,
+        "position": 13.38
+      },
+      {
+        "label": "네팔",
+        "clicks": 6,
+        "impressions": 12,
+        "ctr_percent": 50.0,
+        "position": 4.0
+      },
+      {
+        "label": "베트남",
+        "clicks": 5,
+        "impressions": 73,
+        "ctr_percent": 6.85,
+        "position": 23.08
+      },
+      {
+        "label": "네덜란드",
+        "clicks": 5,
+        "impressions": 68,
+        "ctr_percent": 7.35,
+        "position": 6.9
+      },
+      {
+        "label": "멕시코",
+        "clicks": 4,
+        "impressions": 50,
+        "ctr_percent": 8.0,
+        "position": 22.5
+      },
+      {
+        "label": "아일랜드",
+        "clicks": 4,
+        "impressions": 40,
+        "ctr_percent": 10.0,
+        "position": 4.28
+      },
+      {
+        "label": "브루나이",
+        "clicks": 4,
+        "impressions": 8,
+        "ctr_percent": 50.0,
+        "position": 1.12
+      },
+      {
+        "label": "르완다",
+        "clicks": 4,
+        "impressions": 7,
+        "ctr_percent": 57.14,
+        "position": 3.14
+      },
+      {
+        "label": "브라질",
+        "clicks": 3,
+        "impressions": 1026,
+        "ctr_percent": 0.29,
+        "position": 10.11
+      },
+      {
+        "label": "핀란드",
+        "clicks": 3,
+        "impressions": 23,
+        "ctr_percent": 13.04,
+        "position": 4.52
+      },
+      {
+        "label": "레소토",
+        "clicks": 3,
+        "impressions": 3,
+        "ctr_percent": 100.0,
+        "position": 5.0
+      },
+      {
+        "label": "인도네시아",
+        "clicks": 2,
+        "impressions": 150,
+        "ctr_percent": 1.33,
+        "position": 17.1
+      },
+      {
+        "label": "일본",
+        "clicks": 2,
+        "impressions": 29,
+        "ctr_percent": 6.9,
+        "position": 6.34
+      },
+      {
+        "label": "홍콩",
+        "clicks": 2,
+        "impressions": 25,
+        "ctr_percent": 8.0,
+        "position": 6.12
+      },
+      {
+        "label": "러시아",
+        "clicks": 2,
+        "impressions": 25,
+        "ctr_percent": 8.0,
+        "position": 20.4
+      },
+      {
+        "label": "칠레",
+        "clicks": 2,
+        "impressions": 21,
+        "ctr_percent": 9.52,
+        "position": 4.48
+      },
+      {
+        "label": "케냐",
+        "clicks": 2,
+        "impressions": 17,
+        "ctr_percent": 11.76,
+        "position": 4.94
+      },
+      {
+        "label": "미얀마(버마)",
+        "clicks": 2,
+        "impressions": 15,
+        "ctr_percent": 13.33,
+        "position": 3.2
+      },
+      {
+        "label": "오스트리아",
+        "clicks": 2,
+        "impressions": 15,
+        "ctr_percent": 13.33,
+        "position": 6.0
+      },
+      {
+        "label": "이디오피아",
+        "clicks": 2,
+        "impressions": 9,
+        "ctr_percent": 22.22,
+        "position": 3.22
+      },
+      {
+        "label": "스페인",
+        "clicks": 1,
+        "impressions": 57,
+        "ctr_percent": 1.75,
+        "position": 14.44
+      },
+      {
+        "label": "터키",
+        "clicks": 1,
+        "impressions": 32,
+        "ctr_percent": 3.12,
+        "position": 25.03
+      },
+      {
+        "label": "사우디 아라비아",
+        "clicks": 1,
+        "impressions": 31,
+        "ctr_percent": 3.23,
+        "position": 9.06
+      },
+      {
+        "label": "폴란드",
+        "clicks": 1,
+        "impressions": 25,
+        "ctr_percent": 4.0,
+        "position": 11.28
+      },
+      {
+        "label": "중국",
+        "clicks": 1,
+        "impressions": 22,
+        "ctr_percent": 4.55,
+        "position": 2.91
+      },
+      {
+        "label": "체코",
+        "clicks": 1,
+        "impressions": 19,
+        "ctr_percent": 5.26,
+        "position": 8.74
+      },
+      {
+        "label": "페루",
+        "clicks": 1,
+        "impressions": 15,
+        "ctr_percent": 6.67,
+        "position": 4.33
+      },
+      {
+        "label": "에콰도르",
+        "clicks": 1,
+        "impressions": 15,
+        "ctr_percent": 6.67,
+        "position": 8.07
+      },
+      {
+        "label": "콜롬비아",
+        "clicks": 1,
+        "impressions": 15,
+        "ctr_percent": 6.67,
+        "position": 13.8
+      },
+      {
+        "label": "요르단",
+        "clicks": 1,
+        "impressions": 15,
+        "ctr_percent": 6.67,
+        "position": 27.4
+      },
+      {
+        "label": "모리셔스",
+        "clicks": 1,
+        "impressions": 12,
+        "ctr_percent": 8.33,
+        "position": 5.0
+      },
+      {
+        "label": "튀니지",
+        "clicks": 1,
+        "impressions": 10,
+        "ctr_percent": 10.0,
+        "position": 8.2
+      },
+      {
+        "label": "대만",
+        "clicks": 1,
+        "impressions": 10,
+        "ctr_percent": 10.0,
+        "position": 12.9
+      },
+      {
+        "label": "레바논",
+        "clicks": 1,
+        "impressions": 8,
+        "ctr_percent": 12.5,
+        "position": 4.88
+      },
+      {
+        "label": "불가리아",
+        "clicks": 1,
+        "impressions": 7,
+        "ctr_percent": 14.29,
+        "position": 3.71
+      },
+      {
+        "label": "자메이카",
+        "clicks": 1,
+        "impressions": 7,
+        "ctr_percent": 14.29,
+        "position": 4.14
+      },
+      {
+        "label": "카타르",
+        "clicks": 1,
+        "impressions": 6,
+        "ctr_percent": 16.67,
+        "position": 4.33
+      },
+      {
+        "label": "우즈베키스탄",
+        "clicks": 1,
+        "impressions": 6,
+        "ctr_percent": 16.67,
+        "position": 6.67
+      },
+      {
+        "label": "코스타리카",
+        "clicks": 1,
+        "impressions": 5,
+        "ctr_percent": 20.0,
+        "position": 4.6
+      },
+      {
+        "label": "벨리즈",
+        "clicks": 1,
+        "impressions": 5,
+        "ctr_percent": 20.0,
+        "position": 8.8
+      },
+      {
+        "label": "리비아",
+        "clicks": 1,
+        "impressions": 4,
+        "ctr_percent": 25.0,
+        "position": 7.5
+      },
+      {
+        "label": "부탄",
+        "clicks": 1,
+        "impressions": 3,
+        "ctr_percent": 33.33,
+        "position": 4.0
+      },
+      {
+        "label": "우간다",
+        "clicks": 1,
+        "impressions": 2,
+        "ctr_percent": 50.0,
+        "position": 3.5
+      },
+      {
+        "label": "잠비아",
+        "clicks": 1,
+        "impressions": 2,
+        "ctr_percent": 50.0,
+        "position": 6.0
+      },
+      {
+        "label": "독일",
+        "clicks": 0,
+        "impressions": 106,
+        "ctr_percent": 0.0,
+        "position": 10.63
+      },
+      {
+        "label": "이탈리아",
+        "clicks": 0,
+        "impressions": 58,
+        "ctr_percent": 0.0,
+        "position": 15.12
+      },
+      {
+        "label": "방글라데시",
+        "clicks": 0,
+        "impressions": 38,
+        "ctr_percent": 0.0,
+        "position": 17.87
+      },
+      {
+        "label": "포르투갈",
+        "clicks": 0,
+        "impressions": 33,
+        "ctr_percent": 0.0,
+        "position": 7.94
+      },
+      {
+        "label": "프랑스",
+        "clicks": 0,
+        "impressions": 33,
+        "ctr_percent": 0.0,
+        "position": 10.55
+      },
+      {
+        "label": "이집트",
+        "clicks": 0,
+        "impressions": 31,
+        "ctr_percent": 0.0,
+        "position": 5.55
+      },
+      {
+        "label": "나이지리아",
+        "clicks": 0,
+        "impressions": 27,
+        "ctr_percent": 0.0,
+        "position": 6.19
+      },
+      {
+        "label": "스웨덴",
+        "clicks": 0,
+        "impressions": 21,
+        "ctr_percent": 0.0,
+        "position": 6.33
+      },
+      {
+        "label": "이란",
+        "clicks": 0,
+        "impressions": 16,
+        "ctr_percent": 0.0,
+        "position": 7.06
+      },
+      {
+        "label": "덴마크",
+        "clicks": 0,
+        "impressions": 14,
+        "ctr_percent": 0.0,
+        "position": 7.36
+      },
+      {
+        "label": "우크라이나",
+        "clicks": 0,
+        "impressions": 14,
+        "ctr_percent": 0.0,
+        "position": 13.71
+      },
+      {
+        "label": "세르비아",
+        "clicks": 0,
+        "impressions": 13,
+        "ctr_percent": 0.0,
+        "position": 7.92
+      },
+      {
+        "label": "아르헨티나",
+        "clicks": 0,
+        "impressions": 12,
+        "ctr_percent": 0.0,
+        "position": 7.33
+      },
+      {
+        "label": "노르웨이",
+        "clicks": 0,
+        "impressions": 11,
+        "ctr_percent": 0.0,
+        "position": 4.45
+      },
+      {
+        "label": "슬로바키아",
+        "clicks": 0,
+        "impressions": 11,
+        "ctr_percent": 0.0,
+        "position": 6.55
+      },
+      {
+        "label": "루마니아",
+        "clicks": 0,
+        "impressions": 11,
+        "ctr_percent": 0.0,
+        "position": 8.27
+      },
+      {
+        "label": "그리스",
+        "clicks": 0,
+        "impressions": 10,
+        "ctr_percent": 0.0,
+        "position": 5.0
+      },
+      {
+        "label": "트리니다드 토바고",
+        "clicks": 0,
+        "impressions": 10,
+        "ctr_percent": 0.0,
+        "position": 5.1
+      },
+      {
+        "label": "헝가리",
+        "clicks": 0,
+        "impressions": 10,
+        "ctr_percent": 0.0,
+        "position": 5.4
+      },
+      {
+        "label": "보츠와나",
+        "clicks": 0,
+        "impressions": 9,
+        "ctr_percent": 0.0,
+        "position": 2.44
+      },
+      {
+        "label": "스리랑카",
+        "clicks": 0,
+        "impressions": 9,
+        "ctr_percent": 0.0,
+        "position": 3.89
+      },
+      {
+        "label": "스위스",
+        "clicks": 0,
+        "impressions": 8,
+        "ctr_percent": 0.0,
+        "position": 6.62
+      },
+      {
+        "label": "쿠웨이트",
+        "clicks": 0,
+        "impressions": 8,
+        "ctr_percent": 0.0,
+        "position": 6.88
+      },
+      {
+        "label": "알제리",
+        "clicks": 0,
+        "impressions": 8,
+        "ctr_percent": 0.0,
+        "position": 18.38
+      },
+      {
+        "label": "솔로몬 군도",
+        "clicks": 0,
+        "impressions": 7,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "파나마",
+        "clicks": 0,
+        "impressions": 7,
+        "ctr_percent": 0.0,
+        "position": 6.14
+      },
+      {
+        "label": "바레인",
+        "clicks": 0,
+        "impressions": 7,
+        "ctr_percent": 0.0,
+        "position": 6.57
+      },
+      {
+        "label": "이라크",
+        "clicks": 0,
+        "impressions": 7,
+        "ctr_percent": 0.0,
+        "position": 7.0
+      },
+      {
+        "label": "벨기에",
+        "clicks": 0,
+        "impressions": 7,
+        "ctr_percent": 0.0,
+        "position": 12.29
+      },
+      {
+        "label": "기야나",
+        "clicks": 0,
+        "impressions": 6,
+        "ctr_percent": 0.0,
+        "position": 4.67
+      },
+      {
+        "label": "카자흐스탄",
+        "clicks": 0,
+        "impressions": 6,
+        "ctr_percent": 0.0,
+        "position": 4.83
+      },
+      {
+        "label": "모로코",
+        "clicks": 0,
+        "impressions": 6,
+        "ctr_percent": 0.0,
+        "position": 15.5
+      },
+      {
+        "label": "몰타",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 4.6
+      },
+      {
+        "label": "과테말라",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 5.4
+      },
+      {
+        "label": "리투아니아",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 5.6
+      },
+      {
+        "label": "파푸아 뉴기니",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 7.0
+      },
+      {
+        "label": "온두라스",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 8.4
+      },
+      {
+        "label": "룩셈부르크",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 8.6
+      },
+      {
+        "label": "에스토니아",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "도미니카 공화국",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 10.8
+      },
+      {
+        "label": "사이프러스",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 2.5
+      },
+      {
+        "label": "코트디부아르",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 3.0
+      },
+      {
+        "label": "푸에르토리코",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 4.25
+      },
+      {
+        "label": "말라위",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 5.0
+      },
+      {
+        "label": "파라과이",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 11.5
+      },
+      {
+        "label": "그라나다",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 1.33
+      },
+      {
+        "label": "가나",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "오만",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 5.67
+      },
+      {
+        "label": "이스라엘",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 6.33
+      },
+      {
+        "label": "보스니아 헤르체고비나",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 7.33
+      },
+      {
+        "label": "몬테네그로",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "몽골",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 10.0
+      },
+      {
+        "label": "엘살바도르",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 3.0
+      },
+      {
+        "label": "바베이도스",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "피지",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "아제르바이잔",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 5.0
+      },
+      {
+        "label": "벨로루시",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 5.0
+      },
+      {
+        "label": "그루지아",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 5.5
+      },
+      {
+        "label": "크로아티아",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 7.5
+      },
+      {
+        "label": "몰도바",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 7.5
+      },
+      {
+        "label": "우루과이",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "세인트 루시아",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 9.5
+      },
+      {
+        "label": "라이베리아",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 12.0
+      },
+      {
+        "label": "리히텐슈타인",
+        "clicks": 0,
+        "impressions": 2,
+        "ctr_percent": 0.0,
+        "position": 29.0
+      },
+      {
+        "label": "아르메니아",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "부르키나 파소",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "산마리노",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "아프가니스탄",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 2.0
+      },
+      {
+        "label": "니카라과",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 3.0
+      },
+      {
+        "label": "괌",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "모리타니",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "수리남",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "알바니아",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 5.0
+      },
+      {
+        "label": "키리바티",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 5.0
+      },
+      {
+        "label": "퀴라소",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 6.0
+      },
+      {
+        "label": "슬로베니아",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 7.0
+      },
+      {
+        "label": "시리아",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 7.0
+      },
+      {
+        "label": "세인트키츠 네비스",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 8.0
+      },
+      {
+        "label": "세인트빈센트 그레나딘",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 8.0
+      },
+      {
+        "label": "볼리비아",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "감비아",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "니제르",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "남수단",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "캄보디아",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 10.0
+      },
+      {
+        "label": "마케도니아",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 10.0
+      },
+      {
+        "label": "라트비아",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 11.0
+      },
+      {
+        "label": "짐바브웨",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 11.0
+      },
+      {
+        "label": "키르기스",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 26.0
+      }
+    ],
+    "기기": [
+      {
+        "label": "데스크톱",
+        "clicks": 1517,
+        "impressions": 10405,
+        "ctr_percent": 14.58,
+        "position": 6.81
+      },
+      {
+        "label": "모바일",
+        "clicks": 478,
+        "impressions": 2859,
+        "ctr_percent": 16.72,
+        "position": 6.85
+      },
+      {
+        "label": "태블릿",
+        "clicks": 56,
+        "impressions": 176,
+        "ctr_percent": 31.82,
+        "position": 3.42
+      }
+    ],
+    "차트": [
+      {
+        "label": "2026-08-01",
+        "clicks": 2,
+        "impressions": 30,
+        "ctr_percent": 6.67,
+        "position": 19.1
+      },
+      {
+        "label": "2026-08-02",
+        "clicks": 1,
+        "impressions": 38,
+        "ctr_percent": 2.63,
+        "position": 11.8
+      },
+      {
+        "label": "2026-08-03",
+        "clicks": 4,
+        "impressions": 38,
+        "ctr_percent": 10.53,
+        "position": 13.6
+      },
+      {
+        "label": "2026-08-04",
+        "clicks": 5,
+        "impressions": 46,
+        "ctr_percent": 10.87,
+        "position": 7.8
+      },
+      {
+        "label": "2026-08-05",
+        "clicks": 4,
+        "impressions": 76,
+        "ctr_percent": 5.26,
+        "position": 11.6
+      },
+      {
+        "label": "2026-08-06",
+        "clicks": 4,
+        "impressions": 38,
+        "ctr_percent": 10.53,
+        "position": 11.1
+      },
+      {
+        "label": "2026-08-07",
+        "clicks": 4,
+        "impressions": 32,
+        "ctr_percent": 12.5,
+        "position": 9.8
+      },
+      {
+        "label": "2026-08-08",
+        "clicks": 2,
+        "impressions": 22,
+        "ctr_percent": 9.09,
+        "position": 8.8
+      },
+      {
+        "label": "2026-08-09",
+        "clicks": 6,
+        "impressions": 89,
+        "ctr_percent": 6.74,
+        "position": 13.3
+      },
+      {
+        "label": "2026-08-10",
+        "clicks": 2,
+        "impressions": 36,
+        "ctr_percent": 5.56,
+        "position": 7.9
+      },
+      {
+        "label": "2026-08-11",
+        "clicks": 4,
+        "impressions": 41,
+        "ctr_percent": 9.76,
+        "position": 9.1
+      },
+      {
+        "label": "2026-08-12",
+        "clicks": 5,
+        "impressions": 55,
+        "ctr_percent": 9.09,
+        "position": 15.9
+      },
+      {
+        "label": "2026-08-13",
+        "clicks": 5,
+        "impressions": 46,
+        "ctr_percent": 10.87,
+        "position": 15.6
+      },
+      {
+        "label": "2026-08-14",
+        "clicks": 5,
+        "impressions": 47,
+        "ctr_percent": 10.64,
+        "position": 15.9
+      },
+      {
+        "label": "2026-08-15",
+        "clicks": 4,
+        "impressions": 44,
+        "ctr_percent": 9.09,
+        "position": 11.7
+      },
+      {
+        "label": "2026-08-16",
+        "clicks": 10,
+        "impressions": 58,
+        "ctr_percent": 17.24,
+        "position": 13.3
+      },
+      {
+        "label": "2026-08-17",
+        "clicks": 4,
+        "impressions": 55,
+        "ctr_percent": 7.27,
+        "position": 4.5
+      },
+      {
+        "label": "2026-08-18",
+        "clicks": 6,
+        "impressions": 86,
+        "ctr_percent": 6.98,
+        "position": 10.5
+      },
+      {
+        "label": "2026-08-19",
+        "clicks": 33,
+        "impressions": 115,
+        "ctr_percent": 28.7,
+        "position": 5.6
+      },
+      {
+        "label": "2026-08-20",
+        "clicks": 22,
+        "impressions": 118,
+        "ctr_percent": 18.64,
+        "position": 9.1
+      },
+      {
+        "label": "2026-08-21",
+        "clicks": 7,
+        "impressions": 52,
+        "ctr_percent": 13.46,
+        "position": 12.8
+      },
+      {
+        "label": "2026-08-22",
+        "clicks": 5,
+        "impressions": 96,
+        "ctr_percent": 5.21,
+        "position": 7.9
+      },
+      {
+        "label": "2026-08-23",
+        "clicks": 7,
+        "impressions": 58,
+        "ctr_percent": 12.07,
+        "position": 9.6
+      },
+      {
+        "label": "2026-08-24",
+        "clicks": 8,
+        "impressions": 55,
+        "ctr_percent": 14.55,
+        "position": 10.1
+      },
+      {
+        "label": "2026-08-25",
+        "clicks": 8,
+        "impressions": 69,
+        "ctr_percent": 11.59,
+        "position": 12.3
+      },
+      {
+        "label": "2026-08-26",
+        "clicks": 13,
+        "impressions": 76,
+        "ctr_percent": 17.11,
+        "position": 11.3
+      },
+      {
+        "label": "2026-08-27",
+        "clicks": 10,
+        "impressions": 99,
+        "ctr_percent": 10.1,
+        "position": 20.2
+      },
+      {
+        "label": "2026-08-28",
+        "clicks": 6,
+        "impressions": 87,
+        "ctr_percent": 6.9,
+        "position": 10.1
+      },
+      {
+        "label": "2026-08-29",
+        "clicks": 10,
+        "impressions": 118,
+        "ctr_percent": 8.47,
+        "position": 30.7
+      },
+      {
+        "label": "2026-08-30",
+        "clicks": 11,
+        "impressions": 120,
+        "ctr_percent": 9.17,
+        "position": 23.9
+      },
+      {
+        "label": "2026-08-31",
+        "clicks": 10,
+        "impressions": 84,
+        "ctr_percent": 11.9,
+        "position": 16.2
+      },
+      {
+        "label": "2026-09-01",
+        "clicks": 24,
+        "impressions": 106,
+        "ctr_percent": 22.64,
+        "position": 3.5
+      },
+      {
+        "label": "2026-09-02",
+        "clicks": 33,
+        "impressions": 114,
+        "ctr_percent": 28.95,
+        "position": 4.4
+      },
+      {
+        "label": "2026-09-03",
+        "clicks": 41,
+        "impressions": 161,
+        "ctr_percent": 25.47,
+        "position": 4.4
+      },
+      {
+        "label": "2026-09-04",
+        "clicks": 15,
+        "impressions": 101,
+        "ctr_percent": 14.85,
+        "position": 5.5
+      },
+      {
+        "label": "2026-09-05",
+        "clicks": 22,
+        "impressions": 93,
+        "ctr_percent": 23.66,
+        "position": 4.0
+      },
+      {
+        "label": "2026-09-06",
+        "clicks": 17,
+        "impressions": 128,
+        "ctr_percent": 13.28,
+        "position": 6.9
+      },
+      {
+        "label": "2026-09-07",
+        "clicks": 14,
+        "impressions": 105,
+        "ctr_percent": 13.33,
+        "position": 12.5
+      },
+      {
+        "label": "2026-09-08",
+        "clicks": 14,
+        "impressions": 112,
+        "ctr_percent": 12.5,
+        "position": 4.9
+      },
+      {
+        "label": "2026-09-09",
+        "clicks": 24,
+        "impressions": 105,
+        "ctr_percent": 22.86,
+        "position": 5.6
+      },
+      {
+        "label": "2026-09-10",
+        "clicks": 15,
+        "impressions": 127,
+        "ctr_percent": 11.81,
+        "position": 10.2
+      },
+      {
+        "label": "2026-09-11",
+        "clicks": 18,
+        "impressions": 110,
+        "ctr_percent": 16.36,
+        "position": 6.1
+      },
+      {
+        "label": "2026-09-12",
+        "clicks": 17,
+        "impressions": 85,
+        "ctr_percent": 20.0,
+        "position": 4.8
+      },
+      {
+        "label": "2026-09-13",
+        "clicks": 19,
+        "impressions": 125,
+        "ctr_percent": 15.2,
+        "position": 6.7
+      },
+      {
+        "label": "2026-09-14",
+        "clicks": 21,
+        "impressions": 126,
+        "ctr_percent": 16.67,
+        "position": 5.7
+      },
+      {
+        "label": "2026-09-15",
+        "clicks": 27,
+        "impressions": 162,
+        "ctr_percent": 16.67,
+        "position": 4.6
+      },
+      {
+        "label": "2026-09-16",
+        "clicks": 27,
+        "impressions": 174,
+        "ctr_percent": 15.52,
+        "position": 4.5
+      },
+      {
+        "label": "2026-09-17",
+        "clicks": 25,
+        "impressions": 146,
+        "ctr_percent": 17.12,
+        "position": 5.4
+      },
+      {
+        "label": "2026-09-18",
+        "clicks": 10,
+        "impressions": 132,
+        "ctr_percent": 7.58,
+        "position": 9.0
+      },
+      {
+        "label": "2026-09-19",
+        "clicks": 10,
+        "impressions": 105,
+        "ctr_percent": 9.52,
+        "position": 5.8
+      },
+      {
+        "label": "2026-09-20",
+        "clicks": 19,
+        "impressions": 125,
+        "ctr_percent": 15.2,
+        "position": 3.2
+      },
+      {
+        "label": "2026-09-21",
+        "clicks": 28,
+        "impressions": 148,
+        "ctr_percent": 18.92,
+        "position": 3.9
+      },
+      {
+        "label": "2026-09-22",
+        "clicks": 19,
+        "impressions": 130,
+        "ctr_percent": 14.62,
+        "position": 3.5
+      },
+      {
+        "label": "2026-09-23",
+        "clicks": 25,
+        "impressions": 140,
+        "ctr_percent": 17.86,
+        "position": 3.9
+      },
+      {
+        "label": "2026-09-24",
+        "clicks": 16,
+        "impressions": 154,
+        "ctr_percent": 10.39,
+        "position": 8.4
+      },
+      {
+        "label": "2026-09-25",
+        "clicks": 20,
+        "impressions": 126,
+        "ctr_percent": 15.87,
+        "position": 5.6
+      },
+      {
+        "label": "2026-09-26",
+        "clicks": 13,
+        "impressions": 80,
+        "ctr_percent": 16.25,
+        "position": 4.9
+      },
+      {
+        "label": "2026-09-27",
+        "clicks": 34,
+        "impressions": 147,
+        "ctr_percent": 23.13,
+        "position": 4.0
+      },
+      {
+        "label": "2026-09-28",
+        "clicks": 21,
+        "impressions": 123,
+        "ctr_percent": 17.07,
+        "position": 4.2
+      },
+      {
+        "label": "2026-09-29",
+        "clicks": 19,
+        "impressions": 116,
+        "ctr_percent": 16.38,
+        "position": 5.0
+      },
+      {
+        "label": "2026-09-30",
+        "clicks": 26,
+        "impressions": 155,
+        "ctr_percent": 16.77,
+        "position": 3.9
+      },
+      {
+        "label": "2026-10-01",
+        "clicks": 18,
+        "impressions": 164,
+        "ctr_percent": 10.98,
+        "position": 5.4
+      },
+      {
+        "label": "2026-10-02",
+        "clicks": 22,
+        "impressions": 157,
+        "ctr_percent": 14.01,
+        "position": 5.0
+      },
+      {
+        "label": "2026-10-03",
+        "clicks": 11,
+        "impressions": 123,
+        "ctr_percent": 8.94,
+        "position": 4.1
+      },
+      {
+        "label": "2026-10-04",
+        "clicks": 19,
+        "impressions": 159,
+        "ctr_percent": 11.95,
+        "position": 5.6
+      },
+      {
+        "label": "2026-10-05",
+        "clicks": 25,
+        "impressions": 149,
+        "ctr_percent": 16.78,
+        "position": 4.4
+      },
+      {
+        "label": "2026-10-06",
+        "clicks": 20,
+        "impressions": 126,
+        "ctr_percent": 15.87,
+        "position": 3.5
+      },
+      {
+        "label": "2026-10-07",
+        "clicks": 22,
+        "impressions": 250,
+        "ctr_percent": 8.8,
+        "position": 6.0
+      },
+      {
+        "label": "2026-10-08",
+        "clicks": 23,
+        "impressions": 575,
+        "ctr_percent": 4.0,
+        "position": 9.4
+      },
+      {
+        "label": "2026-10-09",
+        "clicks": 18,
+        "impressions": 272,
+        "ctr_percent": 6.62,
+        "position": 7.9
+      },
+      {
+        "label": "2026-10-10",
+        "clicks": 46,
+        "impressions": 497,
+        "ctr_percent": 9.26,
+        "position": 7.7
+      },
+      {
+        "label": "2026-10-11",
+        "clicks": 44,
+        "impressions": 272,
+        "ctr_percent": 16.18,
+        "position": 5.1
+      },
+      {
+        "label": "2026-10-12",
+        "clicks": 36,
+        "impressions": 213,
+        "ctr_percent": 16.9,
+        "position": 5.0
+      },
+      {
+        "label": "2026-10-13",
+        "clicks": 37,
+        "impressions": 201,
+        "ctr_percent": 18.41,
+        "position": 8.2
+      },
+      {
+        "label": "2026-10-14",
+        "clicks": 29,
+        "impressions": 202,
+        "ctr_percent": 14.36,
+        "position": 5.3
+      },
+      {
+        "label": "2026-10-15",
+        "clicks": 39,
+        "impressions": 209,
+        "ctr_percent": 18.66,
+        "position": 4.8
+      },
+      {
+        "label": "2026-10-16",
+        "clicks": 60,
+        "impressions": 206,
+        "ctr_percent": 29.13,
+        "position": 3.7
+      },
+      {
+        "label": "2026-10-17",
+        "clicks": 37,
+        "impressions": 156,
+        "ctr_percent": 23.72,
+        "position": 5.1
+      },
+      {
+        "label": "2026-10-18",
+        "clicks": 44,
+        "impressions": 223,
+        "ctr_percent": 19.73,
+        "position": 8.0
+      },
+      {
+        "label": "2026-10-19",
+        "clicks": 29,
+        "impressions": 248,
+        "ctr_percent": 11.69,
+        "position": 4.9
+      },
+      {
+        "label": "2026-10-20",
+        "clicks": 41,
+        "impressions": 242,
+        "ctr_percent": 16.94,
+        "position": 4.1
+      },
+      {
+        "label": "2026-10-21",
+        "clicks": 63,
+        "impressions": 254,
+        "ctr_percent": 24.8,
+        "position": 3.3
+      },
+      {
+        "label": "2026-10-22",
+        "clicks": 52,
+        "impressions": 334,
+        "ctr_percent": 15.57,
+        "position": 9.2
+      },
+      {
+        "label": "2026-10-23",
+        "clicks": 57,
+        "impressions": 297,
+        "ctr_percent": 19.19,
+        "position": 4.0
+      },
+      {
+        "label": "2026-10-24",
+        "clicks": 43,
+        "impressions": 204,
+        "ctr_percent": 21.08,
+        "position": 4.9
+      },
+      {
+        "label": "2026-10-25",
+        "clicks": 53,
+        "impressions": 252,
+        "ctr_percent": 21.03,
+        "position": 4.9
+      },
+      {
+        "label": "2026-10-26",
+        "clicks": 54,
+        "impressions": 315,
+        "ctr_percent": 17.14,
+        "position": 4.5
+      },
+      {
+        "label": "2026-10-27",
+        "clicks": 65,
+        "impressions": 295,
+        "ctr_percent": 22.03,
+        "position": 3.9
+      },
+      {
+        "label": "2026-10-28",
+        "clicks": 47,
+        "impressions": 271,
+        "ctr_percent": 17.34,
+        "position": 4.1
+      },
+      {
+        "label": "2026-10-29",
+        "clicks": 62,
+        "impressions": 323,
+        "ctr_percent": 19.2,
+        "position": 4.4
+      },
+      {
+        "label": "2026-10-30",
+        "clicks": 43,
+        "impressions": 273,
+        "ctr_percent": 15.75,
+        "position": 4.3
+      },
+      {
+        "label": "2026-10-31",
+        "clicks": 32,
+        "impressions": 193,
+        "ctr_percent": 16.58,
+        "position": 5.6
+      }
+    ],
+    "페이지": [
+      {
+        "label": "https://rubricheck.com/",
+        "clicks": 1916,
+        "impressions": 10446,
+        "ctr_percent": 18.34,
+        "position": 5.55
+      },
+      {
+        "label": "https://rubricheck.com/assignment-rubric-checker",
+        "clicks": 71,
+        "impressions": 2774,
+        "ctr_percent": 2.56,
+        "position": 4.11
+      },
+      {
+        "label": "https://rubricheck.com/ai-rubric-grader",
+        "clicks": 29,
+        "impressions": 1604,
+        "ctr_percent": 1.81,
+        "position": 8.72
+      },
+      {
+        "label": "https://rubricheck.com/rubric-checker",
+        "clicks": 16,
+        "impressions": 1687,
+        "ctr_percent": 0.95,
+        "position": 4.51
+      },
+      {
+        "label": "https://rubricheck.com/essay-rubric-checker",
+        "clicks": 13,
+        "impressions": 830,
+        "ctr_percent": 1.57,
+        "position": 4.22
+      },
+      {
+        "label": "https://rubricheck.com/ms",
+        "clicks": 12,
+        "impressions": 52,
+        "ctr_percent": 23.08,
+        "position": 2.73
+      },
+      {
+        "label": "https://rubricheck.com/how-to-use-a-rubric-to-check-an-assignment",
+        "clicks": 5,
+        "impressions": 700,
+        "ctr_percent": 0.71,
+        "position": 6.45
+      },
+      {
+        "label": "https://rubricheck.com/ko",
+        "clicks": 5,
+        "impressions": 29,
+        "ctr_percent": 17.24,
+        "position": 4.9
+      },
+      {
+        "label": "https://rubricheck.com/ko/ai-rubric-grader",
+        "clicks": 3,
+        "impressions": 88,
+        "ctr_percent": 3.41,
+        "position": 6.24
+      },
+      {
+        "label": "https://rubricheck.com/ms/how-to-use-a-rubric-to-check-an-assignment",
+        "clicks": 3,
+        "impressions": 74,
+        "ctr_percent": 4.05,
+        "position": 6.49
+      },
+      {
+        "label": "https://rubricheck.com/rubric-feedback-tool",
+        "clicks": 2,
+        "impressions": 991,
+        "ctr_percent": 0.2,
+        "position": 7.33
+      },
+      {
+        "label": "https://rubricheck.com/ko/rubric-checker",
+        "clicks": 1,
+        "impressions": 17,
+        "ctr_percent": 5.88,
+        "position": 5.71
+      },
+      {
+        "label": "https://rubricheck.com/ms/rubric-checker",
+        "clicks": 0,
+        "impressions": 17,
+        "ctr_percent": 0.0,
+        "position": 4.41
+      },
+      {
+        "label": "https://rubricheck.com/pricing",
+        "clicks": 0,
+        "impressions": 9,
+        "ctr_percent": 0.0,
+        "position": 2.89
+      },
+      {
+        "label": "https://rubricheck.com/ko/assignment-rubric-checker",
+        "clicks": 0,
+        "impressions": 7,
+        "ctr_percent": 0.0,
+        "position": 7.86
+      },
+      {
+        "label": "https://rubricheck.com/ko/how-to-use-a-rubric-to-check-an-assignment",
+        "clicks": 0,
+        "impressions": 7,
+        "ctr_percent": 0.0,
+        "position": 10.0
+      },
+      {
+        "label": "https://www.rubricheck.com/",
+        "clicks": 0,
+        "impressions": 6,
+        "ctr_percent": 0.0,
+        "position": 2.33
+      },
+      {
+        "label": "https://rubricheck.com/ko/essay-rubric-checker",
+        "clicks": 0,
+        "impressions": 5,
+        "ctr_percent": 0.0,
+        "position": 4.6
+      },
+      {
+        "label": "https://rubricheck.com/ms/ai-rubric-grader",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 4.75
+      },
+      {
+        "label": "https://rubricheck.com/ms/essay-rubric-checker",
+        "clicks": 0,
+        "impressions": 4,
+        "ctr_percent": 0.0,
+        "position": 7.0
+      },
+      {
+        "label": "https://rubricheck.com/ko/pricing",
+        "clicks": 0,
+        "impressions": 3,
+        "ctr_percent": 0.0,
+        "position": 6.0
+      },
+      {
+        "label": "https://rubricheck.com/ko/rubric-feedback-tool",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 1.0
+      },
+      {
+        "label": "https://rubricheck.com/ms/legal/data-retention",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "https://rubricheck.com/ms/rubric-feedback-tool",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 4.0
+      },
+      {
+        "label": "https://rubricheck.com/ko/legal/refund-policy",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 5.0
+      },
+      {
+        "label": "https://rubricheck.com/vi",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 7.0
+      },
+      {
+        "label": "https://rubricheck.com/ms/legal/terms",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 9.0
+      },
+      {
+        "label": "https://rubricheck.com/ko/legal/data-retention",
+        "clicks": 0,
+        "impressions": 1,
+        "ctr_percent": 0.0,
+        "position": 12.0
+      }
+    ]
+  },
+  "limits": [
+    "Independent aggregate tables; never joined by row or inferred country-query associations.",
+    "Daily-position weighting is approximate because exported positions are rounded.",
+    "Query export excludes anonymized searches; absence does not establish zero demand.",
+    "Ambiguous rubric checker terms are not classified as branded. No conversion or keyword-volume data."
+  ]
+}

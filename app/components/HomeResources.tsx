@@ -3,7 +3,7 @@ import { useLanguage } from "./LanguageProvider";
 import Link from "next/link";
 import { HOME_FAQ_ITEMS, HOME_INTERNAL_LINKS } from "../../src/config/seoPages";
 import styles from "./homeResources.module.css";
-import { BLOG_POST } from "../../src/config/blog";
+import { BLOG_POSTS } from "../../src/config/blog";
 
 export function HomeResources() {
   const { t, href, siteLanguage } = useLanguage();
@@ -15,7 +15,7 @@ export function HomeResources() {
           <span>{t(link.label)}</span>
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5" /></svg>
         </Link>)}
-        {siteLanguage === "en" && <Link href={BLOG_POST.path}>{BLOG_POST.title}</Link>}
+        {siteLanguage === "en" && BLOG_POSTS.map(post => <Link key={post.path} href={post.path}>{post.title}</Link>)}
       </nav>
     </section>
     <section aria-labelledby="home-faq-title">

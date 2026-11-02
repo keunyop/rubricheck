@@ -38,3 +38,6 @@
 .postCard h2 { font-size: 26px; font-weight: 600; line-height: 1.4; margin-top: 14px; }
 .postCard > p:not(.eyebrow) { color: #526177; line-height: 1.8; margin: 16px 0 24px; }
 @media (max-width: 580px) { .steps { grid-template-columns: 1fr; } .steps li { padding: 20px; } .steps li > span { margin-bottom: 10px; } .page { padding-inline: 16px; } .article { padding-inline: 22px; } .cta { padding: 22px; } }
+
+.postCard + .postCard { margin-top: 24px; }
+.example { padding: 4px 20px 18px; margin-top: 18px; border-left: 4px solid #6366f1; background: #f1f5f9; }

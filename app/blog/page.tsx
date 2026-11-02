@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BLOG_INDEX, BLOG_POST } from "../../src/config/blog";
+import { BLOG_INDEX, BLOG_POSTS } from "../../src/config/blog";
 import { absoluteUrl } from "../../src/lib/seo";
 import { JsonLd } from "../components/JsonLd";
 import { blogMetadata } from "./metadata";
@@ -13,12 +13,12 @@ export default function BlogPage() {
     <div className={styles.container}>
       <nav className={styles.breadcrumb} aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true"> / </span><span aria-current="page">Blog</span></nav>
       <header className={styles.indexHeader}><p className={styles.eyebrow}>THE RUBRICHECK BLOG</p><h1>A clearer next step.<br />A stronger next draft.</h1><p>{BLOG_INDEX.description}</p></header>
-      <article className={styles.postCard}>
-        <p className={styles.eyebrow}>{BLOG_POST.category} · 4 min read</p>
-        <h2><Link href={BLOG_POST.path}>{BLOG_POST.title}</Link></h2>
-        <p>{BLOG_POST.description}</p>
-        <time dateTime={BLOG_POST.date}>November 2, 2026</time>
-      </article>
+      {BLOG_POSTS.map(post => <article key={post.path} className={styles.postCard}>
+        <p className={styles.eyebrow}>{post.category} · 4 min read</p>
+        <h2><Link href={post.path}>{post.title}</Link></h2>
+        <p>{post.description}</p>
+        <time dateTime={post.date}>{post.date}</time>
+      </article>)}
     </div>
   </main>;
 }
