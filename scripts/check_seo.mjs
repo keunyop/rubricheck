@@ -51,7 +51,7 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 105, "Sitemap includes all 15 public pages in seven languages");
+  assert.equal(urls.length, 107, "Sitemap includes 15 public pages in seven languages plus two English blog pages");
   assert.equal(new Set(urls.map(String)).size, urls.length, "No duplicate sitemap URLs");
   assert.doesNotMatch(sitemap, /<loc>[^<]*\/(?:api|admin|billing)(?:\/|<)/);
   const titles = new Set();
@@ -74,8 +74,10 @@ try {
     assert.ok(html.includes('dir="' + (locale === "ur" ? "rtl" : "ltr") + '"'), url.pathname + " server direction");
     const alternates = tags(html, "link").filter(tag => tag.rel === "alternate" && tag.hreflang);
     const barePath = prefix ? url.pathname.slice(prefix.length) || "/" : url.pathname;
+    const isBlog = barePath === "/blog" || barePath.startsWith("/blog/");
+    if (isBlog) assert.equal(alternates.length, 0, "English-only blog must not advertise missing translations");
     const languageLocale = { en: "en", ko: "ko", ms: "ms", hi: "hi", ur: "ur", vi: "vi", zh: "zh", "ko-KR": "ko", "ms-MY": "ms", "hi-IN": "hi", "ur-PK": "ur", "vi-VN": "vi", "zh-CN": "zh", "x-default": "en" };
-    for (const language of ["en", "ko", "ms", "hi", "ur", "vi", "zh", "ko-KR", "ms-MY", "hi-IN", "ur-PK", "vi-VN", "zh-CN", "x-default"]) {
+    for (const language of isBlog ? [] : ["en", "ko", "ms", "hi", "ur", "vi", "zh", "ko-KR", "ms-MY", "hi-IN", "ur-PK", "vi-VN", "zh-CN", "x-default"]) {
       const matches = alternates.filter(tag => tag.hreflang === language);
       assert.equal(matches.length, 1, url.pathname + " has exactly one " + language + " alternate");
       const targetLocale = languageLocale[language];
@@ -108,7 +110,7 @@ try {
     const breadcrumb = schemas.find((schema) => schema["@type"] === "BreadcrumbList");
     if (breadcrumb) {
       assert.match(html, /<nav\b[^>]*aria-label=/, "Breadcrumbs are visible as well as marked up");
-      assert.equal(breadcrumb.itemListElement.length, 2);
+      assert.equal(breadcrumb.itemListElement.length, isBlog ? 3 : 2);
       breadcrumb.itemListElement.forEach((item, index) => assert.equal(item.position, index + 1));
       assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + homePath);
       assert.equal(breadcrumb.itemListElement.at(-1).item, url.href);

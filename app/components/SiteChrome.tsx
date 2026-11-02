@@ -11,7 +11,7 @@ import { SiteFooter } from "./SiteFooter";
 import styles from "./site.module.css";
 
 export function SiteChrome({ children }: { children: ReactNode }) {
-  const { t, href } = useLanguage();
+  const { t, href, siteLanguage } = useLanguage();
   const { signedInEmail } = useAccountSummary();
   const path = stripLocale(usePathname()).replace(/\/$/, "") || "/";
   if (path === "/workspace" || /^\/(admin|billing)(\/|$)/.test(path)) return children;
@@ -26,6 +26,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
         <nav aria-label={t("Main navigation")} className={styles.nav}>
           {[["/product", "Product"], ["/pricing", "Pricing"], ["/help", "Help center"]].map(([url, label]) =>
             <Link key={url} href={href(url)} aria-current={path === url ? "page" : undefined}>{t(label)}</Link>)}
+          {siteLanguage === "en" && <Link href="/blog" aria-current={path.startsWith("/blog") ? "page" : undefined}>Blog</Link>}
         </nav>
         {!signedInEmail ? <Link href={href("/workspace?start=login")} className={styles.login}>{t("Log in")}</Link> : null}
         <Link href={href("/workspace")} className={styles.headerCta} aria-label={t("Open workspace")}><span className={styles.desktopLabel} aria-hidden="true">{t("Open workspace")}</span><span className={styles.mobileLabel} aria-hidden="true">{t("Workspace")}</span> <span aria-hidden="true">↗</span></Link>

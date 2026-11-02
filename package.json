@@ -13,6 +13,7 @@
     "test:feedback:browser": "node scripts/check_feedback_replies.mjs",
     "test:ga4:browser": "node scripts/check_ga4.mjs",
     "test:seo": "node scripts/check_seo.mjs",
+    "test:blog:browser": "node scripts/check_blog.mjs",
     "test:i18n:browser": "node scripts/check_i18n.mjs",
     "validate:scoring": "node --import ./scripts/register-test-resolver.mjs --experimental-strip-types scripts/validate_scoring.ts",
     "test:all": "node scripts/run_all_tests.mjs",

@@ -1,4 +1,5 @@
 import { stripLocale } from "../i18n/config";
+import { BLOG_INDEX, BLOG_POST } from "../config/blog";
 
 // Shared, closed vocabulary. Never send user input, email, full URLs or Stripe IDs.
 export const GROWTH_CLIENT_EVENTS = ["page_view", "pricing_viewed", "evaluation_result_viewed", "evaluation_network_failed"] as const;
@@ -15,7 +16,7 @@ const REFERRERS: Record<string, string> = { "google.com": "google", "google.com.
 export function publicGrowthPath(value: unknown): string {
   if (typeof value !== "string") return "unknown";
   const path = stripLocale(value.split(/[?#]/)[0]) || "/";
-  return PUBLIC_PATHS.includes(path) ? path : "unknown";
+  return PUBLIC_PATHS.includes(path) || [BLOG_INDEX.path, BLOG_POST.path].includes(path) ? path : "unknown";
 }
 const pick = (value: unknown, allowed: string[], fallback = "unknown") => typeof value === "string" && allowed.includes(value.toLowerCase()) ? value.toLowerCase() : fallback;
 export function sanitizeTouch(value: unknown): GrowthTouch {

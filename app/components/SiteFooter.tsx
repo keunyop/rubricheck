@@ -3,7 +3,7 @@
 import type { MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LANGUAGE_NAMES, LOCALES, localizedPath } from "../../src/i18n/config";
+import { LANGUAGE_NAMES, LOCALES, localizedPath, stripLocale } from "../../src/i18n/config";
 import { useLanguage } from "./LanguageProvider";
 import { useAccountSummary } from "./AccountSummaryProvider";
 import { FeedbackButton } from "./FeedbackButton";
@@ -19,6 +19,7 @@ export function SiteFooter({ workspace = false, onPricing }: { workspace?: boole
   const { t, href, siteLanguage } = useLanguage();
   const { signedInEmail } = useAccountSummary();
   const pathname = usePathname();
+  const isBlog = /^\/blog(?:\/|$)/.test(stripLocale(pathname));
   return <footer className={styles.footer}>
     <div className={styles.footerGrid}>
       <div className={styles.footerBrand}>
@@ -28,6 +29,7 @@ export function SiteFooter({ workspace = false, onPricing }: { workspace?: boole
       </div>
       {groups.map(group => <nav key={group.title} aria-label={t(group.title)}>
         <h2>{t(group.title)}</h2>
+        {group.title === "Resources" && siteLanguage === "en" && <Link href="/blog">Blog</Link>}
         {group.links.map(([url, label]) => <Link key={url} href={href(url)}
           target={workspace && url !== "/pricing" ? "_blank" : undefined} rel={workspace ? "noopener" : undefined}
           onClick={url === "/pricing" && onPricing ? (event: MouseEvent<HTMLAnchorElement>) => {
@@ -40,7 +42,7 @@ export function SiteFooter({ workspace = false, onPricing }: { workspace?: boole
     <div className={styles.footerBottom}>
       <p>{t("AI-generated estimate only. Not an official grade. RubriCheck.")}</p>
       {!workspace ? <nav aria-label={t("Site language")} className={styles.languages}>
-        {LOCALES.map(locale => <Link key={locale} href={localizedPath(pathname, locale)} hrefLang={locale} lang={locale} aria-current={siteLanguage === locale ? "page" : undefined}>{LANGUAGE_NAMES[locale]}</Link>)}
+        {LOCALES.map(locale => <Link key={locale} href={localizedPath(isBlog && locale !== "en" ? "/" : pathname, locale)} hrefLang={locale} lang={locale} aria-current={siteLanguage === locale ? "page" : undefined}>{LANGUAGE_NAMES[locale]}</Link>)}
       </nav> : null}
     </div>
   </footer>;

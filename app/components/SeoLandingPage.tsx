@@ -6,6 +6,7 @@ import type { SeoLandingPageContent } from "../../src/config/seoPages";
 import { FREE_TRIAL_LIMIT } from "../../src/config/plans";
 import { buildBreadcrumbSchema, buildWebPageSchema } from "../../src/lib/seo";
 import { JsonLd } from "./JsonLd";
+import { BLOG_POST } from "../../src/config/blog";
 
 export async function SeoLandingPage({ page }: { page: SeoLandingPageContent }) {
   const t = await getTranslator();
@@ -101,6 +102,10 @@ export async function SeoLandingPage({ page }: { page: SeoLandingPageContent }) 
             ))}
           </div>
         </section>
+        {locale === "en" && ["/assignment-rubric-checker", "/essay-rubric-checker", "/how-to-use-a-rubric-to-check-an-assignment", "/rubric-feedback-tool"].includes(page.path) && <aside className="rounded-2xl border border-indigo-100 bg-white p-6">
+          <h2 className="text-lg font-semibold">Have you covered every requirement?</h2>
+          <p className="mt-3 leading-7">Use <Link href={BLOG_POST.path} className="text-indigo-700 underline underline-offset-4">our assignment requirements checklist</Link> to turn your instructions into a final review, with a worked example.</p>
+        </aside>}
         <div className="flex flex-wrap justify-center gap-3">
           <Link href={href(page.ctaHref)} className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white">{page.ctaLabel}</Link>
           <Link href={href(`/workspace?start=general&from=${page.slug}#rubric-checker`)} className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">{t("Check without a rubric")}</Link>
