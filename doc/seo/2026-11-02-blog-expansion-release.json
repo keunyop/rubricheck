@@ -1,0 +1,48 @@
+{
+  "releaseDate": "2026-11-02",
+  "deploymentMechanism": "One production Git push after local verification; no CLI/API deployment or prebuilt upload.",
+  "postReleaseScope": "Exactly one read-only GET of the new article per site; no hosted browser, accessibility, regression, crawl, screenshot or load test.",
+  "recordStorage": "Saved locally after release. Not pushed, to avoid triggering another production deployment.",
+  "site": "RubriCheck",
+  "articleUrl": "https://rubricheck.com/blog/descriptive-vs-critical-analysis",
+  "deployment": {
+    "id": "dpl_CpuhbYW1n44kQvJM9C2doQxCKXK8",
+    "state": "READY",
+    "target": "production",
+    "source": "git",
+    "branch": "main",
+    "commit": "b908e79c24689b31fe4faefc889fd897b7be370e",
+    "productionDomains": [
+      "rubricheck.com"
+    ],
+    "readyAt": "2026-11-02T22:50:55.662Z"
+  },
+  "localVerification": {
+    "eslint": "passed on changed files",
+    "typecheck": "passed",
+    "productionBuild": "passed in isolated checkout without production credentials",
+    "growthTestsPassed": 7,
+    "seoUrlsPassed": 108,
+    "blogBrowser": "passed for old/new posts, mobile/desktop, no-JS, workspace entry and 404",
+    "axeViolations": 0,
+    "runtimeErrors": 0,
+    "excluded": [
+      "Real DB/Auth",
+      "AI evaluation execution and generated results",
+      "Billing",
+      "Production analytics ingestion"
+    ],
+    "report": "2026-11-02-blog-expansion.md"
+  },
+  "smoke": {
+    "checkedAt": "2026-11-02T23:51:35.810Z",
+    "status": 200,
+    "titlePresent": true,
+    "bodyPresent": true,
+    "actionPresent": true,
+    "canonicalPresent": true,
+    "articleSchemaPresent": true,
+    "noindex": false
+  }
+}
+

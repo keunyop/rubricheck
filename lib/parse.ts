@@ -1,11 +1,12 @@
 import mammoth from "mammoth";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
+import { createHash } from "node:crypto";
 
 type ParsedField = "rubric" | "assignment";
 type VisionFeatureType = "DOCUMENT_TEXT_DETECTION" | "TEXT_DETECTION";
 
 type VisionOcrClient = {
-  extractText: (params: { imageContentBase64: string; field: ParsedField }) => Promise<string>;
+  extractText: (params: { imageContentBase64: string; field: ParsedField; signal?: AbortSignal; allowEmpty?: boolean }) => Promise<string>;
 };
 
 type ParseFileOptions = {
@@ -85,7 +86,7 @@ function createGoogleVisionOcrClient(): VisionOcrClient {
   const languageHints = parseOcrLanguageHints(process.env.GOOGLE_VISION_LANGUAGE_HINTS);
 
   return {
-    async extractText({ imageContentBase64, field }) {
+    async extractText({ imageContentBase64, field, signal: documentSignal, allowEmpty }) {
       if (!apiKey) visionUnavailable(field, "missing_api_key");
       const requestBody = {
         requests: [
@@ -99,7 +100,8 @@ function createGoogleVisionOcrClient(): VisionOcrClient {
 
       let response: Response;
       let payload: Record<string, unknown> | null;
-      const signal = AbortSignal.timeout(GOOGLE_VISION_TIMEOUT_MS);
+      const requestSignal = AbortSignal.timeout(GOOGLE_VISION_TIMEOUT_MS);
+      const signal = documentSignal ? AbortSignal.any([documentSignal, requestSignal]) : requestSignal;
       try {
         response = await fetch(GOOGLE_VISION_ANNOTATE_ENDPOINT, {
           method: "POST",
@@ -136,7 +138,7 @@ function createGoogleVisionOcrClient(): VisionOcrClient {
       const rawText = asRecord(result.fullTextAnnotation)?.text
         ?? (Array.isArray(result.textAnnotations) ? asRecord(result.textAnnotations[0])?.description : undefined) ?? "";
       if (typeof rawText !== "string") visionUnavailable(field, "invalid_response", { httpStatus: response.status });
-      if (!rawText.trim()) {
+      if (!rawText.trim() && !allowEmpty) {
         throw new Error("TEXT_EXTRACTION_FAILED");
       }
 
@@ -319,6 +321,66 @@ async function parseImageWithOcr(
   return requireMeaningfulText ? ensureMeaningfulText(normalized, file.name) : normalized;
 }
 
+type DocxElement = {
+  type: string;
+  value?: string;
+  children?: DocxElement[];
+  readAsBase64String?: () => Promise<string>;
+};
+
+async function parseDocx(buffer: Buffer, fileName: string, field: ParsedField, options: ParseFileOptions): Promise<string> {
+  const parts: Array<string | (() => Promise<string>)> = [];
+  // Walk Mammoth's document in reading order. Raw-text extraction drops images,
+  // including screenshots of entire grading tables in otherwise readable DOCX files.
+  const collect = (element: DocxElement): void => {
+    if (element.type === "text") parts.push(element.value ?? "");
+    else if (element.type === "tab") parts.push("\t");
+    else if (element.type === "image" && element.readAsBase64String) parts.push(element.readAsBase64String);
+    else {
+      for (const child of element.children ?? []) collect(child);
+      if (element.type === "paragraph") parts.push("\n\n");
+    }
+  };
+  try {
+    await mammoth.convertToHtml({ buffer }, {
+      externalFileAccess: false,
+      transformDocument: (document: DocxElement) => { collect(document); return document; },
+      // Generated HTML is never rendered or used as extracted text.
+      convertImage: mammoth.images.imgElement(async () => ({ src: "" })),
+    });
+  } catch {
+    throw new FileParseValidationError(`Invalid or unreadable DOCX file: ${fileName}`);
+  }
+
+  const client = options.visionOcrClient ?? createGoogleVisionOcrClient();
+  const signal = AbortSignal.timeout(60_000);
+  const recognized = new Map<string, string>();
+  const text: string[] = [];
+  let imageBytes = 0;
+  for (const part of parts) {
+    if (typeof part === "string") { text.push(part); continue; }
+    if (signal.aborted) visionUnavailable(field, "timeout");
+    let content: string;
+    try { content = await part(); }
+    catch { throw new FileParseValidationError(`Invalid or unreadable DOCX image: ${fileName}`); }
+    const key = createHash("sha256").update(content).digest("hex");
+    if (!recognized.has(key)) {
+      imageBytes += Buffer.byteLength(content, "base64");
+      if (recognized.size >= 50 || imageBytes > 30 * 1024 * 1024) {
+        throw new FileParseValidationError(`DOCX contains too many or oversized embedded images: ${fileName}`);
+      }
+      // Blank decorative images are valid. Provider errors and unreadable images
+      // still fail the document instead of silently grading incomplete content.
+      const result = await client.extractText({ imageContentBase64: content, field, signal, allowEmpty: true });
+      recognized.set(key, normalizeText(cleanupOcrText(result, field)));
+    }
+    const result = recognized.get(key)!;
+    if (result) text.push("\n\n" + result + "\n\n");
+  }
+  const normalized = normalizeText(text.join(""));
+  return options.requireMeaningfulText === false ? normalized : ensureMeaningfulText(normalized, fileName);
+}
+
 export async function parseFile(file: File, options: ParseFileOptions = {}): Promise<string> {
   if (file.size === 0) {
     throw new FileParseValidationError(`File is empty: ${file.name || "unnamed"}`);
@@ -339,16 +401,7 @@ export async function parseFile(file: File, options: ParseFileOptions = {}): Pro
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    try {
-      const result = await mammoth.extractRawText({ buffer });
-      const normalizedText = normalizeText(result.value ?? "");
-      return requireMeaningfulText ? ensureMeaningfulText(normalizedText, file.name) : normalizedText;
-    } catch (error) {
-      if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED") {
-        throw error;
-      }
-      throw new FileParseValidationError(`Invalid or unreadable DOCX file: ${file.name}`);
-    }
+    return parseDocx(buffer, file.name, field, options);
   }
 
   if (extension === ".txt") {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { mock, test } from "node:test";
 import type { Rubric } from "../../../lib/schema.ts";
+import { RUBRIC_CACHE_VERSION } from "../../../lib/rubricVersion.ts";
 import { generalRubric } from "../../../lib/generalRubric.ts";
 
 let account: string | null = "student@example.com";
@@ -9,14 +10,14 @@ let failLibrary = false, failEvaluation = false;
 let selected: Rubric | undefined;
 let selectedLanguage: string | undefined;
 let savedLanguage = "ko";
-let structureVersion: string | undefined = "v2";
+let structureVersion: string | undefined = RUBRIC_CACHE_VERSION;
 const settlements: boolean[] = [];
 const custom = { criteria: [{ name: "Custom focus", max_score: 60, description: "Focus" }, { name: "Sources", max_score: 40, description: "Sources" }] };
 const savedId = "a".repeat(64);
 mock.module("../../../src/lib/creditSession.ts", { namedExports: { getCreditEmailFromCookie: () => account } });
 mock.module("../../../src/lib/languagePreferences.ts", { namedExports: { getLanguagePreferences: async () => ({ siteLanguage: "en", resultLanguage: savedLanguage }) } });
 mock.module("../../../lib/rubricStructuring.ts", { namedExports: {
-  RUBRIC_CACHE_VERSION: "v2",
+  RUBRIC_CACHE_VERSION,
   hashNormalizedEmail: () => "hash", structureRubric: async () => { structures++; return custom; },
 } });
 mock.module("../../../lib/evaluation.ts", { namedExports: {
@@ -35,7 +36,7 @@ mock.module("../../../src/lib/rubricLibrary.ts", { namedExports: {
     return email === "student@example.com" && id === savedId ? { id, text: "Custom rubric", rubric: custom, files: [], structureVersion } : null;
   },
   saveRubric: async () => { saves++; if (failLibrary) throw Error("offline"); return savedId; },
-  editSavedRubric: async (_email: string, _id: string, _action: string, _name: string, rubric: Rubric) => { touches++; assert.deepEqual(rubric, custom); structureVersion = "v2"; return !failLibrary; },
+  editSavedRubric: async (_email: string, _id: string, _action: string, _name: string, rubric: Rubric) => { touches++; assert.deepEqual(rubric, custom); structureVersion = RUBRIC_CACHE_VERSION; return !failLibrary; },
 } });
 mock.module("../../../src/lib/credits.ts", { namedExports: {
   getCreditBalanceForRequest: async () => 0, resolveCreditStorageTarget: async () => null,
@@ -120,7 +121,7 @@ test("rubric sources use existing evaluation, access, and billing paths", async 
     const before = structures;
     assert.equal((await POST(request({ rubricSource: "saved", rubricId: savedId }))).status, 200);
     assert.equal(structures, before + 1);
-    assert.equal(structureVersion, "v2");
+    assert.equal(structureVersion, RUBRIC_CACHE_VERSION);
     assert.equal((await POST(request({ rubricSource: "saved", rubricId: savedId }))).status, 200);
     assert.equal(structures, before + 1);
     structures = before;

@@ -135,10 +135,11 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     '{ "total_score": number, "criteria": [{ "name": "string", "max_score": number, "description": "string" }], "adjustments": [{ "name": "string", "kind": "deduction" | "bonus", "max_points": number, "description": "string" }] }',
     "Rules:",
     "- Include all identifiable criteria.",
-    "- If an explicit points table is present, criteria must contain only its base scoring categories with their exact point weights. Their sum must equal the stated base total. Incorporate supporting assignment requirements into those descriptions, not extra point-bearing categories.",
+    "- A document may contain several independent scoring tables (for example Report, Presentation, and Q&A). Include their criteria once each, qualifying names by section when needed to keep names unique. A section subtotal or a course contribution percentage is not an overall raw-points total.",
+    "- If explicit points tables are present, criteria must contain only their base scoring categories with their exact point weights. Their sum must equal the applicable overall raw-points total, if one is stated. Incorporate supporting assignment requirements into those descriptions, not extra point-bearing categories.",
     "- Total and subtotal rows summarize existing categories; never count them again as criteria. Performance-level columns describe alternative scores for the same criterion, not additional criteria or point weights.",
-    "- Preserve explicit point weights and the stated base total. Never rescale weights or change a stated total to hide a mismatch. Re-read the source to distinguish base categories, subtotals, performance levels, and adjustments before returning.",
-    "- total_score is the stated base total (for example 100), excluding bonus and penalty points. If no total is stated, use the sum of base criterion weights. Check the sum before returning.",
+    "- Preserve explicit point weights and any stated overall raw-points total. Never rescale weights or change that overall total to hide a mismatch. Re-read the source to distinguish base categories, subtotals, performance levels, and adjustments before returning.",
+    "- total_score is the stated overall raw-points base total for ALL extracted criteria (for example 100), excluding bonus and penalty points. If no overall raw-points total is stated, use the sum of the extracted base criterion weights. Do not add section-header denominators or mix course percentages with raw marks to invent an overall total. Preserve each row's explicit maximum even when a section heading has an inconsistent subtotal. Check the sum before returning.",
     "- Automatic deductions and optional bonus points are NOT base criteria and must never increase the base rubric total. Put them in adjustments, with a positive max_points magnitude and kind deduction or bonus. Include each rule once, even if repeated in the source.",
     "- Preserve each adjustment condition and any proof requirements in its description. Plagiarism or AI-use penalties requiring evidence must keep that requirement. Use adjustments: [] if there are no explicit point adjustments.",
     "- Assessment instructions and assignment requirements are valid criteria, even without points or a scoring table.",
@@ -163,6 +164,7 @@ export async function structureRubric(rubricText: string, options: StructureRubr
       `Invalid fields: ${JSON.stringify(issues)}.`,
       "Return valid JSON with numeric point values, preserving the original base categories, explicit weights, stated total, and adjustment conditions.",
       "Check that base criterion weights sum to the stated total. Do not include total/subtotal rows or alternative performance levels as extra criteria. Keep deductions and bonuses separate.",
+      "For multiple independent scoring tables, distinguish their section subtotals and course percentages from an overall raw-points total. If no overall raw-points total is stated for all extracted criteria, sum their actual row maxima, not the section-header denominators. Never change explicit row weights to fit an inconsistent section heading.",
       "Do not invent criteria or weights, rescale explicit weights, or replace a stated total to make validation pass. Re-read the original source and return the complete corrected extraction.",
     ].join("\n");
   };
@@ -188,15 +190,17 @@ export async function structureRubric(rubricText: string, options: StructureRubr
       });
       throw new Error("RUBRIC_MODEL_UNAVAILABLE");
     }
+    // Empty criteria is the model's explicit no-assessment signal. It may also
+    // return total_score: 0/null; those fields must not turn guidance into a 500-like failure.
+    if (modelResult && typeof modelResult === "object" && "criteria" in modelResult &&
+        Array.isArray(modelResult.criteria) && modelResult.criteria.length === 0) {
+      console.info("RUBRIC_CRITERIA_NOT_FOUND", { requestId });
+      throw new Error("RUBRIC_CRITERIA_NOT_FOUND");
+    }
     const parsed = RubricSchema.safeParse(modelResult);
     if (parsed.success) {
       rubric = parsed.data;
       break;
-    }
-    if (parsed.error.issues.length === 1 && parsed.error.issues[0].code === "too_small" &&
-        parsed.error.issues[0].path.length === 1 && parsed.error.issues[0].path[0] === "criteria") {
-      console.info("RUBRIC_CRITERIA_NOT_FOUND", { requestId });
-      throw new Error("RUBRIC_CRITERIA_NOT_FOUND");
     }
     const issues = parsed.error.issues.map(issue => ({ code: issue.code, path: issue.path.join(".") }));
     if (attempt === 0) {

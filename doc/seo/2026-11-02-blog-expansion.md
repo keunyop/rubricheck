@@ -66,7 +66,7 @@ UTS 같은 공식 자료에도 전후 문단이 있다. 기존 결과가 모두 
 
 작업 전 배포 확인: `rubricheck.com` 운영 별칭은 Git `main`의 `f46f6bea203cff8e79522d30fa42f4c2b27fb8dd`, `READY`, 배포 `dpl_6BnyshRuEpYU7urfvmFAo2PqPMKb`. 따라서 첫 글은 이전 문서의 미배포 기록 이후 실제 배포되었다.
 
-새 글은 운영 `.env.local`이 없는 별도 작업본에서 검증 중이다. 빌드의 기존 OpenAI 설정 검사는 실제 키가 아닌 명백한 fixture 문자열만 사용하며 AI API를 호출하지 않는다. 최종 검증·배포 결과는 아래에 덧붙인다.
+새 글은 운영 `.env.local`이 없는 별도 작업본에서 검증했다. 빌드의 기존 OpenAI 설정 검사는 실제 키가 아닌 명백한 fixture 문자열만 사용했고 AI API를 호출하지 않았다. 개발 브랜치를 `main`에 한 번 병합·push해 운영 배포했다. 커밋 `b908e79c24689b31fe4faefc889fd897b7be370e`의 배포는 `READY`이고, 새 글에 읽기 전용 GET 1회를 실행해 HTTP 200·본문·서비스 링크·canonical·구조화 데이터를 확인했다. 상세 결과는 [릴리스 기록](2026-11-02-blog-expansion-release.json)에 있다. 배포 후 기록은 추가 운영 배포를 만들지 않도록 로컬에만 저장했다.
 
 ### 완료된 로컬 검증
 

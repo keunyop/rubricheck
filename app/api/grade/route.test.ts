@@ -4,6 +4,7 @@ import { createCreditSessionToken, CREDIT_SESSION_COOKIE_NAME } from "../../../s
 import { gradingFailureCode } from "../../../src/lib/gradingFailureCapture.ts";
 import type { GradingFailureInput } from "../../../src/lib/gradingFailures.ts";
 import { makePdf } from "../../../lib/testFixtures/pdf.ts";
+import { docxFixture } from "../../../lib/testFixtures/docx.ts";
 
 const capturedFailures: GradingFailureInput[] = [];
 mock.module("../../../src/lib/gradingFailureCapture.ts", { namedExports: {
@@ -16,6 +17,7 @@ let structureCalls = 0;
 let rubricFailureCalls = 0;
 let evaluationCalls = 0;
 let negativeCalls = 0;
+let structurePrompt = "";
 const rubric = { criteria: [{ name: "Thesis", max_score: 10, description: "Clarity" }] };
 const evaluation = {
   summary: "Clear argument", top_improvements: ["Add evidence", "Add detail", "Revise conclusion"],
@@ -24,11 +26,12 @@ const evaluation = {
 // Keep the real rubric parser/schema in the route test: a model response with one
 // valid criterion previously failed here even though the mocked route passed.
 mock.module("../../../lib/openai.ts", { namedExports: {
-  callStructureModel: async () => {
+  callStructureModel: async (prompt: string) => {
+    structurePrompt = prompt;
     structureCalls++;
     if (failure === "rubricProvider") throw new Error("upstream unavailable");
     if (failure === "rubricTimeout") throw new Error("OPENAI_TIMEOUT");
-    if (failure === "missingCriteria") return { criteria: [] };
+    if (failure === "missingCriteria") return { total_score: 0, criteria: [], adjustments: [] };
     if (failure === "rubricMismatchAlways" ||
         ((failure === "rubricMismatchOnce" || failure === "rubricRetryTimeout") && rubricFailureCalls++ === 0)) {
       return { ...rubric, total_score: 20 };
@@ -300,6 +303,37 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
         assert.equal(capturedFailures.length, 0);
       }
       credits = 0;
+    });
+    await t.test("DOCX rubric images reach grading; OCR outages never charge for a cover-only extraction", async () => {
+      process.env.GOOGLE_CLOUD_VISION_API_KEY = "test-only";
+      failure = null; reserveStatus = "reserved"; credits = 0;
+      const file = await docxFixture(["Course cover sheet", { image: "synthetic rubric table" }]);
+      const docxRequest = () => {
+        const form = new FormData();
+        form.set("rubric", file);
+        form.set("assignmentText", "A clear argument with evidence.");
+        const req = request();
+        return new Request(req.url, { method: "POST", headers: { cookie: req.headers.get("cookie")! }, body: form });
+      };
+      calls.length = 0; capturedFailures.length = 0;
+      visionStatus = 503; visionResponse = { error: { code: 503 } };
+      const before = structureCalls;
+      const failed = await POST(docxRequest());
+      assert.equal(failed.status, 503);
+      assert.equal((await failed.json()).code, "OCR_UNAVAILABLE");
+      assert.equal(structureCalls, before);
+      assert.ok(!calls.some(c => /reserve|settle|refund/.test(c.name)));
+      assert.equal(capturedFailures.length, 1);
+      assert.equal(capturedFailures[0].files[0].file.name, "synthetic.docx");
+      calls.length = 0; capturedFailures.length = 0;
+      visionStatus = 200; visionResponse = { responses: [{ fullTextAnnotation: { text: "Thesis: 10 points. State a clear argument." } }] };
+      const response = await POST(docxRequest());
+      assert.equal(response.status, 200);
+      assert.match(structurePrompt, /Course cover sheet[\s\S]*Thesis: 10 points/);
+      assert.equal((await response.json()).criteria.length, 1);
+      assert.equal(settlements().length, 1);
+      assert.equal(settlements()[0].body.p_succeeded, true);
+      assert.equal(capturedFailures.length, 0);
     });
     await t.test("a short rubric image grades once while empty or punctuation-only OCR fails before billing", async () => {
       failure = null; reserveStatus = "reserved"; credits = 0;

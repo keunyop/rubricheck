@@ -54,7 +54,7 @@ test("extraction and evaluation preserve separate adjustment rules and proof req
   let prompt = "";
   assert.deepEqual(await structureRubric("Synthetic 100-point rubric with a deduction and bonus", { cacheRedisOverride: null, modelCaller: async p => { prompt = p; return rubric; } }), rubric);
   assert.match(prompt, /must never increase the base rubric total/);
-  assert.match(prompt, /only its base scoring categories/);
+  assert.match(prompt, /only their base scoring categories/);
   const evaluationPrompt = buildEvaluationPrompt(rubric, "Synthetic assignment", "standard");
   assert.match(evaluationPrompt, /score_adjustments/);
   assert.match(evaluationPrompt, /that would double count/);

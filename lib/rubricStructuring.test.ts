@@ -80,7 +80,7 @@ test("same user + same rubric hits cache and skips structuring model", async () 
   assert.equal(redis.getCalls.length, 2);
   assert.equal(redis.setCalls.length, 1);
   assert.equal(redis.setCalls[0]?.options?.ex, 604800);
-  assert.ok(redis.getCalls[0]?.startsWith("rubric_struct_cache:v2:customer:cus_123:"));
+  assert.ok(redis.getCalls[0]?.startsWith(`rubric_struct_cache:${RUBRIC_CACHE_VERSION}:customer:cus_123:`));
 });
 
 test("different users + same rubric do not share cache", async () => {
@@ -153,7 +153,7 @@ test("email hashing uses normalized email and key never stores raw email", async
 
 test("ttl and cache version constants match policy", () => {
   assert.equal(RUBRIC_CACHE_TTL_SECONDS, 604800);
-  assert.equal(RUBRIC_CACHE_VERSION, "v2");
+  assert.equal(RUBRIC_CACHE_VERSION, "v3");
 });
 
 const holisticRubric = {
@@ -235,6 +235,35 @@ test("inconsistent rubric totals are re-extracted once from the source and only 
   assert.match(prompts[1], /Do not include total\/subtotal rows/);
   assert.equal(redis.setCalls.length, 1);
   assert.deepEqual(JSON.parse(redis.setCalls[0].value), correct);
+});
+
+test("empty criteria with zero or null total is actionable input guidance, with no retry or cache write", async () => {
+  for (const total_score of [0, null]) {
+    const redis = createRedisStub();
+    let calls = 0;
+    await assert.rejects(structureRubric("Course cover sheet with no assessment criteria", {
+      cacheRedisOverride: redis,
+      modelCaller: async () => { calls++; return { total_score, criteria: [], adjustments: [] }; },
+    }), /RUBRIC_CRITERIA_NOT_FOUND/);
+    assert.equal(calls, 1);
+    assert.equal(redis.setCalls.length, 0);
+  }
+});
+
+test("independent tables use row maxima, not section denominators or course percentages as an overall raw total", async () => {
+  const source = "Report (50/50 x 20%): six criteria, each 5 marks. Presentation (25/25 x 10%): five criteria, each 5 marks. Q&A (10/10 x 5%): two criteria, each 5 marks.";
+  const criteria = Array.from({ length: 13 }, (_, i) => ({ name: `Criterion ${i + 1}`, max_score: 5, description: "Source row" }));
+  let calls = 0;
+  const result = await structureRubric(source, { cacheRedisOverride: null, modelCaller: async prompt => {
+    calls++;
+    assert.match(prompt, /several independent scoring tables/);
+    assert.match(prompt, /Do not add section-header denominators or mix course percentages/);
+    assert.match(prompt, /Preserve each row's explicit maximum/);
+    return { total_score: calls === 1 ? 85 : 65, criteria };
+  } });
+  assert.equal(calls, 2);
+  assert.equal(result.total_score, 65);
+  assert.deepEqual(result.criteria, criteria);
 });
 
 test("persistent total mismatch fails without changing weights, replacing totals, or caching output", async () => {

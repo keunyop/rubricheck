@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseFile } from "./parse.ts";
+import { docxFixture } from "./testFixtures/docx.ts";
 
 const text = "Synthetic assignment text with evidence, analysis, and a clear conclusion. ".repeat(5).trim();
 const file = new File(["synthetic image bytes"], "private-student-name.jpeg", { type: "image/jpeg" });
@@ -66,6 +67,14 @@ test("Google Vision request and failure handling", async (t) => {
     await t.test("per-image INVALID_ARGUMENT uses the RPC code and reports an unreadable file", async () => {
       reply = async () => Response.json({ responses: [{ error: { code: 3, message: "Invalid image data" } }] });
       await assert.rejects(parseFile(file), /TEXT_EXTRACTION_FAILED/);
+    });
+    await t.test("blank embedded decorations do not reject a DOCX but unreadable images still fail", async () => {
+      const document = await docxFixture(["Native content", { image: "synthetic decoration" }]);
+      reply = async () => Response.json({ responses: [{}] });
+      assert.equal(await parseFile(document), "Native content");
+      await assert.rejects(parseFile(file), /TEXT_EXTRACTION_FAILED/);
+      reply = async () => Response.json({ responses: [{ error: { code: 3 } }] });
+      await assert.rejects(parseFile(document), /TEXT_EXTRACTION_FAILED/);
     });
     await t.test("the OCR deadline aborts stalled requests without exposing provider details", async (deadlineTest) => {
       deadlineTest.mock.method(AbortSignal, "timeout", (ms: number) => {
