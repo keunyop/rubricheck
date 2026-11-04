@@ -2,6 +2,7 @@
 
 import { LandingEntry } from "./LandingEntry";
 import { HomeResources } from "./HomeResources";
+import { QuizSample } from "./QuizSample";
 import { useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "./LanguageProvider";
@@ -19,7 +20,6 @@ export function ProductOverview({ home = false }: { home?: boolean }) {
   const { t, href } = useLanguage();
   const [selected, setSelected] = useState(1);
   const [mode, setMode] = useState<"assignment" | "quiz">("assignment");
-  const [answer, setAnswer] = useState<number | null>(null);
   const criterion = sample.rubric[selected];
   return <main id="main-content" tabIndex={-1} className={styles.page}>
     <div className={styles.container}>
@@ -66,18 +66,7 @@ export function ProductOverview({ home = false }: { home?: boolean }) {
             <div id="sample-criterion-feedback" className={styles.feedback} aria-live="polite" aria-atomic="true"><p>{t(criterion.name)}</p><p>{t(criterion.feedback)}</p></div>
             <p className={styles.sampleNote}>{t("Prepared example. No check is used. AI estimates are not official grades.")}</p>
           </div>
-        </section> : <section className={`${styles.preview} ${styles.quizPreview}`} aria-label={t("Sample quiz")}>
-          <div className={styles.previewTop}><span className={styles.statusDot} aria-hidden="true" />{t("Sample · Illustrative result")}</div>
-          <div className={styles.previewBody}>
-            <p className={styles.sourceExcerpt}>{t("Sample source: A triangle has three sides. A square has four equal sides.")}</p>
-            <div className={styles.questionHeading}><span>{t("Sample · Multiple choice")}</span><span aria-hidden="true">01</span></div>
-            <h2>{t("How many sides does a triangle have?")}</h2>
-            <div className={styles.quizOptions} role="group" aria-label={t("How many sides does a triangle have?")}>
-              {[3, 4, 5, 6].map((value, index) => <button key={value} type="button" aria-pressed={answer === value} data-correct={answer !== null && value === 3} data-incorrect={answer === value && value !== 3} onClick={() => setAnswer(value)}><span className={styles.optionLetter}>{String.fromCharCode(65 + index)}</span><span>{value}</span>{answer === value && <span className={styles.optionMark} aria-hidden="true">{value === 3 ? "✓" : "×"}</span>}</button>)}
-            </div>
-            <div className={styles.quizExplanation} aria-live="polite" aria-atomic="true">{answer !== null ? <div><strong>{t(answer === 3 ? "Correct" : "Incorrect")}</strong><p>{t("A. A triangle has three sides; four sides describes a square in this source.")}</p></div> : <span>{t("Choose an answer")}</span>}</div>
-          </div>
-        </section>}
+        </section> : <QuizSample />}
         </div>
       </section>
 

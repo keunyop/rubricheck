@@ -1,15 +1,17 @@
 "use client";
 import Link from "next/link";
 import { useLanguage } from "./LanguageProvider";
+import { QuizSample } from "./QuizSample";
+import sampleStyles from "./quizSample.module.css";
 import styles from "../quizzes/quiz.module.css";
 
 export function QuizSamples() {
   const { t } = useLanguage();
-  return <section aria-label={t("Sample quiz")}>
-    <p className={styles.muted}>{t("Sample source: A triangle has three sides. A square has four equal sides.")}</p>
-    <div className={styles.sample}>
-      <article className={styles.card}><p className={styles.muted}>{t("Sample · Multiple choice")}</p><h3>{t("How many sides does a triangle have?")}</h3><p>A. 3　 B. 4　 C. 5　 D. 6</p><details><summary>{t("Check answer")}</summary><p>{t("A. A triangle has three sides; four sides describes a square in this source.")}</p></details></article>
-      <article className={styles.card}><p className={styles.muted}>{t("Sample · True / False")}</p><h3>{t("A triangle has four sides.")}</h3><p>O / X</p><details><summary>{t("Check answer")}</summary><p>{t("X. A triangle has three sides, not four.")}</p></details></article>
+  return <section className={sampleStyles.samples} aria-label={t("Sample quiz")}>
+    <p className={sampleStyles.source}>{t("Sample source: A triangle has three sides. A square has four equal sides.")}</p>
+    <div className={sampleStyles.sampleGrid}>
+      <QuizSample showSource={false} headingLevel="h3" label="Sample · Multiple choice" />
+      <QuizSample kind="true_false" showSource={false} headingLevel="h3" label="Sample · True / False" />
     </div>
   </section>;
 }

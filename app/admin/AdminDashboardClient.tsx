@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FeedbackInbox } from "./FeedbackInbox";
 import { GradingFailures } from "./GradingFailures";
 import { GrowthPanel } from "./GrowthPanel";
+import { QuizActivity } from "./QuizActivity";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import type { AdminDashboardData as ServerDashboardData } from "../../src/lib/adminDashboard";
@@ -307,6 +308,7 @@ export function AdminDashboardClient({ adminEmail }: { adminEmail: string }) {
           {error ? <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
         </header>
 
+        <QuizActivity />
         <FeedbackInbox />
         <GradingFailures />
         <GrowthPanel />

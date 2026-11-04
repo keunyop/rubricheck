@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from "rea
 import Link from "next/link";
 import { useAccountSummary } from "./AccountSummaryProvider";
 import { LanguageSettings } from "./LanguageSettings";
+import { SidebarAccountControls } from "./SidebarAccountControls";
 import type { AssignmentHistoryItem, AssignmentProject, AssignmentWorkspace } from "../../src/lib/assignmentWorkspaceTypes";
 import styles from "./assignmentWorkspace.module.css";
 
@@ -105,7 +106,7 @@ export function AssignmentSidebar(props: Props) {
 
   const content = (isMobile: boolean) => <>
     <div className={styles.sidebarHeader}>
-      <button className={styles.brand} onClick={() => navigate(props.onNew)} disabled={props.busy}>RubriCheck</button>
+      <span className={styles.brand}>RubriCheck</span>
       <button className={styles.iconButton} aria-label={t("Search assignments")} title={t("Search assignments (Ctrl+K)")} onClick={() => { mobile.current?.close(); search.current?.showModal(); }}><WorkspaceIcon name="search" /></button>
       <button className={styles.iconButton} aria-label={t("Close sidebar")} title={t("Close sidebar")} onClick={() => isMobile ? mobile.current?.close() : toggle()}><WorkspaceIcon name="panel" /></button>
     </div>
@@ -122,11 +123,7 @@ export function AssignmentSidebar(props: Props) {
       {!props.loading && !props.error && !props.data.assignments.length ? <p className={styles.empty}>{props.email ? t("Your graded assignments appear here.") : t("Log in to see your assignments.")}</p> : null}
       {props.data.assignments.map(item => <button key={item.id} className={styles.navItem} data-active={props.selectedId === item.id} onClick={() => navigate(() => props.onOpen(item))} disabled={props.busy} title={item.title}><span>{item.title}</span></button>)}
     </nav>
-    <div className={styles.sidebarFooter}>
-      {props.email ? <button className={styles.accountTrigger} aria-label={t("Open account menu")} aria-haspopup="dialog" onClick={() => account.current?.showModal()}>
-        <span className={styles.avatar} aria-hidden="true">{props.email[0].toUpperCase()}</span><span className={styles.email} title={props.email}>{props.email}</span><svg className={styles.accountMore} viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></svg>
-      </button> : <div className="flex items-center gap-2"><button className={styles.login} onClick={() => { mobile.current?.close(); props.onLogin(); }}>{t("Log in")}</button><button className={styles.iconButton} aria-label={t("Language preferences")} title={t("Language preferences")} aria-haspopup="dialog" onClick={() => account.current?.showModal()}><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></svg></button></div>}
-    </div>
+    <SidebarAccountControls email={props.email} onAccount={() => account.current?.showModal()} onLogin={() => { mobile.current?.close(); props.onLogin(); }} />
   </>;
 
   return <div className={styles.shell} data-expanded={expanded} data-workspace="assignment">

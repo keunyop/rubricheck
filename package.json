@@ -26,7 +26,8 @@
     "test:saas:browser": "node scripts/check_saas.mjs",
     "test:onboarding:browser": "node scripts/check_onboarding.mjs",
     "test:entry:browser": "node scripts/check_entry.mjs",
-    "test:quiz:browser": "node scripts/check_quiz.mjs"
+    "test:quiz:browser": "node scripts/check_quiz.mjs",
+    "test:admin-quiz:browser": "node scripts/check_admin_quiz.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.36.2",

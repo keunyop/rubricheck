@@ -358,6 +358,14 @@ and reports. The existing support-driven account erasure process must call
 access, alongside existing account cleanup. This removes the account's quiz hash,
 sources, incomplete uploads and locks. It is not exposed as a public deletion API.
 
+The admin **Quiz activity** panel summarizes stored quiz users, quizzes, questions,
+practice/review sessions and generation statuses through the admin-only
+`GET /api/admin/quizzes`. Deleted quizzes and sessions are excluded; completed
+generation jobs can remain after quiz deletion. Reads are bounded, and a partial
+snapshot displays `≥` minimum counts instead of global totals. Storage failures
+show an error rather than zero. Only counters are returned, with a 15-second
+in-process cache; **Refresh quizzes** bypasses it. No migration is required.
+
 See [quiz implementation and verification](doc/verification/quiz/README.md).
 Run `npm run test:all`, `npm run build`, and `npm run test:quiz:browser`.
 The browser script uses a local production server on port 3217 with

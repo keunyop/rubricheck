@@ -22,7 +22,7 @@
 .languages { display: flex; flex-wrap: wrap; gap: 16px; }
 .languages a { padding-bottom: 6px; }
 .languages a[aria-current="page"] { color: #4338ca; font-weight: 600; }
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .headerInner { flex-wrap: wrap; gap: 14px; padding: 16px 20px 10px; }
   .headerCta { margin-left: auto; font-size: 12px; padding: 10px 12px; }
   .nav { order: 3; width: 100%; margin-left: 0; border-top: 1px solid #f1f5f9; padding-top: 6px; }
@@ -35,8 +35,8 @@
 
 .login { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; font-size: 13px; font-weight: 600; color: #526177; white-space: nowrap; }
 .login:hover { color: #4338ca; }
-@media (min-width: 768px) { .headerInner { gap: 24px; } }
-@media (max-width: 767px) { .login { margin-left: auto; font-size: 12px; } .login + .headerCta { margin-left: 0; } }
+@media (min-width: 1024px) { .headerInner { gap: 24px; } }
+@media (max-width: 1023px) { .login { margin-left: auto; font-size: 12px; } .login + .headerCta { margin-left: 0; } }
 @media (max-width: 359px) { .headerCta { padding-inline: 9px; gap: 6px; } }
 
 .mobileLabel { display: none; }

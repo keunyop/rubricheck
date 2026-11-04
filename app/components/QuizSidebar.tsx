@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import Link from "next/link";
 import { useLanguage } from "./LanguageProvider";
 import { useAccountSummary } from "./AccountSummaryProvider";
 import { LanguageSettings } from "./LanguageSettings";
 import { WorkspaceIcon, WorkspaceModeNavigation } from "./AssignmentSidebar";
+import { SidebarAccountControls } from "./SidebarAccountControls";
+import { isKnownAdminEmail } from "../../src/config/admin";
 import type { QuizSummary } from "../../src/lib/quizTypes";
 import styles from "./assignmentWorkspace.module.css";
 
-export function QuizSidebar({ children, email = "", quizzes = [], selectedId, library = false, loading = false, loginHref, onNewQuiz }: {
+export function QuizSidebar({ children, email = "", quizzes = [], selectedId, library = false, loading = false, loginHref, onNewQuiz, accountDialogRef }: {
   children: ReactNode;
   email?: string;
   quizzes?: QuizSummary[];
@@ -18,16 +20,18 @@ export function QuizSidebar({ children, email = "", quizzes = [], selectedId, li
   loading?: boolean;
   loginHref?: string;
   onNewQuiz?: () => void;
+  accountDialogRef?: RefObject<HTMLDialogElement | null>;
 }) {
   const { t, href } = useLanguage();
-  const { accountPlan, creditBalance, clearAccountSummary } = useAccountSummary();
+  const { accountPlan, creditBalance, remainingEvaluations, clearAccountSummary } = useAccountSummary();
   const [expanded, setExpanded] = useState(true);
   const [query, setQuery] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
   const mobile = useRef<HTMLDialogElement>(null);
   const search = useRef<HTMLDialogElement>(null);
-  const account = useRef<HTMLDialogElement>(null);
+  const localAccount = useRef<HTMLDialogElement>(null);
+  const account = accountDialogRef ?? localAccount;
 
   useEffect(() => {
     // Restore the same sidebar preference when switching workspaces.
@@ -61,7 +65,7 @@ export function QuizSidebar({ children, email = "", quizzes = [], selectedId, li
   const filtered = quizzes.filter(quiz => `${quiz.title} ${quiz.sources.map(source => source.name).join(" ")}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const content = (isMobile: boolean) => <>
     <div className={styles.sidebarHeader}>
-      <Link className={styles.brand} href={href("/")}>RubriCheck</Link>
+      <span className={styles.brand}>RubriCheck</span>
       <button className={styles.iconButton} aria-label={t("Search quizzes")} onClick={() => { mobile.current?.close(); search.current?.showModal(); }}><WorkspaceIcon name="search" /></button>
       <button className={styles.iconButton} aria-label={t("Close sidebar")} onClick={() => isMobile ? mobile.current?.close() : toggle()}><WorkspaceIcon name="panel" /></button>
     </div>
@@ -73,10 +77,7 @@ export function QuizSidebar({ children, email = "", quizzes = [], selectedId, li
       {!loading && !quizzes.length ? <p className={styles.empty}>{t("No quizzes yet.")}</p> : null}
       {quizzes.slice(0, 20).map(quiz => <Link key={quiz.id} href={href("/quizzes?id=" + quiz.id)} className={styles.navItem} data-active={selectedId === quiz.id} aria-current={selectedId === quiz.id ? "page" : undefined} title={quiz.title} onClick={closeNavigation}><WorkspaceIcon name="file" /><span>{quiz.title}</span></Link>)}
     </nav>
-    <div className={styles.sidebarFooter}>
-      {email ? <button className={styles.accountTrigger} aria-label={t("Open account menu")} aria-haspopup="dialog" onClick={() => { mobile.current?.close(); account.current?.showModal(); }}><span className={styles.avatar} aria-hidden="true">{email[0].toUpperCase()}</span><span className={styles.email} title={email}>{email}</span></button> : <Link className={styles.login} href={loginHref ?? href("/workspace?start=login")}>{t("Log in")}</Link>}
-      {!email && <button className={styles.iconButton} aria-label={t("Language preferences")} onClick={() => { mobile.current?.close(); account.current?.showModal(); }}><WorkspaceIcon name="menu" /></button>}
-    </div>
+    <SidebarAccountControls email={email} loginHref={loginHref ?? href("/workspace?start=login")} onAccount={() => { mobile.current?.close(); account.current?.showModal(); }} />
   </>;
 
   return <div className={styles.shell} data-expanded={expanded} data-workspace="quiz">
@@ -101,7 +102,8 @@ export function QuizSidebar({ children, email = "", quizzes = [], selectedId, li
     <dialog ref={account} className={styles.accountDialog} aria-label={t("Account menu")} onClick={event => { if (event.target === event.currentTarget) account.current?.close(); }}>
       <div className={styles.accountBody}>
         <div className={styles.accountHeading}><span className={styles.email}>{email || t("Language preferences")}</span><button className={styles.iconButton} aria-label={t("Close account menu")} onClick={() => account.current?.close()}><WorkspaceIcon name="close" /></button></div>
-        {email && <section className={styles.accountOverview}><h2>{t("Account settings")}</h2><dl><div><dt>{t("Current plan")}</dt><dd>{t(accountPlan === "pro" ? "Pro" : accountPlan === "topup" ? "Top-up" : "Free")}</dd></div><div><dt>{t("Credit balance")}</dt><dd>{creditBalance === null ? "—" : creditBalance.toLocaleString()}</dd></div></dl></section>}
+        {email && <section className={styles.accountOverview}><h2>{t("Account settings")}</h2><dl><div><dt>{t("Current plan")}</dt><dd>{t(accountPlan === "pro" ? "Pro" : accountPlan === "topup" ? "Top-up" : "Free")}</dd></div><div><dt>{t("Evaluations available")}</dt><dd>{accountPlan === "pro" ? t("Unlimited evaluations") : remainingEvaluations === null ? "—" : remainingEvaluations.toLocaleString()}</dd></div><div><dt>{t("Credit balance")}</dt><dd>{creditBalance === null ? "—" : creditBalance.toLocaleString()}</dd></div></dl></section>}
+        {isKnownAdminEmail(email) && <Link href={href("/admin")} className={styles.accountItem}>{t("Admin")}</Link>}
         <Link href={href("/pricing")} className={styles.accountItem}>{t("Pricing")}</Link>
         {email && <Link href={href("/billing/manage")} className={styles.accountItem}>{t("Billing and refunds")}</Link>}
         <LanguageSettings />

@@ -7,7 +7,7 @@ import { getCreditEmailFromCookie } from "../../src/lib/creditSession";
 import { buildNoIndexMetadata } from "../../src/lib/seo";
 import { quizLoginPath } from "../../src/lib/quizTypes";
 import { QuizApp } from "./QuizApp";
-import { QuizSidebar } from "../components/QuizSidebar";
+import { QuizWorkspace } from "../components/QuizWorkspace";
 import { QuizSamples } from "../components/QuizOverview";
 import styles from "./quiz.module.css";
 
@@ -22,9 +22,9 @@ export default async function QuizzesPage({ searchParams }: Props) {
   const query = new URLSearchParams();
   for (const key of ["view", "assignment", "trial", "from", "id", "job", "retry"]) if (typeof params?.[key] === "string") query.set(key, params[key]);
   const loginHref = quizLoginPath(localizedPath("/quizzes", locale) + (query.size ? "?" + query : ""), locale);
-  if (!email) return <QuizSidebar loginHref={loginHref}><main id="main-content" tabIndex={-1} className={styles.page}>
-    <section className={styles.hero}><h1>{t("Create a quiz")}</h1><p>{t("Sign up for 10 free questions in total.")}</p><div><Link className={styles.primary} href={loginHref}>{t("Log in")}</Link></div></section>
+  if (!email) return <QuizWorkspace loginHref={loginHref}>
+    <section className={styles.hero}><h1>{t("Create a quiz")}</h1><p>{t("Sign up for 10 free questions in total.")}</p><div><Link className={styles.primary} href={loginHref}>{t("Create a quiz")}</Link></div></section>
     <QuizSamples />
-  </main></QuizSidebar>;
+  </QuizWorkspace>;
   return <QuizApp key={email} email={email} />;
 }

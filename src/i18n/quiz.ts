@@ -2,6 +2,8 @@ import { quizContent } from "./quizContent";
 // Korean, Malay, Hindi, Urdu, Vietnamese, Simplified Chinese. English is the key.
 export const quizMessages: Record<string, readonly [string, string, string, string, string, string]> = {
   ...quizContent,
+  "Workspace header": ["작업 공간 헤더", "Pengepala ruang kerja", "कार्यक्षेत्र शीर्षलेख", "ورک اسپیس ہیڈر", "Đầu trang không gian làm việc", "工作区页眉"],
+  "{count} questions left": ["{count}문항 남음", "{count} soalan berbaki", "{count} प्रश्न शेष", "{count} سوال باقی", "Còn {count} câu hỏi", "剩余 {count} 道题"],
   "New Quiz": ["새 퀴즈", "Kuiz baharu", "नई क्विज़", "نیا کوئز", "Bài trắc nghiệm mới", "新建测验"],
   "Quiz generator": ["퀴즈 생성기", "Penjana kuiz", "क्विज़ जनरेटर", "کوئز جنریٹر", "Trình tạo trắc nghiệm", "测验生成器"],
   "Create a review Quiz": ["복습 퀴즈 만들기", "Cipta kuiz ulang kaji", "पुनरावृत्ति क्विज़ बनाएँ", "دہرائی کوئز بنائیں", "Tạo trắc nghiệm ôn tập", "创建复习测验"],

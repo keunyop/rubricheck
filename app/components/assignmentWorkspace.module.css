@@ -44,7 +44,7 @@
 .accountItem:hover { background: #f3f4f6; }
 .accountItem:focus-visible { outline: 2px solid #4f46e5; outline-offset: -2px; }
 .logoutItem { margin-top: 6px; border-top: 1px solid #eceef2; color: #b91c1c; }
-.login { width: 100%; padding: 8px; border-radius: 8px; background: #fff; border: 1px solid #dddfe4; font-size: 13px; cursor: pointer; }
+.login { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 8px; border-radius: 8px; background: #fff; border: 1px solid #dddfe4; font-size: 13px; cursor: pointer; }
 .openBar { position: absolute; top: 12px; left: 16px; z-index: 20; }
 .shell[data-expanded="true"] .desktopOpen { display: none; }
 .mobileOpen { display: none; }

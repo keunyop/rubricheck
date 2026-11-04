@@ -24,6 +24,7 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1000
 let signedIn = false, source = null, quiz = null, job = null, polls = 0, attempts = [], saveFails = false, expired = false;
 let preferredLanguage = "en";
 let upload = null, uploadedBytes = 0;
+let quizMutations = 0;
 const id = randomUUID(), sourceId = randomUUID();
 const trialAssignmentId = randomUUID();
 function library() {
@@ -35,6 +36,7 @@ await context.route("**/*", async route => {
   const req = route.request(), url = new URL(req.url());
   if (url.origin !== new URL(base).origin) return route.abort();
   if (!url.pathname.startsWith("/api/")) return route.continue();
+  if (url.pathname.startsWith("/api/quizzes") && req.method() !== "GET") quizMutations++;
   let result = {}, status = 200;
   if (url.pathname === "/api/account/summary") result = { signedIn, email: signedIn ? "quiz-browser@test.invalid" : null, plan: "free", remainingEvaluations: 3, creditsBalance: 0 };
   else if (url.pathname === "/api/account/preferences") result = { preferences: signedIn ? { siteLanguage: "en", resultLanguage: preferredLanguage } : null };
@@ -104,6 +106,31 @@ page.setDefaultTimeout(20000);
 page.on("pageerror", error => errors.push(error.message));
 page.on("dialog", dialog => dialog.accept());
 const visit = path => page.goto(base + path, { waitUntil: "networkidle", timeout: 120000 });
+async function checkSample(locale = "en") {
+  const samples = page.getByRole("region", { name: translate(locale, "Sample quiz"), exact: true });
+  const multipleChoice = samples.getByRole("region", { name: translate(locale, "Sample · Multiple choice"), exact: true });
+  const trueFalse = samples.getByRole("region", { name: translate(locale, "Sample · True / False"), exact: true });
+  await multipleChoice.getByRole("button", { name: "B 4", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await multipleChoice.locator('[aria-live="polite"]').getByText(translate(locale, "Incorrect"), { exact: true }).waitFor();
+  assert.equal(await multipleChoice.getByRole("button", { name: "B 4", exact: true }).getAttribute("aria-pressed"), "true");
+  await multipleChoice.getByRole("button", { name: "A 3", exact: true }).click();
+  await multipleChoice.locator('[aria-live="polite"]').getByText(translate(locale, "Correct"), { exact: true }).waitFor();
+  assert.equal(await multipleChoice.getByRole("button", { name: "B 4", exact: true }).getAttribute("aria-pressed"), "false");
+  const falseAnswer = trueFalse.getByRole("button", { name: "X " + translate(locale, "False"), exact: true });
+  await falseAnswer.focus();
+  await page.keyboard.press("Space");
+  await trueFalse.locator('[aria-live="polite"]').getByText(translate(locale, "Correct"), { exact: true }).waitFor();
+  assert.equal(await falseAnswer.getAttribute("aria-pressed"), "true");
+  assert.equal(quizMutations, 0, "prepared samples must not generate quizzes, upload sources or save attempts");
+}
+async function checkStaticBrand(sidebar) {
+  const brand = sidebar.getByText("RubriCheck", { exact: true });
+  assert.equal(await brand.evaluate(node => Boolean(node.closest("a, button"))), false, "workspace title must not navigate or reset work");
+  const before = page.url();
+  await brand.click();
+  assert.equal(page.url(), before);
+}
 try {
   const locales = ["en", "ko", "ms", "hi", "ur", "vi", "zh"];
   for (const locale of locales) {
@@ -131,16 +158,29 @@ try {
     await visit((locale === "en" ? "" : "/" + locale) + "/ai-quiz-generator");
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), locale + " mobile overflow");
     assert.equal(await page.locator("html").getAttribute("dir"), locale === "ur" ? "rtl" : "ltr");
-    const answerToggle = page.locator("main summary").first();
-    await answerToggle.focus();
-    await page.keyboard.press("Enter");
-    assert.ok(await answerToggle.locator("..").evaluate(node => node.open));
-    await page.keyboard.press("Enter");
+    await checkSample(locale);
     await page.screenshot({ path: `${directory}/${locale}-public-390.png`, fullPage: true });
   }
-  pass("English, Korean and Urdu public layouts fit mobile widths, including RTL");
+  pass("Interactive public samples support keyboard answers without API mutations in English, Korean and Urdu mobile layouts");
   await visit("/quizzes?view=create&trial=1");
-  assert.match(await page.locator("main").getByRole("link", { name: "Log in", exact: true }).getAttribute("href"), /returnTo=.*trial%3D1/);
+  await checkSample();
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "guest create screen overflow");
+  await page.screenshot({ path: `${directory}/guest-create-390.png`, fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const guestSidebar = page.locator("aside[aria-label=Sidebar]");
+  const workspaceHeader = page.locator('main header[aria-label="Workspace header"]');
+  await workspaceHeader.waitFor();
+  await workspaceHeader.getByRole("link", { name: "Pricing", exact: true }).waitFor();
+  assert.match(await workspaceHeader.getByRole("link", { name: "Log in", exact: true }).getAttribute("href"), /returnTo=.*trial%3D1/);
+  await checkStaticBrand(guestSidebar);
+  assert.match(await guestSidebar.getByRole("link", { name: "Log in", exact: true }).getAttribute("href"), /returnTo=.*trial%3D1/);
+  const languageButton = guestSidebar.getByRole("button", { name: "Language preferences", exact: true });
+  assert.equal(await languageButton.locator("svg ellipse").count(), 1, "quiz language control uses the assignment globe icon");
+  await languageButton.click();
+  const languageDialog = page.getByRole("dialog", { name: "Account menu", exact: true });
+  await languageDialog.getByLabel("Site language", { exact: true }).waitFor();
+  await languageDialog.getByRole("button", { name: "Close account menu", exact: true }).click();
+  pass("Guest quiz creation shares interactive samples, a static brand and the assignment login/language controls");
   const payload = Buffer.from(JSON.stringify({ email: "quiz-browser@test.invalid", exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url");
   const token = payload + "." + createHmac("sha256", "local-quiz-browser-test-only").update(payload).digest("base64url");
   await context.addCookies([{ name: "rubricheck_credit_session", value: token, url: base }, { name: "rubricheck_analytics", value: "denied", url: base }]);
@@ -148,6 +188,9 @@ try {
   await visit("/workspace?start=login&returnTo=" + encodeURIComponent("/quizzes?view=create&trial=1"));
   await page.getByRole("heading", { name: "Claimed guest assignment", exact: true }).waitFor();
   assert.match(page.url(), /quizzes\?view=create&trial=1/);
+  await workspaceHeader.getByRole("button", { name: "Open account menu", exact: true }).click();
+  await page.getByRole("dialog", { name: "Account menu", exact: true }).getByText("Current plan", { exact: true }).waitFor();
+  await page.getByRole("dialog", { name: "Account menu", exact: true }).getByRole("button", { name: "Close account menu", exact: true }).click();
   pass("Authentication return preserves the chosen guest assignment and claims it before creating a source");
   await page.setViewportSize({ width: 1440, height: 1000 });
   const sidebar = page.locator("aside[aria-label=Sidebar]");
@@ -156,9 +199,11 @@ try {
   assert.equal(await sidebar.getByRole("link", { name: "New Quiz", exact: true }).getAttribute("aria-current"), "page");
   await sidebar.getByRole("link", { name: "New Assignment", exact: true }).click();
   await page.locator("#rubric-checker").waitFor();
+  await checkStaticBrand(sidebar);
   assert.equal(await sidebar.getByRole("button", { name: "New Assignment", exact: true }).getAttribute("aria-current"), "page");
   await sidebar.getByRole("link", { name: "New Quiz", exact: true }).click();
   await page.getByRole("heading", { name: "Create a quiz", exact: true }).waitFor();
+  await checkStaticBrand(sidebar);
   assert.equal(await sidebar.getByRole("link", { name: "New Quiz", exact: true }).getAttribute("aria-current"), "page");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Open sidebar", exact: true }).click();
