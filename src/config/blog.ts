@@ -10,8 +10,8 @@ export const BLOG_POST = {
 } as const;
 export const BLOG_INDEX = {
   path: "/blog",
-  title: "The RubriCheck Blog: Small Steps to a Stronger Draft",
-  description: "Practical essay revision guides with worked examples. Understand your rubric, explain your evidence, and choose the next improvement for your draft.",
+  title: "The RubriCheck Blog: Writing and Study Guides",
+  description: "Practical writing and study guides with worked examples. Check your assignment, improve your analysis, and turn course notes into useful practice quizzes.",
 };
 
 export const CRITICAL_ANALYSIS_POST = {
@@ -21,5 +21,12 @@ export const CRITICAL_ANALYSIS_POST = {
   description: "Turn descriptive writing into critical analysis with a worked paragraph, a rubric example and a five-minute revision checklist for your university essay.",
   date: "2026-11-02", modified: "2026-11-02", category: "Critical writing",
 } as const;
-export const BLOG_POSTS = [CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const QUIZ_GENERATOR_POST = {
+  slug: "quiz-generator-from-notes",
+  path: "/blog/quiz-generator-from-notes",
+  title: "Quiz Generator from Notes: Turn a PDF into Useful Practice",
+  description: "Turn lecture notes, PDFs or slides into a focused study quiz. Follow a worked example, check AI answers against your source, and review mistakes with RubriCheck.",
+  date: "2026-11-04", modified: "2026-11-04", category: "Study and retrieval practice",
+} as const;
+export const BLOG_POSTS = [QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];

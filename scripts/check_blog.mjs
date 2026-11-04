@@ -118,6 +118,36 @@ try {
     assert.equal(await page.getByRole("link", { name: "this critical analysis revision exercise", exact: true }).getAttribute("href"), analysisArticle);
   }
   assert.equal((await fetch(base + "/blog/not-a-post")).status, 404);
+  const quizArticle = "/blog/quiz-generator-from-notes";
+  const quizTitle = "Quiz Generator from Notes: Turn a PDF into Useful Practice";
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(base + "/ai-quiz-generator");
+    await page.getByRole("link", { name: quizTitle, exact: true }).click();
+    await page.getByRole("heading", { name: quizTitle, exact: true }).waitFor();
+    await page.waitForFunction(expected => document.querySelector('link[rel="canonical"]')?.getAttribute("href") === expected, "https://rubricheck.com" + quizArticle);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Quiz guide fits viewport");
+    await page.getByText("Show answer 1", { exact: true }).focus();
+    await page.keyboard.press("Enter");
+    assert.ok(await page.getByText("B: the amount of water.", { exact: true }).isVisible());
+    const audit = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    assert.deepEqual(audit.violations, [], "Quiz article accessibility");
+    await page.screenshot({ path: `doc/verification/blog/quiz-generator-${width}.png`, fullPage: true });
+  }
+  await staticPage.goto(base + "/blog");
+  await staticPage.getByRole("link", { name: quizTitle, exact: true }).click();
+  assert.ok((await staticPage.locator("article").innerText()).includes("Invented practice notes"));
+  await staticPage.getByText("Show answer 2", { exact: true }).click();
+  assert.ok(await staticPage.getByText("True.", { exact: true }).isVisible());
+  await page.getByRole("link", { name: "Create a quiz from my notes →", exact: true }).click();
+  await page.waitForURL(url => url.pathname === "/quizzes");
+  assert.equal(new URL(page.url()).pathname, "/quizzes");
+  assert.equal(new URL(page.url()).searchParams.get("view"), "create");
+  const login = new URL(await page.getByRole("link", { name: "Create a quiz", exact: true }).getAttribute("href"), base);
+  assert.equal(login.pathname, "/workspace");
+  assert.equal(login.searchParams.get("start"), "login");
+  assert.equal(login.searchParams.get("returnTo"), "/quizzes?view=create", "Sign-in preserves the create destination");
+  await noJs.close();
   assert.equal((await fetch(base + "/ko/blog")).status, 404);
   assert.deepEqual(errors, []);
   console.log("Blog browser checks passed: desktop/mobile, metadata, no-JS reading, existing-guide links, workspace entry, locale links, 404s, no runtime errors. Evaluation/Auth/billing use is not tested.");

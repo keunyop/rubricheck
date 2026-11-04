@@ -12,7 +12,7 @@ export default function BlogPage() {
     <JsonLd data={{ "@context": "https://schema.org", "@type": "CollectionPage", "@id": absoluteUrl("/blog#webpage"), url: absoluteUrl("/blog"), name: BLOG_INDEX.title, description: BLOG_INDEX.description, inLanguage: "en-US" }} />
     <div className={styles.container}>
       <nav className={styles.breadcrumb} aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true"> / </span><span aria-current="page">Blog</span></nav>
-      <header className={styles.indexHeader}><p className={styles.eyebrow}>THE RUBRICHECK BLOG</p><h1>A clearer next step.<br />A stronger next draft.</h1><p>{BLOG_INDEX.description}</p></header>
+      <header className={styles.indexHeader}><p className={styles.eyebrow}>THE RUBRICHECK BLOG</p><h1>A clearer next step.<br />For writing and studying.</h1><p>{BLOG_INDEX.description}</p></header>
       {BLOG_POSTS.map(post => <article key={post.path} className={styles.postCard}>
         <p className={styles.eyebrow}>{post.category} · 4 min read</p>
         <h2><Link href={post.path}>{post.title}</Link></h2>

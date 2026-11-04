@@ -51,7 +51,7 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 108, "Sitemap includes 15 public pages in seven languages plus three English blog pages");
+  assert.equal(urls.length, 116, "Sitemap includes 16 public pages in seven languages plus four English blog pages");
   assert.equal(new Set(urls.map(String)).size, urls.length, "No duplicate sitemap URLs");
   assert.doesNotMatch(sitemap, /<loc>[^<]*\/(?:api|admin|billing)(?:\/|<)/);
   const titles = new Set();
@@ -114,7 +114,13 @@ try {
       breadcrumb.itemListElement.forEach((item, index) => assert.equal(item.position, index + 1));
       assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + homePath);
       assert.equal(breadcrumb.itemListElement.at(-1).item, url.href);
-      assert.match(html, /<table\b/, "Guide includes a rendered worked example");
+      if (barePath === "/blog/quiz-generator-from-notes") {
+        assert.match(html, /id="quiz-example"/, "Quiz guide includes its worked source example");
+        assert.match(html, /B: the amount of water/, "Quiz explanation is present in server HTML");
+        assert.match(html, /<details>/, "Answers can be expanded without JavaScript");
+      } else {
+        assert.match(html, /<table\b/, "Guide includes a rendered worked example");
+      }
     }
     const visible = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
     assert.doesNotMatch(visible, /SEO entry points|search intent|close to conversion|transactional page|keyword cluster|SEO themes/);
@@ -135,6 +141,13 @@ try {
     assert.equal(new URL(canonical(html)[0].href).pathname, path);
     assert.ok(!pages.has(path), "Workspace is excluded from sitemap");
     workspaces.set(path, html);
+    const quizPath = prefix + "/quizzes";
+    const quizResponse = await get(quizPath);
+    assert.equal(quizResponse.status, 200);
+    const quizHtml = await quizResponse.text();
+    assert.match(meta(quizHtml, "robots"), /noindex/);
+    assert.ok(!pages.has(quizPath), "Private quizzes are excluded from sitemap");
+    workspaces.set(quizPath, quizHtml);
   }
   for (const path of pages.keys()) {
     const prefix = /^\/(ko|ms|hi|ur|vi|zh)(?=\/|$)/.exec(path)?.[0] ?? "";

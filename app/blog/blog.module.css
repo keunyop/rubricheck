@@ -41,3 +41,7 @@
 
 .postCard + .postCard { margin-top: 24px; }
 .example { padding: 4px 20px 18px; margin-top: 18px; border-left: 4px solid #6366f1; background: #f1f5f9; }
+.practice { margin-top: 24px; padding: 20px; border: 1px solid #c7d2fe; border-radius: 12px; }
+.practice h3:not(:first-child) { margin-top: 24px; }
+.practice ol { list-style: upper-alpha; padding-left: 24px; line-height: 1.85; margin-top: 12px; }
+.practice summary { cursor: pointer; color: #4338ca; padding: 12px 0; min-height: 44px; font-weight: 600; }

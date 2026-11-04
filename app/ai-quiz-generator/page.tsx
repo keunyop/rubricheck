@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { QUIZ_GENERATOR_POST } from "../../src/config/blog";
 import { getLocale, getTranslator } from "../../src/i18n/server";
 import { buildMetadata, buildWebPageSchema, absoluteUrl } from "../../src/lib/seo";
 import { QuizOverview } from "../components/QuizOverview";
@@ -15,5 +17,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export default async function QuizGeneratorPage() {
   const [locale, t] = await Promise.all([getLocale(), getTranslator()]);
-  return <main id="main-content" className={styles.page}><JsonLd data={buildWebPageSchema({ title: t(title), description: t(description), path: "/ai-quiz-generator", locale })} /><QuizOverview /></main>;
+  return <main id="main-content" className={styles.page}><JsonLd data={buildWebPageSchema({ title: t(title), description: t(description), path: "/ai-quiz-generator", locale })} /><QuizOverview />{locale === "en" && <section className={styles.section}><h2>Make your first study quiz</h2><p>Follow a worked example, check source quality and plan your mistake review: <Link className={styles.link} href={QUIZ_GENERATOR_POST.path}>{QUIZ_GENERATOR_POST.title}</Link>.</p></section>}</main>;
 }
