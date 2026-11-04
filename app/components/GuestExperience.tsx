@@ -172,12 +172,14 @@ export function GuestSummary({ result: original, signedIn, busy, onUnlock }: { r
       <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">{t("Free preview")}</span>
       <ResultLanguageSelect language={result.language} busy={translation.busy} error={translation.error} onChange={translation.change} />
     </div>
-    <div className="border-b border-slate-100 pb-4">
-      {result.grading_basis === "general" ? <span className="mb-2 inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{t("General criteria")}</span> : null}
-      <h2 tabIndex={-1} id="guest-evaluation-summary" className="text-xl font-semibold text-slate-900 focus:outline-none">{t("Evaluation Summary")}</h2>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 tabIndex={-1} id="guest-evaluation-summary" className="text-xl font-semibold text-slate-900 focus:outline-none">{t("Evaluation Summary")}</h2>
+        {result.grading_basis === "general" ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{t("General criteria")}</span> : null}
+      </div>
+      <AssignmentQuizCard email="" trial />
     </div>
     <SummaryCard score={formatOverallScoreDisplay(result.overall_range)} summary={result.summary} />
-    <AssignmentQuizCard email="" trial />
     <section aria-label={t("Locked evaluation criteria")} className="mt-6">
       <h3 className="mb-4 text-base font-semibold text-slate-900">{t("Evaluation Criteria")}</h3>
       <div className={styles.lockedCriteria}>

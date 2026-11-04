@@ -98,8 +98,7 @@ try {
         await page.screenshot({ path: join(directory, `${prefix.slice(1) || "en"}-landing-${width}-viewport.png`) });
       }
     }
-    await page.locator('a[href="#sample-feedback"]').click();
-    assert.ok(page.url().endsWith("#sample-feedback"));
+    assert.equal(await page.locator('a[href="#sample-feedback"]').count(), 0);
     await page.locator("#sample-feedback button").first().focus(); await page.keyboard.press("Enter");
     assert.equal(await page.locator("#sample-feedback button").first().getAttribute("aria-pressed"), "true");
     assert.equal(requests.some(path => ["/api/evaluate", "/api/grade", "/api/checkout"].includes(path)), false);

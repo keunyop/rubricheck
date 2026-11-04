@@ -3455,6 +3455,7 @@ export default function Home() {
                 {displayedResult.hidden_ai_alert ? (
                   <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800"> {t("Hidden AI text detected")} </span>
                 ) : null}
+                {!sampleSelected && <AssignmentQuizCard evaluationId={displayedResult.evaluation_id} email={signedInEmail} />}
               </div>
             </div>
 
@@ -3538,8 +3539,6 @@ export default function Home() {
                 ) : null}
               </div>
             </div>
-
-            {!sampleSelected && <AssignmentQuizCard evaluationId={displayedResult.evaluation_id} email={signedInEmail} />}
 
             {SHOW_PRO_FEATURES && !hasProAccess ? (
               <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 md:p-5">

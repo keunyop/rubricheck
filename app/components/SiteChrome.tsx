@@ -24,8 +24,8 @@ export function SiteChrome({ children }: { children: ReactNode }) {
           <Image src="/rubricheck-logo.svg" alt="" width={32} height={34} />RubriCheck
         </Link>
         <nav aria-label={t("Main navigation")} className={styles.nav}>
-          {[["/product", "Product"], ["/ai-quiz-generator", "AI quiz generator"], ["/pricing", "Pricing"], ["/help", "Help center"]].map(([url, label]) =>
-            <Link key={url} href={href(url)} aria-current={path === url ? "page" : undefined}>{t(label)}</Link>)}
+          {[["/product", "Product"], ["/ai-quiz-generator", "Quiz generator"], ["/pricing", "Pricing"], ["/help", "Help center"]].map(([url, label]) =>
+            <Link key={url} href={href(url)} data-theme={url === "/ai-quiz-generator" ? "quiz" : undefined} aria-current={path === url ? "page" : undefined}>{t(label)}</Link>)}
           {siteLanguage === "en" && <Link href="/blog" aria-current={path.startsWith("/blog") ? "page" : undefined}>Blog</Link>}
         </nav>
         {!signedInEmail ? <Link href={href("/workspace?start=login")} className={styles.login}>{t("Log in")}</Link> : null}

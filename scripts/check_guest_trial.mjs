@@ -7,6 +7,8 @@ const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
+page.setDefaultNavigationTimeout(120000);
+await context.route("**/*", route => new URL(route.request().url()).origin === new URL(base).origin ? route.continue() : route.abort());
 const errors = [];
 page.on("pageerror", error => errors.push(error.message));
 let signedIn = false, used = false, evaluations = 0, claims = 0, failNext = true, failClaim = true;
@@ -20,6 +22,7 @@ await context.route("**/api/**", async route => {
   let json = {}, status = 200;
   if (path === "/api/account/summary") json = { signedIn, email: signedIn ? "student@example.com" : null, plan: "free", remainingEvaluations: 3, creditsBalance: 0 };
   else if (path === "/api/account/preferences") json = { preferences: null };
+  else if (path === "/api/quizzes") json = { quizzes: [], jobs: [], access: { pro: false, used: 0, reserved: 0, remaining: 10 }, workspace: { projects: [], assignments: [] } };
   else if (path === "/api/entitlement") json = { plan: "free", status: "needs_restore" };
   else if (path === "/api/comparison-images") json = { images: [] };
   else if (path === "/api/trial" && req.method() === "GET") json = { used, pending: false, result: used && !signedIn ? preview : null };

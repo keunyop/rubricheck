@@ -326,11 +326,15 @@ automated runs isolate external services with fixtures and module mocks.
 
 ## Private study quizzes
 
-The **My quizzes** sidebar entry and assignment review card open `/quizzes`.
+The **New Quiz** sidebar entry opens `/quizzes?view=create`, switching to the teal
+quiz workspace. **My quizzes** inside that workspace opens the saved quiz library.
+**Create a review Quiz** beside Evaluation Summary starts with that assignment attached.
 Verified users can create four-option multiple-choice and O/X questions from an
-exact graded assignment version, PDF, DOCX, PPTX, TXT, PNG/JPG, or pasted notes.
+exact graded assignment version, PDF, DOCX, PPTX, TXT, or PNG/JPG.
 Sources can be previewed and selected by page, slide, or paragraph. Guest users
 see prepared samples and return to their chosen creation flow after login.
+Creation starts with materials and a question count (10, capped at the remaining
+free balance); title, language, difficulty, project and purpose are in Advanced settings.
 The public `/ai-quiz-generator` page and private screens support all seven site languages.
 
 Free and credit-only accounts share **10 generated questions for the account's

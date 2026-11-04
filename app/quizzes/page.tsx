@@ -7,6 +7,7 @@ import { getCreditEmailFromCookie } from "../../src/lib/creditSession";
 import { buildNoIndexMetadata } from "../../src/lib/seo";
 import { quizLoginPath } from "../../src/lib/quizTypes";
 import { QuizApp } from "./QuizApp";
+import { QuizSidebar } from "../components/QuizSidebar";
 import { QuizSamples } from "../components/QuizOverview";
 import styles from "./quiz.module.css";
 
@@ -20,10 +21,10 @@ export default async function QuizzesPage({ searchParams }: Props) {
   const email = getCreditEmailFromCookie(new Request("https://rubricheck.com", { headers: requestHeaders }));
   const query = new URLSearchParams();
   for (const key of ["view", "assignment", "trial", "from", "id", "job", "retry"]) if (typeof params?.[key] === "string") query.set(key, params[key]);
-  if (!email) return <main id="main-content" className={styles.page}>
-    <nav className={styles.nav}><Link href={localizedPath("/", locale)}>RubriCheck</Link><Link href={localizedPath("/ai-quiz-generator", locale)}>{t("AI quiz generator")}</Link></nav>
-    <section className={styles.hero}><h1>{t("Create a quiz")}</h1><p>{t("Sign up for 10 free questions in total.")}</p><div><Link className={styles.primary} href={quizLoginPath(localizedPath("/quizzes", locale) + (query.size ? "?" + query : ""), locale)}>{t("Log in")}</Link></div></section>
+  const loginHref = quizLoginPath(localizedPath("/quizzes", locale) + (query.size ? "?" + query : ""), locale);
+  if (!email) return <QuizSidebar loginHref={loginHref}><main id="main-content" tabIndex={-1} className={styles.page}>
+    <section className={styles.hero}><h1>{t("Create a quiz")}</h1><p>{t("Sign up for 10 free questions in total.")}</p><div><Link className={styles.primary} href={loginHref}>{t("Log in")}</Link></div></section>
     <QuizSamples />
-  </main>;
-  return <QuizApp key={email} />;
+  </main></QuizSidebar>;
+  return <QuizApp key={email} email={email} />;
 }

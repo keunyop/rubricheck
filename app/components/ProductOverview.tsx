@@ -1,7 +1,6 @@
 "use client";
 
 import { LandingEntry } from "./LandingEntry";
-import { QuizOverview } from "./QuizOverview";
 import { HomeResources } from "./HomeResources";
 import { useState } from "react";
 import Link from "next/link";
@@ -19,22 +18,40 @@ const steps = [
 export function ProductOverview({ home = false }: { home?: boolean }) {
   const { t, href } = useLanguage();
   const [selected, setSelected] = useState(1);
+  const [mode, setMode] = useState<"assignment" | "quiz">("assignment");
+  const [answer, setAnswer] = useState<number | null>(null);
   const criterion = sample.rubric[selected];
   return <main id="main-content" tabIndex={-1} className={styles.page}>
     <div className={styles.container}>
       <LandingEntry home={home} />
-      <section className={styles.hero} aria-labelledby="product-title">
-        <div>
-          <p className={styles.eyebrow}>{t("From first draft to final review")}</p>
-          <h1 id="product-title">{t("Know what to improve.")} <span>{t("Before you submit.")}</span></h1>
-          <p className={styles.intro}>{t("Turn your rubric into a clearer revision plan. RubriCheck helps you understand how your draft meets the criteria, where it falls short, and what to work on next.")}</p>
-          <div className={styles.actions}>
-            <Link href={href("/workspace")} className={styles.primary}>{t("Check my draft for free")} <span aria-hidden="true">↗</span></Link>
-            <a href="#sample-feedback" className={styles.secondary}>{t("See sample feedback")} <span aria-hidden="true">↓</span></a>
-          </div>
-          <p className={styles.note}>{t("One free summary preview. No sign-up or card required.")}</p>
+      <section className={styles.heroSection} data-mode={mode} aria-labelledby="product-title">
+        <div className={styles.modeTabs} role="tablist" aria-label={t("Product")}>
+          {(["assignment", "quiz"] as const).map(value => <button
+            key={value} id={`product-tab-${value}`} type="button" role="tab"
+            aria-selected={mode === value} aria-controls="product-panel"
+            tabIndex={mode === value ? 0 : -1} data-mode={value}
+            onClick={() => setMode(value)}
+            onKeyDown={event => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+              event.preventDefault();
+              const next = event.key === "Home" ? "assignment" : event.key === "End" ? "quiz" : mode === "assignment" ? "quiz" : "assignment";
+              setMode(next);
+              document.getElementById(`product-tab-${next}`)?.focus();
+            }}
+          ><span aria-hidden="true" className={styles.modeDot} />{t(value === "assignment" ? "Assignment" : "Quiz generator")}</button>)}
         </div>
-        <section id="sample-feedback" className={styles.preview} aria-labelledby="preview-title">
+        <div className={styles.hero} id="product-panel" role="tabpanel" aria-labelledby={`product-tab-${mode}`} tabIndex={0}>
+        <div className={styles.heroCopy}>
+          <p className={styles.eyebrow}>{t(mode === "assignment" ? "From first draft to final review" : "Learn at your own pace")}</p>
+          <h1 id="product-title">{mode === "assignment" ? <>{t("Know what to improve.")} <span>{t("Before you submit.")}</span></> : t("Turn your study materials into quizzes")}</h1>
+          <p className={styles.intro}>{t(mode === "assignment" ? "Upload your assignment and rubric. Get clear feedback for your next draft." : "Create multiple-choice and true/false questions from assignments, PDFs, slides and notes.")}</p>
+          <div className={styles.actions}>
+            <Link href={href(mode === "assignment" ? "/workspace" : "/quizzes?view=create")} className={styles.primary}>{t(mode === "assignment" ? "Check my draft for free" : "Create a quiz")} <span aria-hidden="true">↗</span></Link>
+          </div>
+          <p className={styles.note}>{t(mode === "assignment" ? "One free summary preview. No sign-up or card required." : "Sign up for 10 free questions in total.")}</p>
+          {mode === "quiz" && <Link href={href("/ai-quiz-generator")} className={styles.textLink}>{t("Explore the quiz generator")} <span aria-hidden="true">→</span></Link>}
+        </div>
+        {mode === "assignment" ? <section id="sample-feedback" className={styles.preview} aria-labelledby="preview-title">
           <div className={styles.previewTop}><span className={styles.statusDot} aria-hidden="true" />{t("Sample · Illustrative result")}</div>
           <div className={styles.previewBody}>
             <h2 id="preview-title">{t(sample.title)}</h2>
@@ -49,7 +66,19 @@ export function ProductOverview({ home = false }: { home?: boolean }) {
             <div id="sample-criterion-feedback" className={styles.feedback} aria-live="polite" aria-atomic="true"><p>{t(criterion.name)}</p><p>{t(criterion.feedback)}</p></div>
             <p className={styles.sampleNote}>{t("Prepared example. No check is used. AI estimates are not official grades.")}</p>
           </div>
-        </section>
+        </section> : <section className={`${styles.preview} ${styles.quizPreview}`} aria-label={t("Sample quiz")}>
+          <div className={styles.previewTop}><span className={styles.statusDot} aria-hidden="true" />{t("Sample · Illustrative result")}</div>
+          <div className={styles.previewBody}>
+            <p className={styles.sourceExcerpt}>{t("Sample source: A triangle has three sides. A square has four equal sides.")}</p>
+            <div className={styles.questionHeading}><span>{t("Sample · Multiple choice")}</span><span aria-hidden="true">01</span></div>
+            <h2>{t("How many sides does a triangle have?")}</h2>
+            <div className={styles.quizOptions} role="group" aria-label={t("How many sides does a triangle have?")}>
+              {[3, 4, 5, 6].map((value, index) => <button key={value} type="button" aria-pressed={answer === value} data-correct={answer !== null && value === 3} data-incorrect={answer === value && value !== 3} onClick={() => setAnswer(value)}><span className={styles.optionLetter}>{String.fromCharCode(65 + index)}</span><span>{value}</span>{answer === value && <span className={styles.optionMark} aria-hidden="true">{value === 3 ? "✓" : "×"}</span>}</button>)}
+            </div>
+            <div className={styles.quizExplanation} aria-live="polite" aria-atomic="true">{answer !== null ? <div><strong>{t(answer === 3 ? "Correct" : "Incorrect")}</strong><p>{t("A. A triangle has three sides; four sides describes a square in this source.")}</p></div> : <span>{t("Choose an answer")}</span>}</div>
+          </div>
+        </section>}
+        </div>
       </section>
 
       <section id="how-it-works" className={styles.section} aria-labelledby="steps-title">
@@ -57,7 +86,6 @@ export function ProductOverview({ home = false }: { home?: boolean }) {
         <ol className={styles.steps}>{steps.map(([title, description], index) => <li key={title}><span className={styles.stepNumber}>0{index + 1}</span><h3>{t(title)}</h3><p>{t(description)}</p></li>)}</ol>
       </section>
 
-      <QuizOverview compact />
       <section className={styles.workflow} aria-labelledby="workflow-title">
         <div><p className={styles.eyebrow}>{t("Built for the next draft, too")}</p><h2 id="workflow-title">{t("Give your revisions a home.")}</h2><p>{t("Sign in to keep your work organized, return to previous feedback, and reuse the rubrics you already added.")}</p><Link href={href("/help")} className={styles.textLink}>{t("Explore the help center")} <span aria-hidden="true">→</span></Link></div>
         <div className={styles.featureList}>

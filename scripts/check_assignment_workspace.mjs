@@ -10,6 +10,8 @@ const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
+page.setDefaultNavigationTimeout(120000);
+await context.route("**/*", route => new URL(route.request().url()).origin === new URL(base).origin ? route.continue() : route.abort());
 const errors = [];
 page.on("pageerror", error => errors.push(error.message));
 let email = "student@example.com", failList = false, failOpen = false;
@@ -33,6 +35,7 @@ await context.route("**/api/**", async route => {
   else if (path === "/api/account/preferences") json = { preferences: null };
   else if (path === "/api/entitlement") json = { plan: "free", status: "needs_restore" };
   else if (path === "/api/trial") json = { used: false, pending: false, result: null };
+  else if (path === "/api/quizzes") json = { quizzes: [], jobs: [], access: { pro: false, used: 0, reserved: 0, remaining: 10 }, workspace: { projects, assignments } };
   else if (path === "/api/comparison-images") json = { images: [] };
   else if (path === "/api/account/logout") { email = ""; json = { ok: true }; }
   else if (path === "/api/workspace" && request.method() === "GET") {
@@ -65,6 +68,14 @@ try {
   assert.ok(labels.indexOf("Projects") < labels.indexOf("Recents"));
   await sidebar.getByRole("button", { name: "Industrial revolution — revised", exact: true }).click();
   await page.getByRole("heading", { name: "Evaluation Summary", exact: true }).waitFor();
+  const reviewQuiz = page.getByRole("link", { name: "Create a review Quiz", exact: true });
+  await reviewQuiz.waitFor();
+  assert.match(await reviewQuiz.getAttribute("href"), new RegExp("/quizzes\\?view=create&assignment=" + assignments[1].id));
+  const summaryBounds = await page.getByRole("heading", { name: "Evaluation Summary", exact: true }).boundingBox();
+  const reviewBounds = await reviewQuiz.boundingBox();
+  assert.ok(reviewBounds.x > summaryBounds.x + summaryBounds.width, "review quiz action sits to the right of the summary title");
+  assert.ok(Math.abs((reviewBounds.y + reviewBounds.height / 2) - (summaryBounds.y + summaryBounds.height / 2)) < 30, "review quiz action shares the summary header row");
+  assert.equal(await sidebar.getByRole("button", { name: "New Assignment", exact: true }).getAttribute("aria-current"), "page");
   assert.equal(await page.locator("#rubric-checker").isVisible(), false);
   assert.ok(page.url().includes("evaluation_id="));
   await page.screenshot({ path: ".next/workspace-result.png", fullPage: false });

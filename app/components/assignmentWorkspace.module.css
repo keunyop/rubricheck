@@ -10,7 +10,18 @@
 .newAssignment, .navItem, .mutedItem { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 8px; text-align: start; font-size: 14px; color: #35383f; cursor: pointer; min-width: 0; }
 .newAssignment { font-weight: 550; margin-bottom: 16px; background: #fff; border: 1px solid #e2e8f0; }
 .newAssignment:hover, .navItem:hover, .mutedItem:hover, .searchResult:hover { background: #e7e8eb; }
-.navItem[data-active="true"] { background: #e1e3e8; color: #111827; }
+.navItem[data-active="true"] { background: #e8eaff; color: #4338ca; font-weight: 600; box-shadow: inset 3px 0 #6366f1; }
+.modeNavigation { display: grid; gap: 6px; padding-bottom: 18px; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+.modeItem { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 11px 12px; border: 1px solid transparent; border-radius: 10px; color: #64748b; font-size: 14px; font-weight: 600; text-align: start; cursor: pointer; }
+.modeItem svg { flex-shrink: 0; }
+.modeItem:hover { background: #fff; color: #334155; }
+.modeItem[data-mode="assignment"][aria-current="page"] { color: #4338ca; border-color: #c7d2fe; background: #eef2ff; box-shadow: inset 3px 0 #6366f1; }
+.modeItem[data-mode="quiz"][aria-current="page"] { color: #0f766e; border-color: #99d9cf; background: #e9f8f4; box-shadow: inset 3px 0 #0d9488; }
+.modeItem[aria-disabled="true"] { opacity: .5; cursor: default; }
+.shell[data-workspace="quiz"] { background: #f6faf9; }
+.shell[data-workspace="quiz"] .desktopSidebar, .shell[data-workspace="quiz"] .mobileDialog { background: #f0f6f4; }
+.shell[data-workspace="quiz"] .navItem[data-active="true"] { background: #e0f2ec; color: #0f766e; box-shadow: inset 3px 0 #0d9488; }
+.shell[data-workspace="quiz"] :is(button, a, input, select):focus-visible { outline-color: #0f766e; }
 .navItem span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .navItem svg, .newAssignment svg, .mutedItem svg, .searchResult svg { flex-shrink: 0; }
 .mutedItem { color: #71717a; }
@@ -37,6 +48,7 @@
 .openBar { position: absolute; top: 12px; left: 16px; z-index: 20; }
 .shell[data-expanded="true"] .desktopOpen { display: none; }
 .mobileOpen { display: none; }
+.workspaceLabel { display: none; }
 .mobileDialog { padding: 0; margin: 0; max-width: none; max-height: none; height: 100dvh; width: min(290px, 85vw); border: 0; background: #f3f4f6; }
 .mobilePanel { display: flex; flex-direction: column; padding: 12px; height: 100%; }
 .dialog { padding: 0; border: 1px solid #e5e7eb; border-radius: 18px; background: white; width: min(520px, calc(100vw - 32px)); max-height: min(650px, 85dvh); margin: auto; color: #27272a; box-shadow: 0 24px 80px #0002; }
@@ -93,7 +105,7 @@
 .contextTitle button { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: min(260px, 55vw); cursor: pointer; }
 .contextTitle button:hover { color: #111827; }
 .contextActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.shell button:focus-visible, .shell select:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+.shell button:focus-visible, .shell select:focus-visible, .shell a:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
 .shell button:disabled { cursor: default; opacity: .5; }
 @media (max-width: 767px) {
   .content { transition: none; }
@@ -103,6 +115,9 @@
   .mobileOpen { display: inline-flex; width: 48px; height: 48px; border-radius: 50%; border: 1px solid #e2e5eb; background: #ffffffed; color: #27272a; box-shadow: 0 4px 20px #0f172a1f; backdrop-filter: blur(12px); }
   .mobileOpen svg { width: 23px; height: 23px; stroke-width: 1.8; }
   .openBar { position: fixed; top: auto; bottom: calc(20px + env(safe-area-inset-bottom)); left: max(16px, env(safe-area-inset-left)); }
+  .shell[data-workspace="quiz"] .openBar { position: sticky; top: 0; left: auto; bottom: auto; display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid #deebe7; background: #f6faf9f5; backdrop-filter: blur(12px); }
+  .shell[data-workspace="quiz"] .mobileOpen { width: 40px; height: 40px; border-radius: 10px; box-shadow: none; color: #0f766e; }
+  .workspaceLabel { display: inline; color: #0f766e; font-size: 14px; font-weight: 600; }
   .mobilePanel { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
   .projectView { padding: 22px 18px; }
   .projectTitle h1 { font-size: 22px; }

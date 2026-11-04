@@ -12,7 +12,7 @@ if (modulePath && !/\.m?js$/.test(modulePath)) modulePath = join(modulePath, "in
 const { chromium } = await import(modulePath ? pathToFileURL(modulePath).href : "playwright");
 const base = process.env.TEST_BASE_URL ?? "http://127.0.0.1:3000";
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname), "Only use a local server");
-const directory = "doc/verification/saas";
+const directory = process.env.TEST_OUTPUT_DIR ?? "doc/verification/saas";
 mkdirSync(directory, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ reducedMotion: "reduce" });
@@ -44,6 +44,7 @@ await context.route("**/*", async route => {
 });
 const page = await context.newPage();
 page.setDefaultTimeout(15000);
+page.setDefaultNavigationTimeout(60000);
 page.on("pageerror", error => errors.push(error.message));
 const pass = message => { checks.push(message); console.log("PASS " + message); };
 async function visit(path) { await page.goto(base + path, { waitUntil: "networkidle" }); await page.evaluate(() => document.fonts.ready); }
@@ -78,9 +79,29 @@ try {
   assert.equal(await page.getByRole("button", { name: /Argument/ }).getAttribute("aria-pressed"), "true");
   await page.getByRole("button", { name: /Organization/ }).click();
   assert.match(await page.locator("#sample-criterion-feedback").innerText(), /paragraphs progress/);
-  await page.getByRole("link", { name: "See sample feedback" }).click();
-  assert.ok(page.url().endsWith("#sample-feedback"));
+  assert.equal(await page.getByRole("link", { name: "See sample feedback" }).count(), 0);
   pass("Illustrative product preview responds to click and keyboard without calling grading or consuming checks");
+
+  await page.getByRole("tab", { name: "Assignment", exact: true }).focus();
+  await page.keyboard.press("ArrowRight");
+  assert.equal(await page.getByRole("tab", { name: "Quiz generator", exact: true }).getAttribute("aria-selected"), "true");
+  await page.getByRole("heading", { name: "Turn your study materials into quizzes" }).waitFor();
+  assert.equal(await page.getByRole("link", { name: "Create a quiz", exact: true }).getAttribute("href"), "/quizzes?view=create");
+  const sampleQuiz = page.getByRole("region", { name: "Sample quiz", exact: true });
+  await sampleQuiz.getByRole("button", { name: "B 4", exact: true }).click();
+  assert.match(await sampleQuiz.locator('[aria-live="polite"]').innerText(), /triangle has three sides/);
+  await sampleQuiz.getByRole("button", { name: "A 3", exact: true }).click();
+  assert.equal(await sampleQuiz.getByRole("button", { name: "A 3", exact: true }).getAttribute("aria-pressed"), "true");
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 960 });
+    await fits("/product?preview=quiz", width);
+    if ([390, 1440].includes(width)) await page.screenshot({ path: join(directory, `en-product-quiz-${width}.png`), fullPage: true });
+  }
+  await page.getByRole("tab", { name: "Quiz generator", exact: true }).focus();
+  await page.keyboard.press("Home");
+  assert.equal(await page.getByRole("tab", { name: "Assignment", exact: true }).getAttribute("aria-selected"), "true");
+  await page.getByRole("heading", { name: /Know what to improve/ }).waitFor();
+  pass("Assignment and quiz hero tabs support keyboard switching; the responsive quiz sample checks answers locally");
 
   await visit("/help");
   await page.getByRole("button", { name: "Account & billing", exact: true }).click();
@@ -152,4 +173,8 @@ try {
   assert.equal(requests.some(path => /\/api\/(grade|evaluate|checkout)/.test(path)), false);
   assert.deepEqual(errors, []);
   writeFileSync(join(directory, "results.json"), JSON.stringify({ checks, dimensions, browserErrors: errors, mockedApi: true, feedbackAttempts }, null, 2));
+} catch (error) {
+  await page.screenshot({ path: join(directory, "failure.png"), fullPage: true });
+  console.error({ url: page.url(), errors, screen: (await page.locator("body").innerText()).slice(0, 2000) });
+  throw error;
 } finally { await browser.close(); }

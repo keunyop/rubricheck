@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const [locale, t] = await Promise.all([getLocale(), getTranslator()]);
   const meta = buildMetadata({ title: t(title), description: t(description), path: "/ai-quiz-generator", locale });
   const image = absoluteUrl("/ai-quiz-generator/opengraph-image");
-  return { ...meta, title: { absolute: t(title) }, openGraph: { ...meta.openGraph, images: [{ url: image, width: 1200, height: 630, alt: t("AI quiz generator") }] }, twitter: { ...meta.twitter, images: [image] } };
+  return { ...meta, title: { absolute: t(title) }, openGraph: { ...meta.openGraph, images: [{ url: image, width: 1200, height: 630, alt: t("Quiz generator") }] }, twitter: { ...meta.twitter, images: [image] } };
 }
 export default async function QuizGeneratorPage() {
   const [locale, t] = await Promise.all([getLocale(), getTranslator()]);

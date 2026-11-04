@@ -9,7 +9,7 @@ import { LanguageSettings } from "./LanguageSettings";
 import type { AssignmentHistoryItem, AssignmentProject, AssignmentWorkspace } from "../../src/lib/assignmentWorkspaceTypes";
 import styles from "./assignmentWorkspace.module.css";
 
-export function WorkspaceIcon({ name }: { name: "search" | "panel" | "menu" | "new" | "folder" | "plus" | "close" | "file" }) {
+export function WorkspaceIcon({ name }: { name: "search" | "panel" | "menu" | "new" | "folder" | "plus" | "close" | "file" | "quiz" }) {
   const paths = {
     search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" /></>,
     panel: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></>,
@@ -19,8 +19,17 @@ export function WorkspaceIcon({ name }: { name: "search" | "panel" | "menu" | "n
     plus: <path d="M12 5v14M5 12h14" />,
     close: <path d="m6 6 12 12M18 6 6 18" />,
     file: <><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z" /><path d="M14 3v6h6M8 13h8M8 17h5" /></>,
+    quiz: <><rect x="4" y="3" width="16" height="18" rx="3" /><path d="m8 9 1.5 1.5L12 8M8 16h8M15 9h1" /></>,
   };
   return <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+}
+
+export function WorkspaceModeNavigation({ mode, onNewAssignment, onNewQuiz, disabled = false }: { mode: "assignment" | "quiz"; onNewAssignment?: () => void; onNewQuiz?: () => void; disabled?: boolean }) {
+  const { t, href } = useLanguage();
+  return <div className={styles.modeNavigation}>
+    {onNewAssignment ? <button className={styles.modeItem} data-mode="assignment" aria-current={mode === "assignment" ? "page" : undefined} onClick={onNewAssignment} disabled={disabled}><WorkspaceIcon name="new" />{t("New Assignment")}</button> : <Link className={styles.modeItem} data-mode="assignment" aria-current={mode === "assignment" ? "page" : undefined} href={href("/workspace")}><WorkspaceIcon name="new" />{t("New Assignment")}</Link>}
+    <Link href={href("/quizzes?view=create")} className={styles.modeItem} data-mode="quiz" aria-current={mode === "quiz" ? "page" : undefined} aria-disabled={disabled || undefined} onClick={event => { if (disabled) event.preventDefault(); else if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) onNewQuiz?.(); }}><WorkspaceIcon name="quiz" />{t("New Quiz")}</Link>
+  </div>;
 }
 
 type Props = {
@@ -100,8 +109,7 @@ export function AssignmentSidebar(props: Props) {
       <button className={styles.iconButton} aria-label={t("Search assignments")} title={t("Search assignments (Ctrl+K)")} onClick={() => { mobile.current?.close(); search.current?.showModal(); }}><WorkspaceIcon name="search" /></button>
       <button className={styles.iconButton} aria-label={t("Close sidebar")} title={t("Close sidebar")} onClick={() => isMobile ? mobile.current?.close() : toggle()}><WorkspaceIcon name="panel" /></button>
     </div>
-    <button className={styles.newAssignment} onClick={() => navigate(props.onNew)} disabled={props.busy}><WorkspaceIcon name="new" />{t("New Assignment")}</button>
-    <Link href={href("/quizzes")} className={styles.newAssignment}><WorkspaceIcon name="file" />{t("My quizzes")}</Link>
+    <WorkspaceModeNavigation mode="assignment" onNewAssignment={() => navigate(props.onNew)} disabled={props.busy} />
     <nav className={styles.sidebarScroll} aria-label={t("Assignments")}>
       <div className={styles.sectionHeading}><span>{t("Projects")}</span><button className={styles.iconButton} aria-label={t("New project")} title={t("New project")} onClick={newProject} disabled={props.busy}><WorkspaceIcon name="plus" /></button></div>
       {props.data.projects.map(project => <button key={project.id} className={styles.navItem} data-active={props.projectId === project.id} onClick={() => navigate(() => props.onProject(project))} disabled={props.busy} title={project.name}>
@@ -121,7 +129,7 @@ export function AssignmentSidebar(props: Props) {
     </div>
   </>;
 
-  return <div className={styles.shell} data-expanded={expanded}>
+  return <div className={styles.shell} data-expanded={expanded} data-workspace="assignment">
     <a href={href("#main-content")} className="skip-link">{t("Skip to content")}</a>
     <aside className={styles.desktopSidebar} aria-label={t("Sidebar")}>{content(false)}</aside>
     <div className={styles.content}>

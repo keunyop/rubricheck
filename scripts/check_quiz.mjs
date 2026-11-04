@@ -15,7 +15,7 @@ if (modulePath && !/\.m?js$/.test(modulePath)) modulePath = join(modulePath, "in
 const { chromium } = await import(modulePath ? pathToFileURL(modulePath).href : "playwright");
 const base = process.env.TEST_BASE_URL ?? "http://127.0.0.1:3217";
 assert.ok(["localhost", "127.0.0.1"].includes(new URL(base).hostname), "Local verification only");
-const directory = "doc/verification/quiz";
+const directory = process.env.TEST_ARTIFACT_DIR ?? "doc/verification/quiz";
 mkdirSync(directory, { recursive: true });
 const checks = [], errors = [];
 const pass = name => { checks.push(name); console.log("PASS " + name); };
@@ -23,6 +23,7 @@ const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
 let signedIn = false, source = null, quiz = null, job = null, polls = 0, attempts = [], saveFails = false, expired = false;
 let preferredLanguage = "en";
+let upload = null, uploadedBytes = 0;
 const id = randomUUID(), sourceId = randomUUID();
 const trialAssignmentId = randomUUID();
 function library() {
@@ -42,14 +43,30 @@ await context.route("**/*", async route => {
   else if (url.pathname === "/api/entitlement") result = { plan: "free", status: "needs_restore" };
   else if (url.pathname === "/api/quizzes/sources") {
     if (req.method() === "GET") { if (expired) { status = 410; result = { code: "QUIZ_SOURCE_EXPIRED" }; } else result = { source }; }
+    else if (req.method() === "PUT") {
+      assert.equal(url.searchParams.get("id"), upload.id);
+      uploadedBytes += req.postDataBuffer()?.length ?? 0;
+      result = { ok: true };
+    }
     else {
       const body = req.postDataJSON();
-      source = { id: sourceId, name: body.name, kind: "text", unitKind: "paragraph", totalUnits: 1, segments: [{ unit: 1, text: body.text }], bytes: 0, receivedAt: Date.now(), expiresAt: Date.now() + 86400000, assignmentId: null, version: null, projectId: null };
-      if (body.action === "assignment") {
-        assert.equal(body.id, trialAssignmentId);
-        Object.assign(source, { name: "Claimed guest assignment", kind: "assignment", assignmentId: trialAssignmentId, segments: [{ unit: 1, text: "A triangle has three sides." }] });
+      if (body.action === "upload") {
+        assert.equal(body.name, "Geometry notes.txt");
+        upload = { id: randomUUID(), name: body.name, size: body.size };
+        uploadedBytes = 0;
+        result = { uploadId: upload.id, chunkBytes: 32 };
+      } else {
+        if (body.action === "extract") {
+          assert.equal(body.id, upload.id);
+          assert.equal(uploadedBytes, upload.size, "all source bytes upload before extraction");
+        }
+        source = { id: sourceId, name: body.action === "extract" ? upload.name : body.name, kind: "txt", unitKind: "paragraph", totalUnits: 1, segments: [{ unit: 1, text: "A triangle has three sides. A square has four equal sides." }], bytes: upload?.size ?? 0, receivedAt: Date.now(), expiresAt: Date.now() + 86400000, assignmentId: null, version: null, projectId: null };
+        if (body.action === "assignment") {
+          assert.equal(body.id, trialAssignmentId);
+          Object.assign(source, { name: "Claimed guest assignment", kind: "assignment", assignmentId: trialAssignmentId, segments: [{ unit: 1, text: "A triangle has three sides." }] });
+        }
+        result = { source };
       }
-      result = { source };
     }
   } else if (url.pathname === "/api/quizzes") {
     if (req.method() === "GET") result = url.searchParams.has("id") ? { quiz, attempts: [...attempts].reverse(), linkedAssignmentIds: [] } : library();
@@ -123,7 +140,7 @@ try {
   }
   pass("English, Korean and Urdu public layouts fit mobile widths, including RTL");
   await visit("/quizzes?view=create&trial=1");
-  assert.match(await page.getByRole("link", { name: "Log in", exact: true }).getAttribute("href"), /returnTo=.*trial%3D1/);
+  assert.match(await page.locator("main").getByRole("link", { name: "Log in", exact: true }).getAttribute("href"), /returnTo=.*trial%3D1/);
   const payload = Buffer.from(JSON.stringify({ email: "quiz-browser@test.invalid", exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url");
   const token = payload + "." + createHmac("sha256", "local-quiz-browser-test-only").update(payload).digest("base64url");
   await context.addCookies([{ name: "rubricheck_credit_session", value: token, url: base }, { name: "rubricheck_analytics", value: "denied", url: base }]);
@@ -132,22 +149,76 @@ try {
   await page.getByRole("heading", { name: "Claimed guest assignment", exact: true }).waitFor();
   assert.match(page.url(), /quizzes\?view=create&trial=1/);
   pass("Authentication return preserves the chosen guest assignment and claims it before creating a source");
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const sidebar = page.locator("aside[aria-label=Sidebar]");
+  await sidebar.getByRole("link", { name: "My quizzes", exact: true }).click();
+  await page.getByRole("heading", { name: "My quizzes", exact: true }).waitFor();
+  assert.equal(await sidebar.getByRole("link", { name: "New Quiz", exact: true }).getAttribute("aria-current"), "page");
+  await sidebar.getByRole("link", { name: "New Assignment", exact: true }).click();
+  await page.locator("#rubric-checker").waitFor();
+  assert.equal(await sidebar.getByRole("button", { name: "New Assignment", exact: true }).getAttribute("aria-current"), "page");
+  await sidebar.getByRole("link", { name: "New Quiz", exact: true }).click();
+  await page.getByRole("heading", { name: "Create a quiz", exact: true }).waitFor();
+  assert.equal(await sidebar.getByRole("link", { name: "New Quiz", exact: true }).getAttribute("aria-current"), "page");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Open sidebar", exact: true }).click();
+  await page.getByRole("dialog", { name: "Sidebar", exact: true }).getByRole("link", { name: "My quizzes", exact: true }).click();
+  await page.getByRole("heading", { name: "My quizzes", exact: true }).waitFor();
+  assert.equal(await page.getByRole("dialog", { name: "Sidebar", exact: true }).isVisible(), false);
+  await page.getByRole("button", { name: "Open sidebar", exact: true }).click();
+  await page.getByRole("dialog", { name: "Sidebar", exact: true }).getByRole("link", { name: "New Quiz", exact: true }).click();
+  await page.getByRole("heading", { name: "Create a quiz", exact: true }).waitFor();
+  assert.equal(await page.getByRole("dialog", { name: "Sidebar", exact: true }).isVisible(), false);
+  await page.getByRole("spinbutton", { name: "Question count", exact: true }).fill("1");
+  await page.getByRole("button", { name: "Open sidebar", exact: true }).click();
+  await page.getByRole("dialog", { name: "Sidebar", exact: true }).getByRole("link", { name: "New Quiz", exact: true }).click();
+  assert.equal(await page.getByRole("spinbutton", { name: "Question count", exact: true }).inputValue(), "4", "New Quiz resets an existing creation form");
+  pass("Assignment and quiz modes switch together with selected navigation and a working mobile drawer");
   await visit("/quizzes?view=create");
   await page.getByRole("heading", { name: "Create a quiz", exact: true }).waitFor();
-  assert.equal(await page.getByLabel("Question count", { exact: true }).inputValue(), "4");
+  assert.equal(await page.getByRole("spinbutton", { name: "Question count", exact: true }).inputValue(), "4");
+  assert.equal(await page.getByRole("button", { name: "Paste text", exact: true }).count(), 0);
+  const advanced = page.locator("details").filter({ has: page.locator("summary", { hasText: "Advanced settings" }) });
+  assert.equal(await advanced.evaluate(node => node.open), false);
+  assert.equal(await page.getByLabel("Question language").isVisible(), false);
+  await advanced.locator("summary").click();
   assert.equal(await page.getByLabel("Question language").locator("option").count(), 7);
-  await page.getByRole("button", { name: "Paste text", exact: true }).click();
-  await page.getByLabel("Source name", { exact: true }).fill("Geometry notes");
-  await page.getByLabel("Paste text", { exact: true }).fill("A triangle has three sides. A square has four equal sides.");
-  await page.getByRole("button", { name: "Add source", exact: true }).click();
+  assert.equal(await page.getByLabel("Difficulty", { exact: true }).inputValue(), "standard");
+  assert.equal(await page.getByLabel("Purpose", { exact: true }).inputValue(), "concepts");
+  await advanced.locator("summary").click();
+  const studyFile = { name: "Geometry notes.txt", mimeType: "text/plain", buffer: Buffer.from("A triangle has three sides. A square has four equal sides.") };
+  const chooseFiles = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Choose files", exact: true }).click();
+  await (await chooseFiles).setFiles(studyFile);
+  await page.getByRole("heading", { name: studyFile.name, exact: true }).waitFor();
+  await page.getByRole("button", { name: "Remove", exact: true }).click();
+  assert.equal(await page.getByRole("heading", { name: studyFile.name, exact: true }).count(), 0);
+  assert.ok(await page.getByRole("button", { name: "Generate quiz", exact: true }).isDisabled());
+  await page.getByLabel("Choose files", { exact: true }).setInputFiles(studyFile);
+  await page.getByRole("button", { name: "Read source", exact: true }).click();
   await page.getByText("Preview and select scope", { exact: true }).waitFor();
-  await page.getByLabel("Question count", { exact: true }).selectOption("2");
-  const scopeHeading = page.getByRole("heading", { name: "2. Question scope", exact: true });
+  await page.getByText("Preview and select scope", { exact: true }).click();
+  await page.getByRole("button", { name: "Clear selection", exact: true }).click();
+  assert.ok(await page.getByRole("button", { name: "Generate quiz", exact: true }).isDisabled(), "empty source scope cannot generate");
+  await page.getByRole("button", { name: "Select all", exact: true }).click();
+  await page.getByText("Preview and select scope", { exact: true }).click();
+  await page.getByRole("spinbutton", { name: "Question count", exact: true }).fill("99");
+  await page.getByRole("spinbutton", { name: "Question count", exact: true }).blur();
+  assert.equal(await page.getByRole("spinbutton", { name: "Question count", exact: true }).inputValue(), "4", "count respects remaining free questions");
+  await page.getByRole("spinbutton", { name: "Question count", exact: true }).fill("2");
+  await page.getByRole("spinbutton", { name: "Question count", exact: true }).blur();
+  assert.equal(await page.getByLabel("Quiz title", { exact: true }).inputValue(), studyFile.name);
+  const scopeHeading = page.getByRole("heading", { name: studyFile.name, exact: true });
   await scopeHeading.scrollIntoViewIfNeeded();
   assert.ok(await scopeHeading.evaluate(node => {
     const bounds = node.getBoundingClientRect();
     return node.contains(document.elementFromPoint(bounds.left + 10, bounds.top + bounds.height / 2));
   }), "creation footer must not cover source scope");
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "mobile creation overflow");
+  await page.setViewportSize({ width: 320, height: 844 });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "narrow mobile creation overflow");
+  await page.setViewportSize({ width: 390, height: 844 });
+  pass("Quiz defaults, collapsed advanced settings, chunked file upload and source removal work");
   await page.screenshot({ path: `${directory}/create-390.png`, fullPage: true });
   await page.getByRole("button", { name: "Generate quiz", exact: true }).click();
   await page.getByRole("link", { name: "Practice now", exact: true }).waitFor({ timeout: 20000 });
@@ -194,6 +265,7 @@ try {
     const prefix = locale === "en" ? "" : "/" + locale;
     await page.setViewportSize({ width: 390, height: 844 });
     await visit(prefix + "/quizzes?view=create");
+    await page.locator("summary").filter({ hasText: translate(locale, "Advanced settings") }).click();
     const language = page.getByLabel(translate(locale, "Question language"), { exact: true });
     await language.waitFor();
     assert.equal(await language.inputValue(), locale, "saved result language default");
@@ -208,7 +280,8 @@ try {
   quiz.title = "Renamed geometry"; quiz.projectId = null;
   quiz.settings.projectId = randomUUID(); // Original project has since been deleted.
   await visit("/quizzes?view=create&from=" + id);
-  await page.getByRole("heading", { name: "Geometry notes", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Geometry notes.txt", exact: true }).waitFor();
+  await page.locator("summary").filter({ hasText: "Advanced settings" }).click();
   assert.equal(await page.getByLabel("Quiz title", { exact: true }).inputValue(), "Renamed geometry");
   assert.equal(await page.getByLabel("Project", { exact: true }).inputValue(), "");
   pass("Reusing a renamed quiz follows current project membership after project deletion");

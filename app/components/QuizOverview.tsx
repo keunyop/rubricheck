@@ -20,7 +20,7 @@ export function QuizOverview({ compact = false }: { compact?: boolean }) {
   return <section className={compact ? styles.page : ""} aria-labelledby="quiz-title">
     <div className={styles.hero}><Heading id="quiz-title">{t("Turn your study materials into quizzes")}</Heading><p>{t("Create multiple-choice and true/false questions from assignments, PDFs, slides and notes.")}</p>
       <div className={styles.row}><span>{t("Review a graded assignment")}</span><span aria-hidden="true">·</span><span>{t("Upload materials to create a quiz")}</span></div>
-      <div className={styles.actions}><Link className={styles.primary} href={href("/quizzes?view=create")}>{t("Create a quiz")}</Link>{compact && <Link className={styles.link} href={href("/ai-quiz-generator")}>{t("Explore the AI quiz generator")}</Link>}</div><p className={styles.muted}>{t("Sign up for 10 free questions in total.")}</p>
+      <div className={styles.actions}><Link className={styles.primary} href={href("/quizzes?view=create")}>{t("Create a quiz")}</Link>{compact && <Link className={styles.link} href={href("/ai-quiz-generator")}>{t("Explore the quiz generator")}</Link>}</div><p className={styles.muted}>{t("Sign up for 10 free questions in total.")}</p>
     </div>
     <QuizSamples />
     {!compact && <>

@@ -24,7 +24,7 @@ export function HelpCenter() {
       </header>
       <div className={styles.content}>
         <aside className={styles.sidebar}>
-          <Link href={href("/ai-quiz-generator")}>{t("Explore the AI quiz generator")}</Link>
+          <Link href={href("/ai-quiz-generator")}>{t("Explore the quiz generator")}</Link>
           <h2>{t("Browse by topic")}</h2>
           <div role="group" aria-label={t("Help topics")} className={styles.topics}>{HELP_CATEGORIES.map(item => <button type="button" key={item} onClick={() => setCategory(item)} aria-pressed={category === item}>{t(item)}<span aria-hidden="true">↗</span></button>)}</div>
           <div className={styles.quickStart}><p>{t("New here?")}</p><Link href={href("/product")}>{t("Take a product tour")} <span aria-hidden="true">→</span></Link></div>
