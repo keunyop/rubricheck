@@ -36,7 +36,7 @@ const guides: Record<"ko" | "ms", Record<string, GuideCopy>> = {
       sections: [
         ["제출물 전체를 준비하세요", "필수 목차, 분량, 자료 수, 분석 방법이 평가 항목에 어떻게 반영되는지 확인하세요. 보고서의 일부만 올리면 빠진 페이지의 내용을 평가할 수 없습니다. 표나 이미지 안의 핵심 정보도 읽을 수 있는 상태로 준비하세요."],
         ["내용의 존재와 설명의 충분함을 구분하세요", "제목만 있는 방법론 절과 실제 절차를 설명한 절은 다릅니다. 요구된 부분이 있는지 확인한 뒤 기준표의 성취 수준에 맞게 설명과 근거가 충분한지 살펴보세요."],
-        ["프로젝트에서 초안의 변화를 추적하세요", "여러 번 수정하는 과제라면 프로젝트에 버전별 결과를 모아두세요. 같은 기준표와 같은 모드로 비교하고, 수정한 부분이 피드백에 어떻게 반영되었는지 확인하세요. 실제 성적이 나오면 별도로 기록할 수도 있습니다."],
+        ["프로젝트에서 초안의 변화를 추적하세요", "여러 번 수정하는 과제라면 프로젝트에 버전별 결과를 모아두세요. 같은 기준표와 같은 모드로 비교하고, 수정한 부분이 피드백에 어떻게 반영되었는지 확인하세요."],
       ],
       example: [["보고서", "결과는 있지만 해석이 부족함", "결과가 연구 질문에 어떤 답을 주는지 설명하기"], ["프로젝트", "결과물만 있고 과정이 빠짐", "주요 선택의 이유와 검증 과정을 추가하기"], ["성찰 과제", "활동 요약에 머무름", "배운 점, 한계, 다음 시도를 구체적으로 적기"]],
     },
@@ -104,7 +104,7 @@ const guides: Record<"ko" | "ms", Record<string, GuideCopy>> = {
       sections: [
         ["Sediakan tugasan yang lengkap", "Semak bagaimana bahagian wajib, panjang tugasan, bilangan sumber dan kaedah analisis dinilai. Jika hanya sebahagian laporan dimuat naik, kandungan halaman yang tidak disertakan tidak boleh dinilai. Pastikan maklumat utama dalam jadual dan imej boleh dibaca."],
         ["Bezakan kewujudan kandungan dengan kecukupan penjelasan", "Bahagian metodologi yang hanya mempunyai tajuk tidak sama dengan bahagian yang menerangkan prosedur sebenar. Selepas memastikan setiap bahagian ada, semak sama ada penjelasan dan bukti memenuhi tahap pencapaian rubrik."],
-        ["Jejak perubahan melalui projek", "Kumpulkan hasil setiap versi dalam projek apabila tugasan disemak berulang kali. Gunakan rubrik dan mod yang sama, kemudian lihat bagaimana pembaikan tercermin dalam maklum balas. Anda juga boleh merekodkan markah sebenar selepas diterima."],
+        ["Jejak perubahan melalui projek", "Kumpulkan hasil setiap versi dalam projek apabila tugasan disemak berulang kali. Gunakan rubrik dan mod yang sama, kemudian lihat bagaimana pembaikan tercermin dalam maklum balas."],
       ],
       example: [["Laporan", "Hasil ada tetapi tafsiran kurang", "Terangkan bagaimana hasil menjawab soalan kajian"], ["Projek", "Hanya hasil akhir, tanpa proses", "Tambahkan alasan keputusan dan proses pengesahan"], ["Refleksi", "Terhad kepada ringkasan aktiviti", "Nyatakan pembelajaran, batasan dan langkah seterusnya"]],
     },

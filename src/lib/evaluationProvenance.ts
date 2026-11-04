@@ -1,7 +1,12 @@
 import { createHash } from "node:crypto";
 import { buildEvaluationPrompt, STRICT_JSON_SYSTEM_INSTRUCTION } from "../../lib/evaluationPrompt";
 import type { GradingMode, Rubric } from "../../lib/schema";
-import type { EvaluationProvenance } from "./actualResultTypes";
+
+export type EvaluationProvenance = {
+  model: string | null;
+  promptVersion: string;
+  inputFingerprint: string;
+};
 
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 

@@ -18,19 +18,18 @@ export default async function PrivacyPolicyPage() {
       <section className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
         <SubpageBackHomeLink />
         <h1 className="mt-3 text-2xl font-semibold text-slate-900">{t("Privacy Policy")}</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-700">{t("Last updated: October 29, 2026.")}</p>
+        <p className="mt-3 text-sm leading-6 text-slate-700">{t("Last updated: November 3, 2026.")}</p>
         <p className="mt-3 text-sm leading-6 text-slate-700"> {t("RubriCheck does not sell personal information. Access to user data is restricted to authorized systems and personnel for security, support, and product operations.")} </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Information We Process")}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700"> {t("Depending on usage, we may process rubric text, assignment text, uploaded files, evaluation outputs, assignment and project names, version history, account email, entitlement status, payment session metadata, and anti-abuse telemetry such as IP-derived usage counters.")} </p>
+        <p className="mt-2 text-sm leading-6 text-slate-700">{t("New evaluations include model and prompt identifiers and an input fingerprint so comparable repeated checks can be identified.")}</p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("How We Use Information")}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700"> {t("We use data to deliver grading and rewrite suggestion features, enforce free and paid limits, save account-specific rubrics and their original files for reuse, maintain assignment history and project versions, prevent abuse, troubleshoot issues, and maintain service performance and security.")} </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Failed grading diagnostics")}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700">{t("When file extraction or grading fails, we may retain original inputs, uploaded files, extracted text, and error details for up to 7 days to troubleshoot the failure. Diagnostic records are encrypted, accessible only to authorized administrators, and automatically deleted after 7 days. They are not used for model training. Contact support to request earlier deletion.")}</p>
-        <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Actual Scores and Comments")}</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-700"> {t("If you choose to save an actual result, we store your score, comments, optional course and assignment details, and permission choices with the saved AI estimate. Personal record storage, internal service quality validation, and anonymized public case use are separate choices. Quality validation and public case use are optional, require their own permission, and do not affect your access. You can edit or delete the record, or withdraw either optional permission by unchecking it and saving. Records are not published automatically. New evaluations include model and prompt identifiers and an input fingerprint so comparable repeated checks can be identified.")} </p>
 
         <h2 className="mt-6 text-lg font-semibold text-slate-900">{t("Payments and Billing")}</h2>
         <p className="mt-2 text-sm leading-6 text-slate-700"> {t("Billing is handled through third-party processors. RubriCheck stores only the minimum billing-related data needed to reconcile entitlements and support account recovery. Full payment card details are not stored by RubriCheck.")} </p>

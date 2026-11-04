@@ -33,7 +33,6 @@ import { generalRubric, ASSIGNMENT_INSTRUCTIONS_LIMIT } from "../lib/generalRubr
 import { GuestChoices, SampleExperience, GuestSummary } from "./components/GuestExperience";
 import { isTrialPreview, type TrialPreview } from "../src/lib/trialPreview";
 import { AssignmentProjectView } from "./components/AssignmentProjectView";
-import { ActualResultPanel } from "./components/ActualResultPanel";
 import { useAssignmentWorkspace } from "./components/useAssignmentWorkspace";
 import { projectVersions, type AssignmentHistoryItem, type AssignmentProject } from "../src/lib/assignmentWorkspaceTypes";
 import workspaceStyles from "./components/assignmentWorkspace.module.css";
@@ -3541,7 +3540,6 @@ export default function Home() {
             </div>
 
             {!sampleSelected && <AssignmentQuizCard evaluationId={displayedResult.evaluation_id} email={signedInEmail} />}
-            {signedInEmail && displayedResult.evaluation_id && <ActualResultPanel key={signedInEmail + ":" + displayedResult.evaluation_id} evaluationId={displayedResult.evaluation_id} />}
 
             {SHOW_PRO_FEATURES && !hasProAccess ? (
               <div className="mt-6 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 md:p-5">

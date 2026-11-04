@@ -14,6 +14,8 @@ export const newLanguages: Record<string, readonly [string, string, string, stri
     '评分标准输入中未找到评分要求。请检查评分标准和作业是否放反了。请使用评估说明作为评分标准，或选择“{noRubric}”。',
   ],
   "Swap rubric and assignment": ["रूब्रिक और असाइनमेंट की जगह बदलें", "روبرک اور اسائنمنٹ کی جگہیں بدلیں", "Đổi chỗ tiêu chí và bài tập", "交换评分标准和作业"],
+  "Last updated: November 3, 2026.": ["आखिरी अपडेट: 3 नवंबर 2026।","آخری تازہ کاری: 3 نومبر 2026۔","Cập nhật lần cuối: ngày 3 tháng 11 năm 2026.","最后更新：2026年11月3日。"],
+  "New evaluations include model and prompt identifiers and an input fingerprint so comparable repeated checks can be identified.": ["नए मूल्यांकनों में मॉडल और प्रॉम्प्ट पहचानकर्ता तथा इनपुट का फ़िंगरप्रिंट शामिल होता है, ताकि तुलना योग्य दोहराई गई जाँचों की पहचान की जा सके।","نئی جانچ میں ماڈل اور پرامپٹ کے شناخت کنندگان اور ان پٹ کا فنگر پرنٹ شامل ہوتا ہے تاکہ قابلِ موازنہ بار بار کی گئی جانچ کی شناخت کی جا سکے۔","Các đánh giá mới có mã định danh mô hình, câu lệnh và dấu vân tay đầu vào để nhận diện các lần kiểm tra lặp lại có thể so sánh.","新评估包含模型和提示词标识符以及输入指纹，以识别可比较的重复检查。"],
   "Last updated: October 29, 2026.": ["अंतिम अपडेट: 29 अक्टूबर 2026।", "آخری تازہ کاری: 29 اکتوبر 2026۔", "Cập nhật lần cuối: 29 tháng 10 năm 2026.", "最后更新：2026年10月29日。"],
   "Failed grading diagnostics": ["मूल्यांकन विफलता का निदान", "جانچ کی ناکامی کی تشخیص", "Chẩn đoán lỗi chấm điểm", "评分失败诊断"],
   "If grading fails, we may keep your submitted text and files for up to 7 days to diagnose and fix the error. Only authorized administrators can access them.": [
@@ -2248,288 +2250,6 @@ export const newLanguages: Record<string, readonly [string, string, string, stri
     "Khác",
     "其他"
   ],
-  "Could not access your actual result. Please try again.": [
-    "आपका वास्तविक परिणाम नहीं मिल सका। कृपया फिर से कोशिश करें।",
-    "آپ کا اصل نتیجہ نہیں مل سکا۔ براہِ کرم دوبارہ کوشش کریں۔",
-    "Không thể truy cập kết quả thực tế của bạn. Vui lòng thử lại.",
-    "无法访问您的实际结果。请重试。"
-  ],
-  "Could not load your actual result. Please try again.": [
-    "आपका वास्तविक परिणाम लोड नहीं हो सका। कृपया फिर से कोशिश करें।",
-    "آپ کا اصل نتیجہ لوڈ نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔",
-    "Không thể tải kết quả thực tế của bạn. Vui lòng thử lại.",
-    "无法加载您的实际结果。请重试。"
-  ],
-  "Actual result deleted. Your AI evaluation is still saved.": [
-    "वास्तविक परिणाम हटाया गया। आपका AI मूल्यांकन अब भी सेव है।",
-    "اصل نتیجہ حذف کر دیا گیا۔ آپ کی AI جانچ اب بھی محفوظ ہے۔",
-    "Đã xóa kết quả thực tế. Bản đánh giá AI của bạn vẫn được lưu.",
-    "已删除实际结果。您的 AI 评估仍已保存。"
-  ],
-  "Actual result saved.": [
-    "वास्तविक परिणाम सेव हो गया।",
-    "اصل نتیجہ محفوظ ہو گیا۔",
-    "Đã lưu kết quả thực tế.",
-    "实际结果已保存。"
-  ],
-  "Actual score and comments": [
-    "वास्तविक स्कोर और टिप्पणियाँ",
-    "اصل اسکور اور تبصرے",
-    "Điểm số và nhận xét thực tế",
-    "实际分数和评语"
-  ],
-  "After your assignment is graded, keep the result and compare it with this AI estimate.": [
-    "आपका असाइनमेंट ग्रेड होने के बाद, परिणाम सेव करें और उसकी तुलना इस AI अनुमान से करें।",
-    "آپ کی اسائنمنٹ کی گریڈنگ کے بعد، نتیجہ محفوظ کریں اور اس کا اس AI تخمینے سے موازنہ کریں۔",
-    "Sau khi bài tập của bạn được chấm, hãy lưu kết quả và so sánh với ước tính AI này.",
-    "作业评分后，请保存结果，并将其与此 AI 估分进行比较。"
-  ],
-  "Close actual result": [
-    "वास्तविक परिणाम बंद करें",
-    "اصل نتیجہ بند کریں",
-    "Đóng kết quả thực tế",
-    "关闭实际结果"
-  ],
-  "View actual score and comments": [
-    "वास्तविक स्कोर और टिप्पणियाँ देखें",
-    "اصل اسکور اور تبصرے دیکھیں",
-    "Xem điểm số và nhận xét thực tế",
-    "查看实际分数和评语"
-  ],
-  "Add actual score and comments": [
-    "वास्तविक स्कोर और टिप्पणियाँ जोड़ें",
-    "اصل اسکور اور تبصرے شامل کریں",
-    "Thêm điểm số và nhận xét thực tế",
-    "添加实际分数和评语"
-  ],
-  "The midpoint is a comparison reference, not a separate predicted grade.": [
-    "मध्य बिंदु तुलना के लिए एक संदर्भ है, अलग से अनुमानित ग्रेड नहीं।",
-    "درمیانی نقطہ موازنہ کرنے کے لیے ایک حوالہ ہے، الگ سے پیش گوئی کردہ گریڈ نہیں۔",
-    "Điểm giữa là mốc tham chiếu để so sánh, không phải một mức điểm dự đoán riêng.",
-    "中间值是用于比较的参考值，并非单独预测的成绩。"
-  ],
-  "Comment saved. Add a numeric score to compare results.": [
-    "टिप्पणी सेव हो गई। नतीजों की तुलना करने के लिए संख्यात्मक स्कोर जोड़ें।",
-    "تبصرہ محفوظ ہو گیا۔ نتائج کا موازنہ کرنے کے لیے عددی اسکور شامل کریں۔",
-    "Đã lưu nhận xét. Hãy thêm điểm số để so sánh kết quả.",
-    "评论已保存。添加数字分数以比较结果。"
-  ],
-  "The submitted work was revised or has not been confirmed as the same draft. This difference cannot be attributed to AI error alone.": [
-    "जमा किए गए काम में संशोधन किया गया था या यह पुष्टि नहीं हुई है कि वह वही ड्राफ़्ट है। इस अंतर का कारण केवल AI की त्रुटि नहीं माना जा सकता।",
-    "جمع کرائے گئے کام میں ترمیم کی گئی تھی یا اس بات کی تصدیق نہیں ہوئی کہ وہی مسودہ تھا۔ اس فرق کی وجہ صرف AI کی غلطی کو نہیں قرار دیا جا سکتا۔",
-    "Bài đã nộp đã được chỉnh sửa hoặc chưa được xác nhận là cùng một bản nháp. Không thể quy sự khác biệt này chỉ cho lỗi của AI.",
-    "提交的作业经过了修改，或尚未确认与之前是同一份草稿。不能将这一差异单独归因于 AI 错误。"
-  ],
-  "Record your actual result": [
-    "अपना वास्तविक नतीजा दर्ज करें",
-    "اپنا اصل نتیجہ درج کریں",
-    "Ghi lại kết quả thực tế của bạn",
-    "记录你的实际结果"
-  ],
-  "Actual score (optional)": [
-    "वास्तविक स्कोर (वैकल्पिक)",
-    "اصل اسکور (اختیاری)",
-    "Điểm thực tế (không bắt buộc)",
-    "实际分数（可选）"
-  ],
-  "Maximum score": [
-    "अधिकतम स्कोर",
-    "زیادہ سے زیادہ اسکور",
-    "Điểm tối đa",
-    "最高分"
-  ],
-  "Course / subject (optional)": [
-    "कोर्स / विषय (वैकल्पिक)",
-    "کورس / مضمون (اختیاری)",
-    "Khóa học / môn học (không bắt buộc)",
-    "课程 / 科目（可选）"
-  ],
-  "Assignment type": [
-    "असाइनमेंट का प्रकार",
-    "اسائنمنٹ کی قسم",
-    "Loại bài tập",
-    "作业类型"
-  ],
-  "Was the graded submission the same draft as this AI check?": [
-    "क्या ग्रेड दिया गया सबमिशन, इस AI जाँच वाले ड्राफ़्ट के समान था?",
-    "کیا گریڈ دیا گیا جمع شدہ کام اسی مسودے کا تھا جس کی AI سے جانچ کی گئی تھی؟",
-    "Bài đã chấm có phải là cùng bản nháp đã được AI kiểm tra không?",
-    "已评分的提交内容与这次 AI 检查的草稿相同吗？"
-  ],
-  "Not sure / not specified": [
-    "पक्का नहीं / बताया नहीं गया",
-    "یقین نہیں / وضاحت نہیں کی گئی",
-    "Không chắc / chưa nêu rõ",
-    "不确定 / 未说明"
-  ],
-  "Yes, the same draft": [
-    "हाँ, वही ड्राफ़्ट",
-    "ہاں، وہی مسودہ",
-    "Có, cùng một bản nháp",
-    "是，同一份草稿"
-  ],
-  "No, I revised it before submission": [
-    "नहीं, जमा करने से पहले मैंने इसमें संशोधन किया था",
-    "نہیں، جمع کرانے سے پہلے میں نے اس میں ترمیم کی تھی",
-    "Không, tôi đã chỉnh sửa trước khi nộp",
-    "不是，我在提交前修改过"
-  ],
-  "Loading actual result...": [
-    "वास्तविक परिणाम लोड हो रहा है...",
-    "اصل نتیجہ لوڈ ہو رہا ہے...",
-    "Đang tải kết quả thực tế...",
-    "正在加载实际结果..."
-  ],
-  "Reload saved record": [
-    "सहेजा गया रिकॉर्ड फिर से लोड करें",
-    "محفوظ شدہ ریکارڈ دوبارہ لوڈ کریں",
-    "Tải lại bản ghi đã lưu",
-    "重新加载已保存的记录"
-  ],
-  "Reloading replaces your unsaved edits with the latest saved record.": [
-    "फिर से लोड करने पर आपके सहेजे नहीं गए बदलाव नवीनतम सहेजे गए रिकॉर्ड से बदल जाएंगे।",
-    "دوبارہ لوڈ کرنے سے آپ کی غیر محفوظ شدہ تبدیلیاں تازہ ترین محفوظ شدہ ریکارڈ سے بدل جائیں گی۔",
-    "Tải lại sẽ thay thế các chỉnh sửa chưa lưu của bạn bằng bản ghi đã lưu mới nhất.",
-    "重新加载会用最新保存的记录替换您尚未保存的更改。"
-  ],
-  "Enter a score between zero and the maximum, or a comment, and confirm personal record storage.": [
-    "शून्य और अधिकतम के बीच स्कोर या टिप्पणी दर्ज करें और व्यक्तिगत रिकॉर्ड सहेजने की पुष्टि करें।",
-    "صفر اور زیادہ سے زیادہ کے درمیان اسکور یا تبصرہ درج کریں، اور ذاتی ریکارڈ محفوظ کرنے کی تصدیق کریں۔",
-    "Nhập điểm từ 0 đến mức tối đa hoặc nhập nhận xét, rồi xác nhận lưu hồ sơ cá nhân.",
-    "输入 0 到最高分之间的分数或一条评语，并确认保存个人记录。"
-  ],
-  "Saved actual result comparison": [
-    "सहेजे गए वास्तविक परिणाम की तुलना",
-    "محفوظ شدہ اصل نتیجے کا موازنہ",
-    "So sánh kết quả thực tế đã lưu",
-    "已保存的实际结果对比"
-  ],
-  "Saved result ·": [
-    "सहेजा गया परिणाम ·",
-    "محفوظ شدہ نتیجہ ·",
-    "Kết quả đã lưu ·",
-    "已保存的结果 ·"
-  ],
-  "AI estimate at the time": [
-    "उस समय का AI अनुमान",
-    "اس وقت کا AI تخمینہ",
-    "Ước tính AI tại thời điểm đó",
-    "当时的 AI 估算"
-  ],
-  "Actual score": [
-    "वास्तविक स्कोर",
-    "اصل اسکور",
-    "Điểm thực tế",
-    "实际分数"
-  ],
-  "Actual minus AI midpoint": [
-    "वास्तविक स्कोर और AI अनुमान के मध्यबिंदु का अंतर",
-    "اصل اسکور اور AI تخمینے کے وسطی نقطے کا فرق",
-    "Chênh lệch giữa điểm thực tế và điểm giữa trong ước tính của AI",
-    "实际分数与 AI 估算中点之差"
-  ],
-  "percentage points": [
-    "प्रतिशत अंक",
-    "فیصدی پوائنٹس",
-    "điểm phần trăm",
-    "个百分点"
-  ],
-  "Within the estimated range.": [
-    "अनुमानित सीमा के भीतर।",
-    "تخمینی حد کے اندر۔",
-    "Nằm trong khoảng ước tính.",
-    "在估算范围内。"
-  ],
-  "Outside the estimated range by {difference} percentage points.": [
-    "अनुमानित सीमा से {difference} प्रतिशत अंक बाहर।",
-    "تخمینی حد سے {difference} فیصدی پوائنٹس باہر۔",
-    "Nằm ngoài khoảng ước tính {difference} điểm phần trăm.",
-    "超出估算范围 {difference} 个百分点。"
-  ],
-  "Assignment comments (optional)": [
-    "असाइनमेंट पर टिप्पणियाँ (वैकल्पिक)",
-    "اسائنمنٹ پر تبصرے (اختیاری)",
-    "Nhận xét về bài tập (không bắt buộc)",
-    "作业评语（可选）"
-  ],
-  "Instructor feedback or your own notes": [
-    "शिक्षक की प्रतिक्रिया या आपके अपने नोट्स",
-    "استاد کی رائے یا آپ کے اپنے نوٹس",
-    "Phản hồi của giảng viên hoặc ghi chú của bạn",
-    "教师反馈或您的备注"
-  ],
-  "Enter a score, a comment, or both. Avoid names, student IDs and other personal details in comments.": [
-    "स्कोर, टिप्पणी या दोनों दर्ज करें। टिप्पणियों में नाम, छात्र आईडी और अन्य निजी जानकारी न लिखें।",
-    "اسکور، تبصرہ یا دونوں درج کریں۔ تبصروں میں نام، طالب علم کی آئی ڈی اور دیگر ذاتی معلومات شامل نہ کریں۔",
-    "Nhập điểm, nhận xét hoặc cả hai. Tránh ghi tên, mã số sinh viên và thông tin cá nhân khác trong phần nhận xét.",
-    "请输入分数、评语或两者。请勿在评语中填写姓名、学生 ID 或其他个人信息。"
-  ],
-  "Choose how this record may be used": [
-    "चुनें कि इस रिकॉर्ड का उपयोग कैसे किया जा सकता है",
-    "منتخب کریں کہ اس ریکارڈ کو کس طرح استعمال کیا جا سکتا ہے",
-    "Chọn cách hồ sơ này có thể được sử dụng",
-    "选择此记录的使用方式"
-  ],
-  "Save to my personal record (required to save). I can edit or delete it later.": [
-    "मेरे निजी रिकॉर्ड में सेव करें (सेव करने के लिए ज़रूरी)। मैं इसे बाद में संपादित या मिटा सकता/सकती हूँ।",
-    "میرے ذاتی ریکارڈ میں محفوظ کریں (محفوظ کرنے کے لیے ضروری)۔ میں بعد میں اس میں ترمیم یا اسے حذف کر سکتا/سکتی ہوں۔",
-    "Lưu vào hồ sơ cá nhân của tôi (bắt buộc để lưu). Tôi có thể chỉnh sửa hoặc xóa hồ sơ này sau.",
-    "保存到我的个人记录（保存所必需）。我之后可以编辑或删除此记录。"
-  ],
-  "Allow service quality validation (optional). Use this result, comments and saved AI estimate to study errors, range coverage and repeated-run variation internally.": [
-    "सेवा की गुणवत्ता की जाँच की अनुमति दें (वैकल्पिक)। इस परिणाम, टिप्पणियों और सेव किए गए AI अनुमान का उपयोग करके आंतरिक रूप से त्रुटियों, रेंज कवरेज और बार-बार चलाने पर होने वाले बदलावों का अध्ययन करें।",
-    "سروس کے معیار کی توثیق کی اجازت دیں (اختیاری)۔ اس نتیجے، تبصروں اور محفوظ کردہ AI اندازے کو اندرونی طور پر غلطیوں، رینج کوریج اور بار بار چلانے پر نتائج میں فرق کا مطالعہ کرنے کے لیے استعمال کریں۔",
-    "Cho phép kiểm tra chất lượng dịch vụ (không bắt buộc). Sử dụng kết quả này, nhận xét và ước tính AI đã lưu để nghiên cứu nội bộ về lỗi, mức độ bao phủ các khoảng điểm và sự biến động khi chạy nhiều lần.",
-    "允许验证服务质量（可选）。使用此结果、评语和已保存的 AI 估分，在内部研究错误、分数范围覆盖情况以及多次运行结果的差异。"
-  ],
-  "Allow an anonymized public case (optional). The saved AI estimate, actual score, assignment type and comments may illustrate both useful estimates and misses. This does not publish automatically.": [
-    "गुमनाम सार्वजनिक केस की अनुमति दें (वैकल्पिक)। सेव किया गया AI अनुमान, वास्तविक स्कोर, असाइनमेंट का प्रकार और टिप्पणियाँ उपयोगी अनुमानों और गलत अनुमानों—दोनों के उदाहरण के तौर पर इस्तेमाल की जा सकती हैं। इससे यह अपने-आप प्रकाशित नहीं होगा।",
-    "گمنام عوامی کیس کی اجازت دیں (اختیاری)۔ محفوظ کردہ AI اندازہ، اصل اسکور، اسائنمنٹ کی قسم اور تبصرے مفید اندازوں اور غلط اندازوں، دونوں کی مثال کے طور پر دکھائے جا سکتے ہیں۔ اس سے یہ خودکار طور پر شائع نہیں ہوگا۔",
-    "Cho phép sử dụng làm trường hợp công khai đã ẩn danh (không bắt buộc). Ước tính AI đã lưu, điểm thực tế, loại bài tập và nhận xét có thể minh họa cả những ước tính hữu ích lẫn những lần ước tính sai. Nội dung này sẽ không tự động được công bố.",
-    "允许将其作为匿名公开案例（可选）。已保存的 AI 估分、实际分数、作业类型和评语可用于展示估分准确和失准的情况。此内容不会自动发布。"
-  ],
-  "Optional choices are independent and do not affect grading or access. To withdraw either permission, uncheck it and save. Deleting removes this record and both permissions.": [
-    "वैकल्पिक विकल्प एक-दूसरे से स्वतंत्र हैं और ग्रेडिंग या पहुँच पर कोई असर नहीं डालते। किसी भी अनुमति को वापस लेने के लिए, उसका चयन हटाकर सेव करें। इसे मिटाने से यह रिकॉर्ड और दोनों अनुमतियाँ हट जाएँगी।",
-    "اختیاری انتخاب ایک دوسرے سے آزاد ہیں اور گریڈنگ یا رسائی پر اثر انداز نہیں ہوتے۔ کسی بھی اجازت کو واپس لینے کے لیے اس کا انتخاب ختم کرکے محفوظ کریں۔ حذف کرنے سے یہ ریکارڈ اور دونوں اجازتیں ختم ہو جائیں گی۔",
-    "Các lựa chọn không bắt buộc là độc lập với nhau và không ảnh hưởng đến việc chấm điểm hoặc quyền truy cập. Để rút lại một trong hai quyền, hãy bỏ chọn quyền đó rồi lưu. Xóa hồ sơ này sẽ xóa cả hai quyền.",
-    "各项可选设置彼此独立，不会影响评分或访问权限。要撤回任一授权，请取消勾选后保存。删除此记录会同时删除这两项授权。"
-  ],
-  "Please wait...": [
-    "कृपया प्रतीक्षा करें...",
-    "براہِ کرم انتظار کریں...",
-    "Vui lòng chờ...",
-    "请稍候..."
-  ],
-  "Save actual result": [
-    "वास्तविक परिणाम सेव करें",
-    "اصل نتیجہ محفوظ کریں",
-    "Lưu kết quả thực tế",
-    "保存实际结果"
-  ],
-  "Delete actual result": [
-    "वास्तविक परिणाम मिटाएँ",
-    "اصل نتیجہ حذف کریں",
-    "Xóa kết quả thực tế",
-    "删除实际结果"
-  ],
-  "Delete this score, comments and permissions? Your AI evaluation will remain saved.": [
-    "क्या यह स्कोर, टिप्पणियाँ और अनुमतियाँ मिटानी हैं? आपका AI मूल्यांकन सेव रहेगा।",
-    "کیا یہ اسکور، تبصرے اور اجازتیں حذف کرنی ہیں؟ آپ کی AI جانچ محفوظ رہے گی۔",
-    "Xóa điểm, nhận xét và các quyền này? Kết quả đánh giá AI của bạn vẫn được lưu.",
-    "要删除此分数、评语和授权吗？您的 AI 评估仍会保留。"
-  ],
-  "Confirm deletion": [
-    "हटाने की पुष्टि करें",
-    "حذف کرنے کی تصدیق کریں",
-    "Xác nhận xóa",
-    "确认删除"
-  ],
-  "Keep record": [
-    "रिकॉर्ड रखें",
-    "ریکارڈ برقرار رکھیں",
-    "Giữ bản ghi",
-    "保留记录"
-  ],
   "Essay": [
     "निबंध",
     "مضمون",
@@ -3304,12 +3024,6 @@ export const newLanguages: Record<string, readonly [string, string, string, stri
     "Dữ liệu đầu vào thô của rubric và bài tập được dùng để khôi phục kết quả sẽ được lưu trữ trong 24 giờ. Phiên thanh toán liên kết có thể kéo dài thời gian khôi phục lên đến bảy ngày. Tệp đã tải lên và dữ liệu đầu vào thô không nằm trong lịch sử bài tập được lưu lâu dài. Bản nháp trên trình duyệt hết hạn sau 24 giờ.",
     "用于恢复结果的原始评分标准和作业输入会存储 24 小时。关联的结账流程可能会将恢复期限延长至七天。上传的文件和原始输入不会纳入长期保存的作业历史记录。浏览器草稿会在 24 小时后过期。"
   ],
-  "Actual Scores and Comments": [
-    "वास्तविक स्कोर और टिप्पणियाँ",
-    "حقیقی اسکورز اور تبصرے",
-    "Điểm số và nhận xét thực tế",
-    "实际分数和评论"
-  ],
   "How RubriCheck collects, uses, and protects personal data.": [
     "RubriCheck व्यक्तिगत डेटा कैसे एकत्र करता है, उसका उपयोग करता है और उसकी सुरक्षा करता है।",
     "RubriCheck ذاتی ڈیٹا کیسے جمع کرتا ہے، اسے استعمال کرتا ہے اور اس کی حفاظت کرتا ہے۔",
@@ -3352,12 +3066,6 @@ export const newLanguages: Record<string, readonly [string, string, string, stri
     "Chúng tôi sử dụng dữ liệu để cung cấp tính năng chấm điểm và gợi ý viết lại, áp dụng giới hạn miễn phí và trả phí, lưu rubric gắn với tài khoản cùng các tệp gốc để tái sử dụng, duy trì lịch sử bài tập và phiên bản dự án, ngăn chặn hành vi lạm dụng, khắc phục sự cố, cũng như duy trì hiệu suất và bảo mật dịch vụ.",
     "我们使用数据来提供评分和改写建议功能、执行免费和付费使用限制、保存与账户关联的评分标准及其原始文件以供重复使用、维护作业历史记录和项目版本、预防滥用、排查问题，并维护服务的性能与安全。"
   ],
-  "If you choose to save an actual result, we store your score, comments, optional course and assignment details, and permission choices with the saved AI estimate. Personal record storage, internal service quality validation, and anonymized public case use are separate choices. Quality validation and public case use are optional, require their own permission, and do not affect your access. You can edit or delete the record, or withdraw either optional permission by unchecking it and saving. Records are not published automatically. New evaluations include model and prompt identifiers and an input fingerprint so comparable repeated checks can be identified.": [
-    "अगर आप कोई वास्तविक परिणाम सहेजना चुनते हैं, तो हम आपका स्कोर, टिप्पणियाँ, वैकल्पिक कोर्स और असाइनमेंट का विवरण, और अनुमति संबंधी विकल्प, सहेजे गए AI अनुमान के साथ स्टोर करते हैं। व्यक्तिगत रिकॉर्ड स्टोरेज, आंतरिक सेवा-गुणवत्ता सत्यापन और अनाम सार्वजनिक केस के रूप में उपयोग—ये अलग-अलग विकल्प हैं। गुणवत्ता सत्यापन और सार्वजनिक केस के रूप में उपयोग वैकल्पिक हैं, इनके लिए अलग से अनुमति देना ज़रूरी है और इनका आपकी पहुँच पर कोई असर नहीं पड़ता। आप रिकॉर्ड को संपादित या मिटा सकते हैं, या विकल्प से टिक हटाकर और बदलाव सहेजकर किसी भी वैकल्पिक अनुमति को वापस ले सकते हैं। रिकॉर्ड अपने-आप प्रकाशित नहीं होते। नई जाँचों में मॉडल और प्रॉम्प्ट पहचानकर्ता तथा एक इनपुट फ़िंगरप्रिंट शामिल होते हैं, ताकि तुलना योग्य दोहराई गई जाँचों की पहचान की जा सके।",
-    "اگر آپ کوئی حقیقی نتیجہ محفوظ کرنے کا انتخاب کرتے ہیں، تو ہم آپ کا اسکور، تبصرے، کورس اور اسائنمنٹ کی اختیاری تفصیلات، اور اجازت سے متعلق انتخاب محفوظ کیے گئے AI اندازے کے ساتھ اسٹور کرتے ہیں۔ ذاتی ریکارڈ اسٹوریج، اندرونی سروس کے معیار کی توثیق، اور گمنام عوامی کیس کے طور پر استعمال الگ الگ انتخاب ہیں۔ معیار کی توثیق اور عوامی کیس کے طور پر استعمال اختیاری ہیں، ان کے لیے الگ اجازت درکار ہے، اور ان سے آپ کی رسائی متاثر نہیں ہوتی۔ آپ ریکارڈ میں ترمیم یا اسے حذف کر سکتے ہیں، یا متعلقہ نشان ہٹا کر اور محفوظ کر کے کسی بھی اختیاری اجازت سے دستبردار ہو سکتے ہیں۔ ریکارڈ خودکار طور پر شائع نہیں کیے جاتے۔ نئی جانچوں میں ماڈل اور پرامپٹ کے شناخت کنندگان اور ایک ان پٹ فنگر پرنٹ شامل ہوتے ہیں تاکہ موازنہ کے قابل بار بار کی گئی جانچوں کی شناخت کی جا سکے۔",
-    "Nếu chọn lưu một kết quả thực tế, chúng tôi lưu điểm số, nhận xét, thông tin khóa học và bài tập tùy chọn, cùng các lựa chọn cấp quyền của bạn với ước tính AI đã lưu. Việc lưu hồ sơ cá nhân, xác thực chất lượng dịch vụ nội bộ và sử dụng làm trường hợp công khai đã ẩn danh là các lựa chọn riêng biệt. Xác thực chất lượng và sử dụng làm trường hợp công khai là tùy chọn, cần có sự cho phép riêng và không ảnh hưởng đến quyền truy cập của bạn. Bạn có thể chỉnh sửa hoặc xóa hồ sơ, hoặc rút lại một trong hai quyền tùy chọn bằng cách bỏ chọn và lưu. Hồ sơ không được tự động công bố. Các lần đánh giá mới bao gồm mã định danh mô hình và câu lệnh, cùng dấu vân tay đầu vào để nhận diện các lần kiểm tra lặp lại có thể so sánh.",
-    "如果您选择保存一条实际结果，我们会将您的分数、评语、可选的课程和作业详情以及权限选择，与保存的 AI 估算结果一并存储。保存个人记录、进行内部服务质量验证和将匿名案例用于公开展示是彼此独立的选择。质量验证和公开案例用途均为可选，需分别获得您的许可，且不会影响您的访问权限。您可以编辑或删除记录，也可以取消勾选相应选项并保存，以撤回任一可选许可。记录不会自动发布。新的评估会包含模型和提示词标识符以及输入指纹，以便识别可进行比较的重复检查。"
-  ],
   "Payments and Billing": [
     "भुगतान और बिलिंग",
     "ادائیگیاں اور بلنگ",
@@ -3381,12 +3089,6 @@ export const newLanguages: Record<string, readonly [string, string, string, stri
     "ڈیٹا قابلِ اعتماد سروس فراہم کنندگان کے ساتھ شیئر کیا جا سکتا ہے جو معاہدے کی ذمہ داریوں کے تحت ہوسٹنگ، تجزیات، AI پراسیسنگ اور ادائیگیوں میں معاونت کرتے ہیں۔ قانون کے تقاضے کے مطابق یا صارفین اور سروس کی سالمیت کے تحفظ کے لیے بھی ڈیٹا ظاہر کیا جا سکتا ہے۔",
     "Dữ liệu có thể được chia sẻ với các nhà cung cấp dịch vụ đáng tin cậy hỗ trợ lưu trữ, phân tích, xử lý AI và thanh toán theo các nghĩa vụ hợp đồng. Dữ liệu cũng có thể được tiết lộ khi pháp luật yêu cầu hoặc để bảo vệ người dùng và tính toàn vẹn của dịch vụ.",
     "数据可能会与可信赖的服务提供商共享，这些提供商根据合同义务提供托管、分析、AI 处理和支付支持。法律要求时，或为保护用户和服务的完整性，数据也可能会被披露。"
-  ],
-  "Actual scores, comments, optional course and assignment details, the saved AI estimate, and your permission choices remain in your account until you delete the actual result or request account data deletion. Deleting an actual result keeps the AI evaluation. Quality validation and anonymized public case use each require a separate optional permission. You can withdraw either permission by editing the record and saving. Records are not published automatically. New evaluations also retain model and prompt identifiers and a fingerprint of the inputs for comparing repeated checks.": [
-    "वास्तविक स्कोर, टिप्पणियाँ, वैकल्पिक कोर्स और असाइनमेंट विवरण, सहेजा गया AI अनुमान और आपकी अनुमति संबंधी पसंद आपके खाते में तब तक रहती हैं, जब तक आप वास्तविक परिणाम को मिटा नहीं देते या खाते का डेटा मिटाने का अनुरोध नहीं करते। वास्तविक परिणाम मिटाने से AI मूल्यांकन नहीं मिटता। गुणवत्ता सत्यापन और अनाम सार्वजनिक केस के रूप में उपयोग—इनमें से प्रत्येक के लिए अलग वैकल्पिक अनुमति आवश्यक है। रिकॉर्ड में बदलाव करके और उसे सहेजकर आप किसी भी अनुमति को वापस ले सकते हैं। रिकॉर्ड अपने-आप प्रकाशित नहीं होते। नई जाँचों में बार-बार की गई जाँचों की तुलना के लिए मॉडल और प्रॉम्प्ट पहचानकर्ता तथा इनपुट का फ़िंगरप्रिंट भी सहेजा जाता है।",
-    "اصل اسکور، تبصرے، اختیاری کورس اور اسائنمنٹ کی تفصیلات، محفوظ کردہ AI تخمینہ، اور آپ کی اجازت سے متعلق ترجیحات آپ کے اکاؤنٹ میں اس وقت تک رہتی ہیں جب تک آپ اصل نتیجہ حذف نہ کر دیں یا اکاؤنٹ کا ڈیٹا حذف کرنے کی درخواست نہ کریں۔ اصل نتیجہ حذف کرنے سے AI کی جانچ حذف نہیں ہوتی۔ معیار کی توثیق اور گمنام عوامی کیس کے طور پر استعمال—ہر ایک کے لیے الگ اختیاری اجازت درکار ہے۔ ریکارڈ میں ترمیم کرکے اور اسے محفوظ کرکے آپ کوئی بھی اجازت واپس لے سکتے ہیں۔ ریکارڈ خودکار طور پر شائع نہیں ہوتے۔ نئی جانچوں میں بار بار کی گئی جانچوں کا موازنہ کرنے کے لیے ماڈل اور پرامپٹ شناخت کار اور ان پٹس کا فنگرپرنٹ بھی محفوظ کیا جاتا ہے۔",
-    "Điểm thực tế, nhận xét, thông tin môn học và bài tập tùy chọn, ước tính AI đã lưu và các lựa chọn cấp quyền của bạn sẽ được lưu trong tài khoản cho đến khi bạn xóa kết quả thực tế hoặc yêu cầu xóa dữ liệu tài khoản. Xóa kết quả thực tế không xóa đánh giá AI. Việc xác thực chất lượng và việc sử dụng làm trường hợp công khai đã ẩn danh đều cần có sự cho phép riêng và không bắt buộc. Bạn có thể rút lại một trong hai quyền bằng cách chỉnh sửa rồi lưu bản ghi. Bản ghi không được tự động công bố. Các lượt đánh giá mới cũng lưu mã định danh mô hình và câu lệnh, cùng dấu vân tay của dữ liệu đầu vào để so sánh các lần kiểm tra lặp lại.",
-    "实际得分、评论、可选的课程和作业详情、已保存的 AI 估算结果以及您的授权选择会保留在您的账户中，直到您删除实际结果或请求删除账户数据。删除实际结果不会删除 AI 评估。质量验证和匿名公开案例使用分别需要单独的可选授权。您可以通过编辑并保存记录撤回任一授权。记录不会自动发布。新的评估还会保留模型和提示词标识符，以及输入内容的指纹，以便比较重复检查的结果。"
   ],
   "My Rubrics": [
     "मेरे रूब्रिक्स",

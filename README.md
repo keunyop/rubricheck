@@ -288,17 +288,6 @@ workspace, recovery, and feedback browser scripts. Browser tests use mocked API
 responses; set `TEST_BASE_URL` for a local Next server and `PLAYWRIGHT_MODULE`
 if Playwright is installed outside this repository.
 
-## Actual scores and comments
-
-Open a saved assignment and choose **Add actual score and comments** to record a grade,
-instructor feedback or personal notes, and compare it with the original AI estimate.
-Personal storage, optional quality validation, and optional anonymized public case use are
-separate choices. Records can be edited or deleted and optional permissions withdrawn.
-No extra checks, credits, SQL migration or new environment variables are required.
-
-See [storage, consent, comparison and verification](doc/verification/actual-results.md).
-Run `npm run test:all` and `npm run test:actual-results:browser` for regression coverage.
-
 ## Admin subscriber pagination
 
 Before deploying the paginated admin dashboard, apply [supabase/admin_dashboard.sql](supabase/admin_dashboard.sql). See [deployment and verification](doc/admin-subscriber-pagination.md).

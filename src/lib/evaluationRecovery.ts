@@ -1,6 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { evaluationProvenance } from "./evaluationProvenance";
-import type { EvaluationProvenance } from "./actualResultTypes";
+import { evaluationProvenance, type EvaluationProvenance } from "./evaluationProvenance";
 import { Redis } from "@upstash/redis";
 import type { Rubric, GradingMode } from "../../lib/schema";
 import { restrictEvaluationFeedback, type FinalEvaluation } from "../../lib/gradeFinalization";
