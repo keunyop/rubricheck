@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { CHECKOUT_CURRENCY } from "../config/billing.ts";
 
 export type CreditCheckoutSessionParamsInput = {
   priceId: string;
@@ -14,6 +15,8 @@ export function buildCreditCheckoutSessionParams(
 ): Stripe.Checkout.SessionCreateParams {
   const baseParams: Stripe.Checkout.SessionCreateParams = {
     mode: "payment",
+    currency: CHECKOUT_CURRENCY,
+    adaptive_pricing: { enabled: false },
     line_items: [{ price: params.priceId, quantity: 1 }],
     success_url: `${params.appUrl}/?checkout_session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${params.appUrl}/billing/cancel`,

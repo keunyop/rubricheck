@@ -147,7 +147,7 @@ function createGoogleVisionOcrClient(): VisionOcrClient {
   };
 }
 
-async function readPdfPagesWithOcr(buffer: Buffer, pages: number[], field: ParsedField): Promise<Map<number, string>> {
+export async function readPdfPagesWithOcr(buffer: Buffer, pages: number[], field: ParsedField): Promise<Map<number, string>> {
   // files:annotate accepts at most five explicitly selected pages per request.
   // https://docs.cloud.google.com/vision/docs/file-small-batch
   const apiKey = process.env.GOOGLE_CLOUD_VISION_API_KEY?.trim();

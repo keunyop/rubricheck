@@ -1,5 +1,7 @@
 "use client";
 import { flushGrowth, trackGrowth } from "../src/lib/growthClient";
+import { AssignmentQuizCard } from "./components/AssignmentQuizCard";
+import { safeQuizReturn } from "../src/lib/quizTypes";
 import { PlanFitNote } from "./components/PlanFitNote";
 
 
@@ -1229,6 +1231,8 @@ export default function Home() {
   useEffect(() => {
     if (!draftReady) return;
     const url = new URL(window.location.href);
+    const quizReturn = safeQuizReturn(url.searchParams.get("returnTo"));
+    if (signedInEmail && quizReturn) { window.location.assign(quizReturn); return; }
     const start = url.searchParams.get("start");
     const entry = start + ":" + (signedInEmail || "guest");
     if (!start || starterRef.current === entry || url.searchParams.has("evaluation_id") || url.searchParams.has("checkout_session_id")) return;
@@ -3536,6 +3540,7 @@ export default function Home() {
               </div>
             </div>
 
+            {!sampleSelected && <AssignmentQuizCard evaluationId={displayedResult.evaluation_id} email={signedInEmail} />}
             {signedInEmail && displayedResult.evaluation_id && <ActualResultPanel key={signedInEmail + ":" + displayedResult.evaluation_id} evaluationId={displayedResult.evaluation_id} />}
 
             {SHOW_PRO_FEATURES && !hasProAccess ? (

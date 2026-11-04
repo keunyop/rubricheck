@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { saveEvaluation, getEvaluation, upgradeEvaluation, normalizeEvaluationId } from "./evaluationRecovery.ts";
-import { createEvaluationCheckout, evaluationCheckoutFields, validateCheckoutEvaluation } from "./evaluationCheckout.ts";
+import { saveEvaluation, getEvaluation, upgradeEvaluation, normalizeEvaluationId, ownerHash } from "./evaluationRecovery.ts";
+import { createEvaluationCheckout, findEvaluationCheckout, evaluationCheckoutFields, validateCheckoutEvaluation } from "./evaluationCheckout.ts";
 import { mergeDetailedEvaluation } from "./mergeDetailedEvaluation.ts";
 import type Stripe from "stripe";
 import type { FinalEvaluation } from "../../lib/gradeFinalization";
@@ -95,9 +95,13 @@ test("recovery binds ownership, rejects expired IDs, serializes upgrades and reu
       retrieve: async (id: string) => ({ id, status, url: status === "open" ? "https://checkout.stripe.com/test" : null }),
     } } } as unknown as Stripe;
     const params = { mode: "payment" as const, ...evaluationCheckoutFields("https://example.com", saved.evaluation_id) };
+    values.set("rubricheck:evaluationCheckout:" + ownerHash("student@example.com") + ":" + saved.evaluation_id, "cs_legacy_cad");
+    assert.equal(await findEvaluationCheckout(stripe, "student@example.com", saved.evaluation_id), null,
+      "A cached checkout from before the USD migration must not be resumed");
     const [first, concurrent] = await Promise.all([createEvaluationCheckout(stripe, params, "student@example.com", saved.evaluation_id), createEvaluationCheckout(stripe, params, "student@example.com", saved.evaluation_id)]);
     assert.equal(first.id, concurrent.id);
     assert.equal(creates, 1);
+    assert.notEqual(first.id, "cs_legacy_cad");
     status = "complete";
     const completed = await createEvaluationCheckout(stripe, params, "student@example.com", saved.evaluation_id);
     assert.equal(completed.status, "complete");

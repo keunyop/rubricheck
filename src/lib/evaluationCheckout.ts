@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { CHECKOUT_CURRENCY } from "../config/billing.ts";
 import { getEvaluation, normalizeEvaluationId, ownerHash, recoveryKey, recoveryRedis } from "./evaluationRecovery.ts";
 
 export async function validateCheckoutEvaluation(value: unknown, email: string) {
@@ -18,7 +19,7 @@ export async function validateCheckoutEvaluation(value: unknown, email: string) 
 
 export async function findEvaluationCheckout(stripe: Stripe, email: string, id: string | null) {
   if (!id) return null;
-  const key = "rubricheck:evaluationCheckout:" + ownerHash(email) + ":" + id;
+  const key = "rubricheck:evaluationCheckout:" + CHECKOUT_CURRENCY + ":" + ownerHash(email) + ":" + id;
   const previous = await recoveryRedis().get<string>(key);
   if (!previous) return null;
   const session = await stripe.checkout.sessions.retrieve(previous);
@@ -29,7 +30,8 @@ export async function findEvaluationCheckout(stripe: Stripe, email: string, id: 
 export async function createEvaluationCheckout(stripe: Stripe, params: Stripe.Checkout.SessionCreateParams, email: string, id: string | null) {
   if (!id) return stripe.checkout.sessions.create(params);
   const redis = recoveryRedis();
-  const key = "rubricheck:evaluationCheckout:" + ownerHash(email) + ":" + id;
+  // A currency migration must not reopen an earlier currency's checkout.
+  const key = "rubricheck:evaluationCheckout:" + CHECKOUT_CURRENCY + ":" + ownerHash(email) + ":" + id;
   const previous = await redis.get<string>(key);
   if (previous) {
     const session = await stripe.checkout.sessions.retrieve(previous);

@@ -1,0 +1,14 @@
+{
+  "checks": [
+    "Seven public locales have server HTML, canonical, reciprocal hreflang and creation links",
+    "Private pages are noindex, APIs reject guests, and sitemap excludes private quizzes",
+    "English, Korean and Urdu public layouts fit mobile widths, including RTL",
+    "Authentication return preserves the chosen guest assignment and claims it before creating a source",
+    "Creation, seven language choices, save-failure retry, answer locking and refresh resume work",
+    "Wrong and unanswered review survives source expiry and preserves the full-attempt score",
+    "All seven authenticated creation and review screens fit mobile; saved question language is restored",
+    "Reusing a renamed quiz follows current project membership after project deletion"
+  ],
+  "errors": [],
+  "apiMode": "mocked browser API; live Redis and model covered by separate integration scripts"
+}

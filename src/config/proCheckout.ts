@@ -1,9 +1,11 @@
-export const PRO_MONTHLY_LOOKUP_KEY = "pro_monthly";
-export const PRO_ANNUAL_LOOKUP_KEY = "pro_annual";
-export const PRO_LIFETIME_LOOKUP_KEY = "pro_lifetime";
+import { CHECKOUT_CURRENCY } from "./billing.ts";
+
+export const PRO_MONTHLY_LOOKUP_KEY = "pro_monthly_usd_v1";
+export const PRO_ANNUAL_LOOKUP_KEY = "pro_annual_usd_v1";
+export const PRO_LIFETIME_LOOKUP_KEY = "pro_lifetime_usd_v1";
 export const PRO_LIFETIME_PRICE_CENTS = 9999;
-export const PRO_LIFETIME_CURRENCY = "cad";
-export const PRO_LIFETIME_STRIPE_PRICE_ID = "price_1URj6hBUXk6e3lrdOBfYg02a";
+export const PRO_LIFETIME_CURRENCY = CHECKOUT_CURRENCY;
+export const PRO_LIFETIME_STRIPE_PRICE_ID = "price_1UXvmdBUXk6e3lrd6EY1cfMR";
 // Stripe revalidates the configured one-time price before opening checkout.
 export const PRO_LIFETIME_CHECKOUT_ENABLED = true;
 
@@ -20,7 +22,7 @@ const PRO_MONTHLY_PRICE_CENTS = 799;
 const PRO_ANNUAL_PRICE_CENTS = 5999;
 
 function formatPriceLabel(amountCents: number): string {
-  return `CAD $${(amountCents / 100).toFixed(2)}`;
+  return `$${(amountCents / 100).toFixed(2)}`;
 }
 
 export function buildAnnualSaveNote(monthlyPriceCents: number, annualPriceCents: number): string {
@@ -116,6 +118,9 @@ export function resolveProCheckoutPlan(input: {
 export function includesProLookupKey(lookupKeys: readonly string[]): boolean {
   return lookupKeys.some((key) => {
     const normalized = key.trim().toLowerCase();
-    return normalized === PRO_MONTHLY_LOOKUP_KEY || normalized === PRO_ANNUAL_LOOKUP_KEY;
+    // Recognize prior subscriptions for restoration and lifecycle webhooks only.
+    // New checkout always resolves the USD keys above.
+    return normalized === PRO_MONTHLY_LOOKUP_KEY || normalized === PRO_ANNUAL_LOOKUP_KEY ||
+      normalized === "pro_monthly" || normalized === "pro_annual";
   });
 }

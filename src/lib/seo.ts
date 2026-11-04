@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CHECKOUT_CURRENCY } from "../config/billing.ts";
 import { FREE_TRIAL_LIMIT } from "../config/plans";
 import { localizedPath, LOCALES, type Locale } from "../i18n/config";
 import { translate } from "../i18n/translate";
@@ -167,7 +168,7 @@ export function buildSoftwareApplicationSchema({
       name: translate(locale, "Free trial: {count} evaluations", { count: FREE_TRIAL_LIMIT }),
       url: absoluteUrl(localizedPath("/pricing", locale)),
       price: "0",
-      priceCurrency: "CAD",
+      priceCurrency: CHECKOUT_CURRENCY.toUpperCase(),
     },
   };
 }

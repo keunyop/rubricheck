@@ -101,6 +101,7 @@ export function AssignmentSidebar(props: Props) {
       <button className={styles.iconButton} aria-label={t("Close sidebar")} title={t("Close sidebar")} onClick={() => isMobile ? mobile.current?.close() : toggle()}><WorkspaceIcon name="panel" /></button>
     </div>
     <button className={styles.newAssignment} onClick={() => navigate(props.onNew)} disabled={props.busy}><WorkspaceIcon name="new" />{t("New Assignment")}</button>
+    <Link href={href("/quizzes")} className={styles.newAssignment}><WorkspaceIcon name="file" />{t("My quizzes")}</Link>
     <nav className={styles.sidebarScroll} aria-label={t("Assignments")}>
       <div className={styles.sectionHeading}><span>{t("Projects")}</span><button className={styles.iconButton} aria-label={t("New project")} title={t("New project")} onClick={newProject} disabled={props.busy}><WorkspaceIcon name="plus" /></button></div>
       {props.data.projects.map(project => <button key={project.id} className={styles.navItem} data-active={props.projectId === project.id} onClick={() => navigate(() => props.onProject(project))} disabled={props.busy} title={project.name}>

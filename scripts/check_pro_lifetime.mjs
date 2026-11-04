@@ -55,12 +55,13 @@ try {
       const monthly = page.getByRole("button", { name: locale.monthly, exact: true });
       const annual = page.getByRole("button", { name: locale.annual, exact: true });
       await annual.click();
-      assert.match(await page.locator('[aria-live="polite"]').innerText(), /CAD\s*\$59\.99/);
+      assert.match(await page.locator('[aria-live="polite"]').innerText(), /\$59\.99/);
       await monthly.click();
-      assert.match(await page.locator('[aria-live="polite"]').innerText(), /CAD\s*\$7\.99/);
+      assert.match(await page.locator('[aria-live="polite"]').innerText(), /\$7\.99/);
       await lifetime.click();
       assert.equal(await lifetime.getAttribute("aria-pressed"), "true");
-      assert.match(await page.locator('[aria-live="polite"]').innerText(), /CAD\s*\$99\.99/);
+      assert.match(await page.locator('[aria-live="polite"]').innerText(), /\$99\.99/);
+      assert.doesNotMatch(await page.locator('body').innerText(), /\bCAD\b/);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       if (locale.path === "/ko") await page.screenshot({ path: `doc/verification/lifetime/pricing-${width}.png`, fullPage: true, animations: "disabled" });
     }

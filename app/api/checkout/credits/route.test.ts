@@ -16,6 +16,8 @@ test("credit checkout reuses an existing Stripe customer when available", () => 
   assert.equal(params.customer, "cus_existing");
   assert.equal(params.customer_email, undefined);
   assert.equal(params.customer_creation, undefined);
+  assert.equal(params.currency, "usd");
+  assert.equal(params.adaptive_pricing?.enabled, false);
 });
 
 test("credit checkout creates a customer only when no prior Stripe customer exists", () => {
@@ -31,4 +33,6 @@ test("credit checkout creates a customer only when no prior Stripe customer exis
   assert.equal(params.customer, undefined);
   assert.equal(params.customer_email, "student@example.com");
   assert.equal(params.customer_creation, "always");
+  assert.equal(params.currency, "usd");
+  assert.equal(params.adaptive_pricing?.enabled, false);
 });

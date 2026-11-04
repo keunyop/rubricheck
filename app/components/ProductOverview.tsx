@@ -1,6 +1,7 @@
 "use client";
 
 import { LandingEntry } from "./LandingEntry";
+import { QuizOverview } from "./QuizOverview";
 import { HomeResources } from "./HomeResources";
 import { useState } from "react";
 import Link from "next/link";
@@ -56,6 +57,7 @@ export function ProductOverview({ home = false }: { home?: boolean }) {
         <ol className={styles.steps}>{steps.map(([title, description], index) => <li key={title}><span className={styles.stepNumber}>0{index + 1}</span><h3>{t(title)}</h3><p>{t(description)}</p></li>)}</ol>
       </section>
 
+      <QuizOverview compact />
       <section className={styles.workflow} aria-labelledby="workflow-title">
         <div><p className={styles.eyebrow}>{t("Built for the next draft, too")}</p><h2 id="workflow-title">{t("Give your revisions a home.")}</h2><p>{t("Sign in to keep your work organized, return to previous feedback, and reuse the rubrics you already added.")}</p><Link href={href("/help")} className={styles.textLink}>{t("Explore the help center")} <span aria-hidden="true">→</span></Link></div>
         <div className={styles.featureList}>

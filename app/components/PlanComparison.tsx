@@ -14,6 +14,7 @@ export function PlanComparison() {
         <caption className="sr-only">{t("Plan feature comparison")}</caption>
         <thead><tr><th scope="col">{t("Included features")}</th><th scope="col">{t("Free")}</th><th scope="col">{t("Top-up")}</th><th scope="col">Pro</th></tr></thead>
         <tbody>
+          <tr><th scope="row">{t("Quiz generation")}</th><td>{t("10 questions total")}</td><td>{t("10 questions total")}</td><td>{t("No monthly generation limit")}</td></tr>
           <tr><th scope="row">{t("Evaluations")}</th><td>{t("{count} free checks", { count: FREE_TRIAL_LIMIT })}</td><td>{t("Per purchased pack")}</td><td>{t("Unlimited evaluations")}</td></tr>
           <tr><th scope="row">{t("Estimated scores")}</th>{ACCOUNT_FEATURE_TIERS.map(tier => <td key={tier}>{t("Included")}</td>)}</tr>
           <tr><th scope="row">{t("Improvement priorities")}</th>{ACCOUNT_FEATURE_TIERS.map(tier => <td key={tier}>{getVisibleTopImprovementsCount(tier)}</td>)}</tr>

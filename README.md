@@ -178,7 +178,7 @@ As a portfolio project, RubriCheck shows experience across both product thinking
 
 ## Pro Lifetime
 
-Pro Lifetime is a CAD $99.99 one-time purchase for ongoing Pro access. The pricing
+Pro Lifetime is a USD $99.99 one-time purchase for ongoing Pro access. The pricing
 control and checkout API are enabled and use the configured Stripe Price ID.
 Checkout validates the amount, currency, one-time pricing, and active status before
 opening a payment session. See [Stripe setup and activation](doc/pro-lifetime-stripe-setup.md).
@@ -334,6 +334,51 @@ See [verification results](doc/verification/i18n/verification.json) and
 [language-flow checks](doc/verification/i18n/results.json). Live model translation
 quality and production account persistence require a deployment smoke test; the
 automated runs isolate external services with fixtures and module mocks.
+
+## Private study quizzes
+
+The **My quizzes** sidebar entry and assignment review card open `/quizzes`.
+Verified users can create four-option multiple-choice and O/X questions from an
+exact graded assignment version, PDF, DOCX, PPTX, TXT, PNG/JPG, or pasted notes.
+Sources can be previewed and selected by page, slide, or paragraph. Guest users
+see prepared samples and return to their chosen creation flow after login.
+The public `/ai-quiz-generator` page and private screens support all seven site languages.
+
+Free and credit-only accounts share **10 generated questions for the account's
+lifetime**, across both creation paths. Monthly, annual and lifetime Pro have no
+monthly question limit. Each request allows 1–20 questions (up to the free balance),
+five sources, 20 MiB per file, 50 MiB total, 50 selected pages/slides/images, and
+50,000 selected characters. Grading credits are independent. Only successfully
+saved questions count; deleting a quiz does not restore usage. Practice is free.
+
+The existing Upstash Redis, OpenAI and Google Vision OCR configuration is sufficient;
+there is no SQL migration or new service. Generation runs after the HTTP response,
+with persistent job status, atomic quota reservation, idempotent completion and a
+five-minute lease. Interrupted jobs release reservations when the library or next
+request checks them. A second model pass rejects unsupported or ambiguous questions.
+
+New extracted sources expire after 24 hours. Assignment sources preserve their
+existing recovery deadline. Saved questions and attempts persist independently.
+Deleting a project detaches quizzes; deleting a quiz removes its questions, attempts
+and reports. The existing support-driven account erasure process must call
+`deleteQuizAccountData(email)` from `src/lib/quizStore.ts` after stopping account
+access, alongside existing account cleanup. This removes the account's quiz hash,
+sources, incomplete uploads and locks. It is not exposed as a public deletion API.
+
+See [quiz implementation and verification](doc/verification/quiz/README.md).
+Run `npm run test:all`, `npm run build`, and `npm run test:quiz:browser`.
+The browser script uses a local production server on port 3217 with
+`ENTITLEMENT_SESSION_SECRET=local-quiz-browser-test-only`; override `TEST_BASE_URL`
+and `PLAYWRIGHT_MODULE` if needed. Its private APIs use fixtures. Opt-in integration
+scripts exercise real Redis and the configured model with isolated synthetic
+accounts and remove their data in `finally`:
+
+```powershell
+$env:QUIZ_REDIS_TEST='1'
+node --env-file=.env.local --import ./scripts/register-test-resolver.mjs --experimental-strip-types scripts/test_quiz_redis.ts
+$env:QUIZ_GENERATION_TEST='1'
+node --env-file=.env.local --import ./scripts/register-test-resolver.mjs --experimental-strip-types scripts/test_quiz_generation.ts
+```
 
 ## Revenue and conversion measurement
 

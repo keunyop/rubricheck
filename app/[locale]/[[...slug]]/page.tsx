@@ -7,6 +7,8 @@ import { isLocale } from "../../../src/i18n/config";
 const pages = {
   "/": () => import("../../page"),
   "/workspace": () => import("../../workspace/page"),
+  "/quizzes": () => import("../../quizzes/page"),
+  "/ai-quiz-generator": () => import("../../ai-quiz-generator/page"),
   "/pricing": () => import("../../pricing/page"),
   "/product": () => import("../../product/page"),
   "/help": () => import("../../help/page"),

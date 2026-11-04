@@ -94,6 +94,10 @@ export async function SeoLandingPage({ page }: { page: SeoLandingPageContent }) 
           <h2 className="text-2xl font-semibold">{t("More ways to review your draft")}</h2>
           <p className="mt-3 text-sm leading-6 text-slate-700">{t("Find guidance for your assignment type or learn how to apply the feedback.")}</p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <Link href={href("/ai-quiz-generator")} className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-md">
+              <h3 className="text-base font-semibold">{t("AI quiz generator")}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{t("Create an AI review quiz")}</p>
+            </Link>
             {page.relatedLinks.map((link) => (
               <Link key={link.href} href={href(link.href)} className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:shadow-md">
                 <h3 className="text-base font-semibold">{link.label}</h3>

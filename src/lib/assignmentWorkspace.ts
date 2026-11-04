@@ -70,11 +70,21 @@ export async function editWorkspace(email: string, action: "renameProject" | "de
           end
         end
       end
+      local quizzes = redis.call('HGETALL', KEYS[2])
+      for i = 1, #quizzes, 2 do
+        if string.sub(quizzes[i], 1, 2) == 'q:' then
+          local quiz = cjson.decode(quizzes[i + 1])
+          if quiz.projectId == ARGV[2] then
+            quiz.projectId = cjson.null
+            redis.call('HSET', KEYS[2], quizzes[i], cjson.encode(quiz))
+          end
+        end
+      end
       redis.call('HDEL', KEYS[1], field)
       return 1
     end
     redis.call('HSET', KEYS[1], field, cjson.encode(item))
     return 1
-  `, [workspaceKey(email)], [action, id, value ?? ""]);
+  `, [workspaceKey(email), `rubricheck:quiz:{${ownerHash(email)}}`], [action, id, value ?? ""]);
   if (!status) throw new Error("WORKSPACE_NOT_FOUND");
 }

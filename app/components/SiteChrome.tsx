@@ -14,7 +14,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   const { t, href, siteLanguage } = useLanguage();
   const { signedInEmail } = useAccountSummary();
   const path = stripLocale(usePathname()).replace(/\/$/, "") || "/";
-  if (path === "/workspace" || /^\/(admin|billing)(\/|$)/.test(path)) return children;
+  if (path === "/workspace" || path === "/quizzes" || /^\/(admin|billing)(\/|$)/.test(path)) return children;
 
   return <>
     <a href="#main-content" className="skip-link">{t("Skip to content")}</a>
@@ -24,7 +24,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
           <Image src="/rubricheck-logo.svg" alt="" width={32} height={34} />RubriCheck
         </Link>
         <nav aria-label={t("Main navigation")} className={styles.nav}>
-          {[["/product", "Product"], ["/pricing", "Pricing"], ["/help", "Help center"]].map(([url, label]) =>
+          {[["/product", "Product"], ["/ai-quiz-generator", "AI quiz generator"], ["/pricing", "Pricing"], ["/help", "Help center"]].map(([url, label]) =>
             <Link key={url} href={href(url)} aria-current={path === url ? "page" : undefined}>{t(label)}</Link>)}
           {siteLanguage === "en" && <Link href="/blog" aria-current={path.startsWith("/blog") ? "page" : undefined}>Blog</Link>}
         </nav>

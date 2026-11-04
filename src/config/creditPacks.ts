@@ -12,25 +12,25 @@ type CreditPackConfig = {
 
 const CREDIT_PACK_CONFIG: Record<CreditPackId, CreditPackConfig> = {
   "10": {
-    lookupKey: "credits_10_v1",
+    lookupKey: "credits_10_usd_v1",
     credits: 10,
     label: "10 evaluations",
     marketingLabel: "Starter",
-    priceLabel: "CAD $4.99",
+    priceLabel: "$4.99",
   },
   "25": {
-    lookupKey: "credits_25_v1",
+    lookupKey: "credits_25_usd_v1",
     credits: 25,
     label: "25 evaluations",
     marketingLabel: "Most Popular",
-    priceLabel: "CAD $9.99",
+    priceLabel: "$9.99",
   },
   "60": {
-    lookupKey: "credits_60_v1",
+    lookupKey: "credits_60_usd_v1",
     credits: 60,
     label: "60 evaluations",
     marketingLabel: "Best Value",
-    priceLabel: "CAD $19.99",
+    priceLabel: "$19.99",
   },
 };
 
@@ -39,7 +39,8 @@ const LOOKUP_KEY_TO_PACK_ID = Object.entries(CREDIT_PACK_CONFIG).reduce<Record<s
     acc[config.lookupKey.toLowerCase()] = packId as CreditPackId;
     return acc;
   },
-  {},
+  // Keep historical purchases recognizable without selecting these keys for sales.
+  { credits_10_v1: "10", credits_25_v1: "25", credits_60_v1: "60" },
 );
 
 export function normalizeCreditPackId(value: unknown): CreditPackId | null {

@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { CHECKOUT_CURRENCY } from "../config/billing.ts";
 import type { ProCheckoutPlan } from "../config/proCheckout";
 import { evaluationCheckoutFields } from "./evaluationCheckout";
 
@@ -12,9 +13,11 @@ export function buildProCheckoutSessionParams(params: {
   const lifetime = params.plan === "lifetime";
   return {
     mode: lifetime ? "payment" : "subscription",
+    currency: CHECKOUT_CURRENCY,
+    adaptive_pricing: { enabled: false },
     // Keep lifetime payments on a separate customer so an older recurring
     // subscription's cancellation can never replace the lifetime entitlement.
-    ...(lifetime ? { customer_creation: "always", payment_method_types: ["card"], adaptive_pricing: { enabled: false } } : {}),
+    ...(lifetime ? { customer_creation: "always" } : {}),
     line_items: [{ price: params.priceId, quantity: 1 }],
     customer_email: params.email,
     ...evaluationCheckoutFields(params.appUrl, params.evaluationId),

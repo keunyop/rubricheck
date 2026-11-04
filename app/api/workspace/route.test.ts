@@ -38,7 +38,7 @@ test("workspace APIs isolate accounts, validate changes and retain result-only v
       const keys = args.slice(1, count + 1).map(String);
       const argv = args.slice(count + 1).map(String);
       const entries = hash(keys[0]);
-      if (count === 2) {
+      if (count === 2 && !["renameProject", "deleteProject", "moveAssignment"].includes(argv[0])) {
         const item = JSON.parse(argv[1]);
         if (item.projectId && !entries.has("p:" + item.projectId)) item.projectId = null;
         if (!entries.has("a:" + argv[0])) entries.set("a:" + argv[0], JSON.stringify(item));

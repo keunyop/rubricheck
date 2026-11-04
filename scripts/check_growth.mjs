@@ -64,7 +64,7 @@ try{
   const visitor=seen.find(x=>x.value?.p_event_name==="page_view").value.p_visitor;
   const stored=JSON.parse(query(`select row_to_json(v) from public.growth_visitors v where visitor_id=${quote(visitor)};`));
   assert.equal(stored.first_touch.source,"google");assert.equal(stored.first_touch.campaign,"malaysia-students");assert.equal(stored.first_touch.landing,"/pricing");
-  await page.getByRole("button",{name:"Compare credit packs",exact:true}).click();await page.getByText("CAD",{exact:true}).first().waitFor();
+  await page.getByRole("button",{name:"Compare credit packs",exact:true}).click();await page.getByText("$4.99",{exact:true}).first().waitFor();
   assert.equal(await page.getByRole("heading",{name:"Evaluation Top-Ups",exact:true}).count(),1,"comparison opens credit options");
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,"mobile comparison fits viewport");
   assert.equal((await fetch(base+"/api/admin/growth")).status,401);

@@ -26,7 +26,8 @@
     "test:ui:browser": "node scripts/check_ui.mjs",
     "test:saas:browser": "node scripts/check_saas.mjs",
     "test:onboarding:browser": "node scripts/check_onboarding.mjs",
-    "test:entry:browser": "node scripts/check_entry.mjs"
+    "test:entry:browser": "node scripts/check_entry.mjs",
+    "test:quiz:browser": "node scripts/check_quiz.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.36.2",
@@ -40,7 +41,8 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "stripe": "^20.3.1",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "jszip": "3.10.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

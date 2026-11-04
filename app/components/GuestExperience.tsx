@@ -1,5 +1,6 @@
 "use client";
 import { useLanguage } from "./LanguageProvider";
+import { AssignmentQuizCard } from "./AssignmentQuizCard";
 
 
 import { ResultLanguageSelect, useResultTranslation } from "./ResultLanguageSelect";
@@ -176,6 +177,7 @@ export function GuestSummary({ result: original, signedIn, busy, onUnlock }: { r
       <h2 tabIndex={-1} id="guest-evaluation-summary" className="text-xl font-semibold text-slate-900 focus:outline-none">{t("Evaluation Summary")}</h2>
     </div>
     <SummaryCard score={formatOverallScoreDisplay(result.overall_range)} summary={result.summary} />
+    <AssignmentQuizCard email="" trial />
     <section aria-label={t("Locked evaluation criteria")} className="mt-6">
       <h3 className="mb-4 text-base font-semibold text-slate-900">{t("Evaluation Criteria")}</h3>
       <div className={styles.lockedCriteria}>

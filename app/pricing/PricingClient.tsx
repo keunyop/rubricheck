@@ -73,14 +73,7 @@ function getEmailInitialAvatarClassName(email: string): string {
 }
 
 function PricingAmount({ label }: { label: string }) {
-  const [currency, amount] = label.split(" ");
-
-  return (
-    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
-      <span className="text-sm font-medium tracking-normal">{currency}</span>{" "}
-      <span>{amount}</span>
-    </span>
-  );
+  return <span className="whitespace-nowrap">{label}</span>;
 }
 
 export function PricingClient() {

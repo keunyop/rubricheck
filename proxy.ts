@@ -37,7 +37,9 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  return NextResponse.next({ request: { headers } });
+  const response = NextResponse.next({ request: { headers } });
+  if (pathname === "/quizzes") { response.headers.set("X-Robots-Tag", "noindex, nofollow"); response.headers.set("Cache-Control", "private, no-store"); }
+  return response;
 }
 
 export const config = {

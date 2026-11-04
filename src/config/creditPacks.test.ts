@@ -11,9 +11,9 @@ import {
 } from "./creditPacks.ts";
 
 test("credit pack id maps to expected lookup_key and credit amount", () => {
-  assert.equal(getLookupKeyForCreditPack("10"), "credits_10_v1");
-  assert.equal(getLookupKeyForCreditPack("25"), "credits_25_v1");
-  assert.equal(getLookupKeyForCreditPack("60"), "credits_60_v1");
+  assert.equal(getLookupKeyForCreditPack("10"), "credits_10_usd_v1");
+  assert.equal(getLookupKeyForCreditPack("25"), "credits_25_usd_v1");
+  assert.equal(getLookupKeyForCreditPack("60"), "credits_60_usd_v1");
 
   assert.equal(getCreditsForCreditPack("10"), 10);
   assert.equal(getCreditsForCreditPack("25"), 25);
@@ -21,6 +21,9 @@ test("credit pack id maps to expected lookup_key and credit amount", () => {
 });
 
 test("credit pack lookup_key resolves back to pack id", () => {
+  assert.equal(resolveCreditPackIdFromLookupKey("credits_10_usd_v1"), "10");
+  assert.equal(resolveCreditPackIdFromLookupKey("credits_25_usd_v1"), "25");
+  assert.equal(resolveCreditPackIdFromLookupKey("credits_60_usd_v1"), "60");
   assert.equal(resolveCreditPackIdFromLookupKey("credits_10_v1"), "10");
   assert.equal(resolveCreditPackIdFromLookupKey("credits_25_v1"), "25");
   assert.equal(resolveCreditPackIdFromLookupKey("credits_60_v1"), "60");
@@ -38,7 +41,7 @@ test("credit pack marketing and price labels are configured for interstitial car
   assert.equal(getCreditPackMarketingLabel("10"), "Starter");
   assert.equal(getCreditPackMarketingLabel("25"), "Most Popular");
   assert.equal(getCreditPackMarketingLabel("60"), "Best Value");
-  assert.equal(getCreditPackPriceLabel("10"), "CAD $4.99");
-  assert.equal(getCreditPackPriceLabel("25"), "CAD $9.99");
-  assert.equal(getCreditPackPriceLabel("60"), "CAD $19.99");
+  assert.equal(getCreditPackPriceLabel("10"), "$4.99");
+  assert.equal(getCreditPackPriceLabel("25"), "$9.99");
+  assert.equal(getCreditPackPriceLabel("60"), "$19.99");
 });

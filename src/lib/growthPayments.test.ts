@@ -33,3 +33,19 @@ test("partial refunds are keyed by refund ID so repeated cumulative charge event
   await recordStripeGrowth(event("charge.refunded",charge),stripe);await recordStripeGrowth(event("charge.refunded",charge),stripe);
   assert.equal(rows.size,2);assert.equal([...rows.values()].reduce((n,r)=>n+Number(r.p_amount),0),-300);
 });
+
+test("USD subscription lookup keys identify invoice revenue even without plan metadata", async () => {
+  for (const [lookupKey, expected] of [["pro_monthly_usd_v1", "pro_monthly"], ["pro_annual_usd_v1", "pro_annual"]]) {
+    rows.clear();
+    const fallbackStripe = {
+      subscriptions: { retrieve: async () => ({ metadata: { growth_account: account }, items: { data: [{ price: { lookup_key: lookupKey } }] } }) },
+    } as unknown as Stripe;
+    await recordStripeGrowth(event("invoice.payment_succeeded", {
+      id: "in_usd", status: "paid", amount_paid: 799, billing_reason: "subscription_cycle", currency: "usd",
+      status_transitions: { paid_at: 120 }, parent: { subscription_details: { subscription: "sub_usd" } }, customer: null,
+    }), fallbackStripe);
+    assert.equal(rows.size, 1);
+    assert.equal([...rows.values()][0].p_product, expected);
+    assert.equal([...rows.values()][0].p_currency, "usd");
+  }
+});

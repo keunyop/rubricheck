@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type Stripe from "stripe";
+import { PRO_ANNUAL_LOOKUP_KEY, PRO_MONTHLY_LOOKUP_KEY } from "../config/proCheckout.ts";
 import { growthEnabled, growthHash } from "./growthServer";
 import { callSupabaseRpc } from "./supabaseRest";
 import type { GrowthProduct } from "./growth";
@@ -45,7 +46,10 @@ export async function recordStripeGrowth(event: Stripe.Event, stripe: Stripe) {
     const sub = await stripe.subscriptions.retrieve(typeof subRef === "string" ? subRef : subRef.id, stripeGrowthOptions);
     const recurring = sub.items.data[0]?.price;
     const product = paymentProduct(sub.metadata);
-    const inferred = product !== "unknown" ? product : recurring?.lookup_key === "pro_annual" ? "pro_annual" : recurring?.lookup_key === "pro_monthly" ? "pro_monthly" : "unknown";
+    const lookupKey = recurring?.lookup_key;
+    const inferred = product !== "unknown" ? product :
+      [PRO_ANNUAL_LOOKUP_KEY, "pro_annual"].includes(lookupKey ?? "") ? "pro_annual" :
+      [PRO_MONTHLY_LOOKUP_KEY, "pro_monthly"].includes(lookupKey ?? "") ? "pro_monthly" : "unknown";
     await save(`invoice:${invoice.id}`, await account(sub.metadata, invoice.customer, invoice.customer_email), invoice.status_transitions.paid_at ?? event.created, inferred, invoicePaymentKind(invoice.billing_reason), invoice.amount_paid, invoice.currency);
   } else if (event.type === "customer.subscription.deleted") {
     const sub = event.data.object as Stripe.Subscription;
