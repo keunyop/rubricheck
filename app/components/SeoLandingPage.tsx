@@ -6,7 +6,7 @@ import type { SeoLandingPageContent } from "../../src/config/seoPages";
 import { FREE_TRIAL_LIMIT } from "../../src/config/plans";
 import { buildBreadcrumbSchema, buildWebPageSchema } from "../../src/lib/seo";
 import { JsonLd } from "./JsonLd";
-import { BLOG_POST, CRITICAL_ANALYSIS_POST } from "../../src/config/blog";
+import { BLOG_POST, CRITICAL_ANALYSIS_POST, REFLECTIVE_WRITING_POST } from "../../src/config/blog";
 
 export async function SeoLandingPage({ page }: { page: SeoLandingPageContent }) {
   const t = await getTranslator();
@@ -110,6 +110,7 @@ export async function SeoLandingPage({ page }: { page: SeoLandingPageContent }) 
           <h2 className="text-lg font-semibold">Have you covered every requirement?</h2>
           <p className="mt-3 leading-7">Use <Link href={BLOG_POST.path} className="text-indigo-700 underline underline-offset-4">our assignment requirements checklist</Link> to turn your instructions into a final review, with a worked example.</p>
           <p className="mt-3 leading-7">If your feedback says your essay is too descriptive, try <Link href={CRITICAL_ANALYSIS_POST.path} className="text-indigo-700 underline underline-offset-4">this critical analysis revision exercise</Link>.</p>
+          {["/essay-rubric-checker", "/rubric-feedback-tool"].includes(page.path) && <p className="mt-3 leading-7">Writing about your own experience? Move from the event to its meaning and a specific next action with our <Link href={REFLECTIVE_WRITING_POST.path} className="text-indigo-700 underline underline-offset-4">worked reflective writing example</Link>.</p>}
         </aside>}
         <div className="flex flex-wrap justify-center gap-3">
           <Link href={href(page.ctaHref)} className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white">{page.ctaLabel}</Link>

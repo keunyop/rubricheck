@@ -27,6 +27,8 @@ const article = "/blog/assignment-requirements-checklist";
 const title = "Assignment Requirements Checklist: 5 Checks Before Submission";
 const analysisArticle = "/blog/descriptive-vs-critical-analysis";
 const analysisTitle = "Essay Too Descriptive? How to Add Critical Analysis";
+const reflectionArticle = "/blog/reflective-writing-what-so-what-now-what";
+const reflectionTitle = "Reflective Writing Example: Move from What? to So What?";
 const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^(OPENAI|SUPABASE|STRIPE|UPSTASH|NEXT_PUBLIC|GROWTH|RESEND|VERCEL|DATABASE)/.test(key)));
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(port)], { env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
 let output = "";
@@ -117,6 +119,28 @@ try {
     await page.goto(base + path);
     assert.equal(await page.getByRole("link", { name: "this critical analysis revision exercise", exact: true }).getAttribute("href"), analysisArticle);
   }
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(base + "/rubric-feedback-tool");
+    await page.getByRole("link", { name: "worked reflective writing example", exact: true }).click();
+    await page.getByRole("heading", { name: reflectionTitle, exact: true }).waitFor();
+    await page.waitForFunction(expected => document.querySelector('link[rel="canonical"]')?.getAttribute("href") === expected, "https://rubricheck.com" + reflectionArticle);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Reflection guide fits viewport");
+    assert.equal(await page.locator('link[rel="alternate"][hreflang]').count(), 0);
+    const structured = await page.locator('script[type="application/ld+json"]').allTextContents();
+    assert.ok(structured.some(value => { const data = JSON.parse(value); return data["@type"] === "BlogPosting" && data.headline === reflectionTitle && data.datePublished === "2026-11-05"; }));
+    assert.ok((await page.locator("article").innerText()).includes("Invented practice scenario"));
+    const audit = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    assert.deepEqual(audit.violations, [], "Reflection article accessibility");
+    await page.screenshot({ path: `doc/verification/blog/reflective-writing-${width}.png`, fullPage: true });
+  }
+  await staticPage.goto(base + "/blog");
+  await staticPage.getByRole("link", { name: reflectionTitle, exact: true }).click();
+  assert.equal(await staticPage.locator("h1").innerText(), reflectionTitle);
+  assert.ok((await staticPage.locator("article").innerText()).includes("schedule a group evidence check 72 hours before submission"));
+  await page.getByRole("link", { name: "Check my reflective draft →", exact: true }).click();
+  await page.locator("#rubric-checker").waitFor({ state: "visible" });
+  assert.equal(new URL(page.url()).pathname, "/workspace");
   assert.equal((await fetch(base + "/blog/not-a-post")).status, 404);
   const quizArticle = "/blog/quiz-generator-from-notes";
   const quizTitle = "Quiz Generator from Notes: Turn a PDF into Useful Practice";

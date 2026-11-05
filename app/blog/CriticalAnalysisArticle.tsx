@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BLOG_POST } from "../../src/config/blog";
+import { BLOG_POST, REFLECTIVE_WRITING_POST } from "../../src/config/blog";
 import styles from "./blog.module.css";
 
 export function CriticalAnalysisArticle() {
@@ -51,6 +51,7 @@ export function CriticalAnalysisArticle() {
     </aside>
     <section className={styles.sources} aria-labelledby="analysis-sources"><h2 id="analysis-sources">Continue your revision</h2>
       <p>For the whole submission, use the <Link href={BLOG_POST.path}>assignment requirements checklist</Link>. For a broader criterion-by-criterion review, see <Link href="/how-to-use-a-rubric-to-check-an-assignment">how to use a rubric to check an assignment</Link> and the <Link href="/essay-rubric-checker">essay rubric checker</Link>.</p>
+      <p>If the assignment asks you to analyse your own experience, use the <Link href={REFLECTIVE_WRITING_POST.path}>worked reflective writing example</Link> to move from the event to its significance and a testable next action.</p>
       <ul><li><a href="https://www.monash.edu/student-academic-success/excel-at-writing/how-to-write/essay/taking-it-further">Monash University: essay writing, description and analysis</a></li><li><a href="https://www.uts.edu.au/for-students/current-students/support/helps/self-help-resources/academic-skills/how-write-critically">University of Technology Sydney: how to write critically</a></li><li><a href="https://library.leeds.ac.uk/info/1401/academic-skills/129/using-your-feedback/4">University of Leeds: acting on feedback about criticality and argument</a></li></ul>
     </section>
   </>;

@@ -51,7 +51,7 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 116, "Sitemap includes 16 public pages in seven languages plus four English blog pages");
+  assert.equal(urls.length, 117, "Sitemap includes 16 public pages in seven languages plus five English blog pages");
   assert.equal(new Set(urls.map(String)).size, urls.length, "No duplicate sitemap URLs");
   assert.doesNotMatch(sitemap, /<loc>[^<]*\/(?:api|admin|billing)(?:\/|<)/);
   const titles = new Set();
@@ -118,6 +118,10 @@ try {
         assert.match(html, /id="quiz-example"/, "Quiz guide includes its worked source example");
         assert.match(html, /B: the amount of water/, "Quiz explanation is present in server HTML");
         assert.match(html, /<details>/, "Answers can be expanded without JavaScript");
+      } else if (barePath === "/blog/reflective-writing-what-so-what-now-what") {
+        assert.match(html, /During the final review/, "Reflection guide includes its worked example in server HTML");
+        assert.match(html, /schedule a group evidence check 72 hours before submission/, "Reflection action plan is present in server HTML");
+        assert.match(html, /<table\b/, "Reflection guide includes an accessible rubric checklist");
       } else {
         assert.match(html, /<table\b/, "Guide includes a rendered worked example");
       }

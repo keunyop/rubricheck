@@ -1,9 +1,10 @@
 import { CriticalAnalysisArticle } from "../CriticalAnalysisArticle";
 import { RequirementsArticle } from "../RequirementsArticle";
 import { QuizGeneratorArticle } from "../QuizGeneratorArticle";
+import { ReflectiveWritingArticle } from "../ReflectiveWritingArticle";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BLOG_POSTS, CRITICAL_ANALYSIS_POST, QUIZ_GENERATOR_POST } from "../../../src/config/blog";
+import { BLOG_POSTS, CRITICAL_ANALYSIS_POST, QUIZ_GENERATOR_POST, REFLECTIVE_WRITING_POST } from "../../../src/config/blog";
 import { absoluteUrl, buildBreadcrumbSchema } from "../../../src/lib/seo";
 import { JsonLd } from "../../components/JsonLd";
 import { blogMetadata } from "../metadata";
@@ -36,7 +37,7 @@ export default async function BlogArticle({ params }: Props) {
       <nav className={styles.breadcrumb} aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true"> / </span><Link href="/blog">Blog</Link><span aria-hidden="true"> / </span><span aria-current="page">{post.category}</span></nav>
       <article className={styles.article}>
         <header><p className={styles.eyebrow}>{post.category}</p><h1>{post.title}</h1><p className={styles.byline}>By <Link href="/product">RubriCheck</Link> · <time dateTime={post.date}>{post.date}</time> · 4 min read</p></header>
-        {post.slug === QUIZ_GENERATOR_POST.slug ? <QuizGeneratorArticle /> : post.slug === CRITICAL_ANALYSIS_POST.slug ? <CriticalAnalysisArticle /> : <RequirementsArticle />}
+        {post.slug === REFLECTIVE_WRITING_POST.slug ? <ReflectiveWritingArticle /> : post.slug === QUIZ_GENERATOR_POST.slug ? <QuizGeneratorArticle /> : post.slug === CRITICAL_ANALYSIS_POST.slug ? <CriticalAnalysisArticle /> : <RequirementsArticle />}
       </article>
     </div>
   </main>;

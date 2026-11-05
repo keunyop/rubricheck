@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CRITICAL_ANALYSIS_POST } from "../../src/config/blog";
+import { CRITICAL_ANALYSIS_POST, REFLECTIVE_WRITING_POST } from "../../src/config/blog";
 import styles from "./blog.module.css";
 
 export function RequirementsArticle() { return <>
@@ -54,6 +54,6 @@ export function RequirementsArticle() { return <>
           <ul><li><a href="https://writingcenter.unc.edu/tips-and-tools/understanding-assignments/">UNC Writing Center: understanding assignments</a></li><li><a href="https://www.cmu.edu/teaching/assessment/assesslearning/rubrics.html">Carnegie Mellon University: what rubrics assess</a></li></ul>
           <p>More about the tool: <Link href="/assignment-rubric-checker">assignment rubric checker</Link>.</p>
         </section>
-        <p>Next: <Link href={CRITICAL_ANALYSIS_POST.path}>make a descriptive essay more analytical</Link> with a worked paragraph. Revising the course material behind your assignment? <Link href="/blog/quiz-generator-from-notes">Turn your notes into a practice quiz</Link>.</p>
+        <p>Next: <Link href={CRITICAL_ANALYSIS_POST.path}>make a descriptive essay more analytical</Link>, or use the <Link href={REFLECTIVE_WRITING_POST.path}>reflective writing example</Link> when the subject is your own experience. Revising course material instead? <Link href="/blog/quiz-generator-from-notes">Turn your notes into a practice quiz</Link>.</p>
   </>;
 }
