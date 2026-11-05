@@ -52,6 +52,11 @@ await context.route("**/*", async route => {
     }
   } else if (url.pathname === "/api/admin/feedback") json = { items: [], nextOffset: null };
   else if (url.pathname === "/api/admin/dashboard") json = { summary: {}, subscribers: [] };
+  else if (url.pathname === "/api/admin/quizzes") json = {
+    generatedAt: new Date(timestamp).toISOString(), coverage: "complete", scannedAccounts: 0, scannedRecords: 0,
+    totals: { users: 0, quizzes: 0, questions: 0, attempts: 0, completedAttempts: 0, reviewAttempts: 0 },
+    generation: { completed: 0, failed: 0, inProgress: 0, interrupted: 0 },
+  };
   else if (url.pathname === "/api/admin/growth") json = { enabled: false };
   else if (url.pathname === "/api/account/summary") json = { signedIn: true, email: "admin@example.com", plan: "free", creditsBalance: 0 };
   else if (url.pathname === "/api/account/preferences") json = { preferences: null };

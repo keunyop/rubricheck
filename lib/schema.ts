@@ -2,16 +2,6 @@ import { z } from "zod";
 
 export const GradingModeSchema = z.enum(["standard", "strict"]);
 
-const oneToTwoSentences = (value: string): boolean => {
-  const sentenceCount = value
-    .trim()
-    .split(/[.!?]+/)
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0).length;
-
-  return sentenceCount >= 1 && sentenceCount <= 2;
-};
-
 const integerRangeTuple = z
   .tuple([z.number().int(), z.number().int()])
   .refine(([low, high]) => low <= high, {
@@ -87,11 +77,14 @@ const scoreAdjustmentsSchema = z.array(z.object({
   evidence: evidenceArraySchema.optional(),
 })).optional();
 
+// The prompt keeps summaries concise, while normalization applies the hard
+// 280-character bound. Do not infer sentence counts from punctuation: periods
+// in abbreviations, initials, and decimals are not reliable sentence breaks.
+const evaluationSummarySchema = z.string().trim().min(1).max(280);
+
 export const EvaluationSchema = z.object({
   score_adjustments: scoreAdjustmentsSchema,
-  summary: z.string().max(280).refine(oneToTwoSentences, {
-    message: "summary must be 1-2 sentences",
-  }),
+  summary: evaluationSummarySchema,
   criteria_scores: z.array(EvaluationCriterionSchema),
   top_improvements: z
     .array(z.string().max(120))
@@ -100,9 +93,7 @@ export const EvaluationSchema = z.object({
 
 export const StrictEvaluationSchema = z.object({
   score_adjustments: scoreAdjustmentsSchema,
-  summary: z.string().max(280).refine(oneToTwoSentences, {
-    message: "summary must be 1-2 sentences",
-  }),
+  summary: evaluationSummarySchema,
   criteria_scores: z.array(StrictEvaluationCriterionSchema),
   top_improvements: z
     .array(z.string().max(120))

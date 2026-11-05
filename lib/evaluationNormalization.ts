@@ -10,14 +10,11 @@ function normalizeSummary(summary: unknown): unknown {
     return summary;
   }
 
-  const sentences = summary
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(/(?<=[.!?])\s+/)
-    .filter((part) => part.length > 0);
-
-  const limited = sentences.slice(0, 2).join(" ").trim();
-  return limited.slice(0, 280);
+  // Sentence boundaries in natural prose are ambiguous (for example O.M.,
+  // Dr., and 3.5). The prompt asks for 1-2 sentences; normalization should
+  // enforce the safe length bound without truncating or rejecting valid
+  // punctuation as if it were an extra sentence.
+  return summary.replace(/\s+/g, " ").trim().slice(0, 280);
 }
 
 function normalizeTopImprovements(value: unknown): unknown {

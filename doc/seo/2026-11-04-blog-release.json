@@ -1,0 +1,43 @@
+{
+  "releaseDate": "2026-11-04",
+  "site": "RubriCheck",
+  "articleUrl": "https://rubricheck.com/blog/quiz-generator-from-notes",
+  "deployment": {
+    "id": "dpl_7eXs4bNjZhahXqzbwWMG55QgZjqm",
+    "state": "READY",
+    "target": "production",
+    "source": "git",
+    "branch": "main",
+    "commit": "e9d8778e3c656795e374a02ed48cea6b27d5e39e",
+    "productionDomain": "rubricheck.com"
+  },
+  "localVerification": {
+    "build": "passed including TypeScript",
+    "changedFileLint": "passed",
+    "growthTestsPassed": 7,
+    "seoPublicUrlsPassed": 116,
+    "blogBrowser": "passed old/new articles, no-JS, 390/1280px, keyboard, CTA and login return destination",
+    "axeViolations": 0,
+    "runtimeErrors": 0,
+    "excluded": [
+      "real authentication",
+      "AI quiz generation and persistence",
+      "quiz server answer persistence",
+      "grading",
+      "billing",
+      "production analytics ingestion"
+    ]
+  },
+  "smoke": {
+    "checkedAt": "2026-11-04T22:57:57.333Z",
+    "url": "https://rubricheck.com/blog/quiz-generator-from-notes",
+    "status": 200,
+    "titlePresent": true,
+    "bodyPresent": true,
+    "actionPresent": true,
+    "canonicalPresent": true,
+    "articleSchemaPresent": true,
+    "noindex": false
+  },
+  "recordStorage": "Saved locally after release; not pushed to avoid a second production deployment."
+}

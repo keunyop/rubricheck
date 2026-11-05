@@ -33,7 +33,8 @@ async function scenario(name, run) {
     else if (pathname === "/api/workspace") json = { projects: [], assignments: [] };
     else if (pathname.startsWith("/api/workspace/assignments/")) { status = 404; json = {}; }
     else if (pathname === "/api/account/preferences") json = { preferences: null };
-  else if (pathname === "/api/entitlement") json = { plan: "free", status: "needs_restore" };
+    else if (pathname === "/api/entitlement") json = { plan: "free", status: "needs_restore" };
+    else if (pathname === "/api/quizzes") json = { quizzes: [], jobs: [], access: { pro: false, used: 0, reserved: 0, remaining: 10 }, workspace: { projects: [], assignments: [] } };
     else if (pathname === "/api/comparison-images") json = { images: [] };
     else if (pathname === "/api/evaluate") { state.evaluations++; json = free; }
     else if (pathname === "/api/checkout" || pathname === "/api/checkout/credits") {
