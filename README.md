@@ -360,11 +360,14 @@ sources, incomplete uploads and locks. It is not exposed as a public deletion AP
 
 The admin **Quiz activity** panel summarizes stored quiz users, quizzes, questions,
 practice/review sessions and generation statuses through the admin-only
-`GET /api/admin/quizzes`. Deleted quizzes and sessions are excluded; completed
-generation jobs can remain after quiz deletion. Reads are bounded, and a partial
-snapshot displays `≥` minimum counts instead of global totals. Storage failures
-show an error rather than zero. Only counters are returned, with a 15-second
-in-process cache; **Refresh quizzes** bypasses it. No migration is required.
+`GET /api/admin/quizzes`. It also provides a searchable, paginated quiz library via
+`?view=list` and loads a selected quiz's questions, answers, explanations, and source
+references via `?view=detail&owner=...&id=...`. Deleted quizzes and sessions are
+excluded; completed generation jobs can remain after quiz deletion. Reads are
+bounded, and partial snapshots display minimum counts instead of apparent global
+totals. Storage failures show an error rather than zero. Metrics use a 15-second
+in-process cache; **Refresh quizzes** bypasses it. Quiz list and detail responses are
+uncached and remain admin-only. No migration is required.
 
 See [quiz implementation and verification](doc/verification/quiz/README.md).
 Run `npm run test:all`, `npm run build`, and `npm run test:quiz:browser`.

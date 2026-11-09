@@ -24,6 +24,7 @@ const errors = [], checks = [];
 page.on("pageerror", error => errors.push(error.message));
 const pass = label => { checks.push(label); console.log("PASS " + label); };
 let fail = false, coverage = "complete", requests = 0;
+const owner = "a".repeat(64), quizId = "11111111-1111-4111-8111-111111111111";
 const snapshot = () => ({
   generatedAt: "2026-11-04T12:00:00.000Z", coverage, scannedAccounts: 124, scannedRecords: 420,
   totals: { users: 124, quizzes: 248, questions: 1240, attempts: 360, completedAttempts: 270, reviewAttempts: 90 },
@@ -36,6 +37,15 @@ await context.route("**/*", async route => {
   assert.equal(request.method(), "GET", "admin review must not mutate records");
   if (url.pathname === "/api/admin/quizzes") {
     requests++;
+    if (url.searchParams.get("view") === "list") return route.fulfill({ json: {
+      generatedAt: "2026-11-04T12:00:00.000Z", coverage: "complete", scannedAccounts: 1, scannedQuizzes: 1,
+      total: 1, offset: 0, limit: 20, items: [{ ownerId: owner, id: quizId, title: "Cell biology", createdAt: 1_794_000_000_000, questionCount: 1, language: "en", difficulty: "standard", purpose: "concepts", sourceNames: ["Biology notes.pdf"] }],
+    } });
+    if (url.searchParams.get("view") === "detail") return route.fulfill({ json: {
+      ownerId: owner, id: quizId, title: "Cell biology", createdAt: 1_794_000_000_000, questionCount: 1, language: "en", difficulty: "standard", purpose: "concepts", requestedCount: 1, topic: "Cells",
+      sources: [{ id: "source-1", name: "Biology notes.pdf", kind: "pdf", unitKind: "page", units: [2] }],
+      questions: [{ id: "question-1", type: "mcq", question: "What is ATP?", options: ["Energy carrier", "Cell wall"], answer: 0, explanation: "ATP carries energy.", concepts: ["ATP"], sourceId: "source-1", sourceName: "Biology notes.pdf", unit: 2 }],
+    } });
     return route.fulfill(fail ? { status: 503, json: { message: "Unable to load quiz activity. Please retry." } } : { json: snapshot() });
   }
   const fixtures = {
@@ -63,8 +73,13 @@ try {
   assert.equal(await value("Review sessions").innerText(), "90");
   assert.equal(await value("Interrupted").innerText(), "1");
   assert.equal(await panel.getByText(/Partial snapshot/).count(), 0);
+  await panel.getByText("Cell biology", { exact: true }).waitFor();
+  await panel.getByRole("button", { name: "View quiz", exact: true }).click();
+  await panel.getByRole("heading", { name: "What is ATP?", exact: false }).waitFor();
+  assert.equal(await panel.getByText("A. Energy carrier — Correct", { exact: true }).count(), 1);
+  assert.equal(await panel.getByText(/ATP carries energy/).count(), 1);
   await page.getByRole("heading", { name: "Subscriber roster", exact: true }).waitFor();
-  pass("Quiz metrics are admin-only and render alongside the existing subscriber dashboard");
+  pass("Quiz metrics and saved quiz details are admin-only and render alongside the existing subscriber dashboard");
   await panel.screenshot({ path: `${directory}/complete-1440.png` });
   coverage = "partial";
   await panel.getByRole("button", { name: "Refresh quizzes", exact: true }).click();
