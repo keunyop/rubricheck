@@ -49,7 +49,7 @@ try {
       else if (url.pathname === "/api/trial") json = { used: false, pending: false, result: null };
       else if (url.pathname === "/api/evaluate") {
         attempts.push({ key: request.headers()["idempotency-key"], input: request.postDataJSON() });
-        status = nextCode === "RUBRIC_STRUCTURE_FAILED" ? 400 : ["RUBRIC_MODEL_UNAVAILABLE", "OCR_UNAVAILABLE"].includes(nextCode) ? 503 : nextCode ? 500 : 200;
+        status = ["RUBRIC_STRUCTURE_FAILED", "PROTECTED_FILE", "IMAGE_TOO_SMALL"].includes(nextCode) ? 400 : ["RUBRIC_MODEL_UNAVAILABLE", "OCR_UNAVAILABLE"].includes(nextCode) ? 503 : nextCode ? 500 : 200;
         json = nextCode ? { code: nextCode, requestId: "browser-test" } : result;
       } else if (url.pathname.startsWith("/api/growth/")) json = { ok: true };
       else throw new Error("Unexpected API: " + url.pathname);
@@ -68,6 +68,8 @@ try {
       ["RUBRIC_STRUCTURE_FAILED", locale === "en" ? /We could not read the grading criteria/ : /채점 기준을 읽지 못했습니다/],
       ["RUBRIC_MODEL_UNAVAILABLE", locale === "en" ? /Service is temporarily unavailable/ : /일시적으로 서비스를 이용할 수 없습니다/],
       ["OCR_UNAVAILABLE", locale === "en" ? /Image OCR is temporarily unavailable/ : /현재 이미지의 글자를 읽을 수 없습니다/],
+      ["PROTECTED_FILE", locale === "en" ? /encrypted or protected by your organization/ : /암호화되었거나 소속 기관에서 보호하고 있습니다/],
+      ["IMAGE_TOO_SMALL", locale === "en" ? /too small or blurry/ : /너무 작거나 흐려서/],
       ["EVALUATION_FAILED", locale === "en" ? /We could not finish grading this assignment/ : /과제 채점을 완료하지 못했습니다/],
     ]) {
       nextCode = code;
@@ -86,7 +88,7 @@ try {
     await submit.click();
     await page.getByText(result.summary, { exact: true }).waitFor();
     await page.getByText("Overall quality", { exact: true }).first().waitFor();
-    assert.equal(attempts.length, 5);
+    assert.equal(attempts.length, 7);
     assert.equal(attempts.at(-1).key, attempts[0].key);
     assert.deepEqual(pageErrors, []);
     console.log(`PASS ${locale}: retry displays a single-criterion grading result`);

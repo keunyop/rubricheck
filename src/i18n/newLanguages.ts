@@ -42,6 +42,18 @@ export const newLanguages: Record<string, readonly [string, string, string, stri
     "Không thể hoàn tất việc chấm điểm bài tập này. Vui lòng thử lại sau giây lát.",
     "未能完成此作业的评分。请稍后重试。",
   ],
+  "This document is encrypted or protected by your organization. Export an unprotected DOCX or TXT file, or paste the text directly.": [
+    "यह दस्तावेज़ एन्क्रिप्टेड है या आपके संगठन द्वारा सुरक्षित किया गया है। बिना सुरक्षा वाली DOCX या TXT फ़ाइल निर्यात करें, या टेक्स्ट सीधे पेस्ट करें।",
+    "یہ دستاویز خفیہ کردہ ہے یا آپ کی تنظیم نے اسے محفوظ کیا ہے۔ غیر محفوظ DOCX یا TXT فائل برآمد کریں، یا متن براہِ راست پیسٹ کریں۔",
+    "Tài liệu này đã được mã hóa hoặc được tổ chức của bạn bảo vệ. Hãy xuất tệp DOCX hoặc TXT không được bảo vệ, hoặc dán văn bản trực tiếp.",
+    "此文档已加密或受您所在组织的策略保护。请导出未受保护的 DOCX 或 TXT 文件，或直接粘贴文本。",
+  ],
+  "This image is too small or blurry for reliable text reading. Upload the original image or a sharper screenshot (ideally 1024x768 or larger), or paste the text directly.": [
+    "यह छवि इतनी छोटी या धुंधली है कि टेक्स्ट को भरोसेमंद ढंग से नहीं पढ़ा जा सकता। मूल छवि या अधिक स्पष्ट स्क्रीनशॉट (बेहतर हो कि 1024x768 या बड़ा हो) अपलोड करें, या टेक्स्ट सीधे पेस्ट करें।",
+    "یہ تصویر اتنی چھوٹی یا دھندلی ہے کہ متن کو قابلِ اعتماد طور پر نہیں پڑھا جا سکتا۔ اصل تصویر یا زیادہ واضح اسکرین شاٹ (بہتر ہے کہ 1024x768 یا اس سے بڑا ہو) اپ لوڈ کریں، یا متن براہِ راست پیسٹ کریں۔",
+    "Hình ảnh này quá nhỏ hoặc mờ để đọc văn bản một cách đáng tin cậy. Hãy tải ảnh gốc hoặc ảnh chụp màn hình rõ hơn (lý tưởng là 1024x768 trở lên), hoặc dán văn bản trực tiếp.",
+    "此图片过小或过于模糊，无法可靠识别文字。请上传原图或更清晰的截图（建议为 1024x768 或更高分辨率），或者直接粘贴文字。",
+  ],
   "Usage analytics starts automatically on public pages. We measure page visits and evaluation, signup and checkout steps using pseudonymous identifiers. Assignment content, names, emails and payment secrets are not sent to analytics providers. URLs are stripped of queries and fragments. You can turn analytics off on this privacy page. Existing opt-outs, Do Not Track and Global Privacy Control are respected.": [
     "सार्वजनिक पृष्ठों पर उपयोग विश्लेषण अपने आप शुरू होता है। हम छद्मनाम वाले पहचानकर्ताओं से पृष्ठ विज़िट तथा मूल्यांकन, पंजीकरण और भुगतान के चरण मापते हैं। असाइनमेंट की सामग्री, नाम, ईमेल और भुगतान संबंधी गोपनीय जानकारी विश्लेषण प्रदाताओं को नहीं भेजी जाती। URL से क्वेरी और फ़्रैगमेंट हटा दिए जाते हैं। आप इस गोपनीयता पृष्ठ पर विश्लेषण बंद कर सकते हैं। पहले से चुने गए इनकार, Do Not Track और Global Privacy Control का सम्मान किया जाता है।",
     "عوامی صفحات پر استعمال کے تجزیات خودکار طور پر شروع ہوتے ہیں۔ ہم فرضی شناختی کوڈز سے صفحات کے دورے اور جانچ، اندراج اور ادائیگی کے مراحل کی پیمائش کرتے ہیں۔ اسائنمنٹ کا مواد، نام، ای میل اور ادائیگی کی خفیہ معلومات تجزیاتی فراہم کنندگان کو نہیں بھیجی جاتیں۔ URL سے کوئری اور فریگمنٹ ہٹا دیے جاتے ہیں۔ آپ اس رازداری کے صفحے پر تجزیات بند کر سکتے ہیں۔ پہلے سے کیے گئے انکار، Do Not Track اور Global Privacy Control کا احترام کیا جاتا ہے۔",

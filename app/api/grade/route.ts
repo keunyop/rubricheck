@@ -112,6 +112,14 @@ function mapFieldParseError(error: unknown, field: FieldName): never {
     throw new Error(`OCR_UNAVAILABLE:${field}`);
   }
 
+  if (error instanceof Error && error.message === "PROTECTED_FILE") {
+    throw new Error(`PROTECTED_FILE:${field}`);
+  }
+
+  if (error instanceof Error && error.message === "IMAGE_TOO_SMALL") {
+    throw new Error(`IMAGE_TOO_SMALL:${field}`);
+  }
+
   throw error;
 }
 
@@ -620,7 +628,12 @@ async function runGrade(request: Request) {
       return errorResponse(context, 500, "EVALUATION_FAILED", "We hit an unexpected error while grading. Please retry.", undefined, usageHeaders);
     }
   } catch (error) {
-    diagnosticCode = gradingFailureCode(error, error instanceof FileParseValidationError ? "FILE_PARSE_FAILED" : "INTERNAL_SERVER_ERROR");
+    // Protected Office files and unreadable thumbnails are valid user inputs
+    // that need actionable upload guidance, not unexpected-failure retention.
+    diagnosticCode = error instanceof Error &&
+      (error.message.startsWith("PROTECTED_FILE:") || error.message.startsWith("IMAGE_TOO_SMALL:"))
+      ? undefined
+      : gradingFailureCode(error, error instanceof FileParseValidationError ? "FILE_PARSE_FAILED" : "INTERNAL_SERVER_ERROR");
     await releaseReservation();
     console.error("GRADE_REQUEST_FAILED", { requestId: context.requestId, stage, billingSource: usage?.billingSource, error });
     if (error instanceof Error && error.message === "UPSTASH_REDIS_CONFIG_MISSING") {
@@ -651,6 +664,28 @@ async function runGrade(request: Request) {
         503,
         "OCR_UNAVAILABLE",
         "Image OCR is temporarily unavailable. Please retry or paste text directly.",
+        { field },
+      );
+    }
+
+    if (error instanceof Error && error.message.startsWith("PROTECTED_FILE:")) {
+      const field = error.message.split(":")[1] as FieldName;
+      return errorResponse(
+        context,
+        400,
+        "PROTECTED_FILE",
+        "This document is encrypted or protected by your organization. Export an unprotected DOCX or TXT file, or paste the text directly.",
+        { field },
+      );
+    }
+
+    if (error instanceof Error && error.message.startsWith("IMAGE_TOO_SMALL:")) {
+      const field = error.message.split(":")[1] as FieldName;
+      return errorResponse(
+        context,
+        400,
+        "IMAGE_TOO_SMALL",
+        "This image is too small or blurry for reliable text reading. Upload the original image or a sharper screenshot (ideally 1024x768 or larger), or paste the text directly.",
         { field },
       );
     }

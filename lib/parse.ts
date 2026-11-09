@@ -20,6 +20,13 @@ const DEFAULT_OCR_LANGUAGE_HINTS = ["en", "ko"];
 const GOOGLE_VISION_ANNOTATE_ENDPOINT = "https://vision.googleapis.com/v1/images:annotate";
 const GOOGLE_VISION_FILE_ENDPOINT = "https://vision.googleapis.com/v1/files:annotate";
 const GOOGLE_VISION_TIMEOUT_MS = 20_000;
+const MIN_RELIABLE_OCR_PIXELS = 50_000;
+const INTUNE_MAM_HEADER = Buffer.from("MSMAMARPCRYPT", "ascii");
+const OLE_COMPOUND_HEADER = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
+const OCR_SUPPORTED_EMBEDDED_IMAGE_TYPES = new Set([
+  "image/bmp", "image/gif", "image/jpeg", "image/jpg", "image/png", "image/tiff", "image/webp",
+  "image/vnd.microsoft.icon", "image/x-icon",
+]);
 const SAFE_VISION_ERROR_REASONS = new Set([
   "API_KEY_INVALID", "API_KEY_EXPIRED", "API_KEY_SERVICE_BLOCKED", "API_KEY_IP_ADDRESS_BLOCKED",
   "API_KEY_HTTP_REFERRER_BLOCKED", "SERVICE_DISABLED", "BILLING_DISABLED", "RATE_LIMIT_EXCEEDED", "QUOTA_EXCEEDED",
@@ -61,6 +68,52 @@ function normalizeText(text: string): string {
 function getFileExtension(fileName: string): string {
   const index = fileName.lastIndexOf(".");
   return index >= 0 ? fileName.slice(index).toLowerCase() : "";
+}
+
+function readImageDimensions(buffer: Buffer, extension: string): { width: number; height: number } | null {
+  if (extension === ".png" && buffer.length >= 24 &&
+      buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+    return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+  }
+
+  if ((extension === ".jpg" || extension === ".jpeg") && buffer.length >= 4 &&
+      buffer[0] === 0xff && buffer[1] === 0xd8) {
+    let offset = 2;
+    while (offset + 8 < buffer.length) {
+      if (buffer[offset] !== 0xff) { offset++; continue; }
+      while (buffer[offset] === 0xff) offset++;
+      const marker = buffer[offset++];
+      if (marker === 0xd8 || marker === 0xd9 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+      if (offset + 2 > buffer.length) return null;
+      const length = buffer.readUInt16BE(offset);
+      if (length < 2 || offset + length > buffer.length) return null;
+      if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+        if (length < 7) return null;
+        return { width: buffer.readUInt16BE(offset + 5), height: buffer.readUInt16BE(offset + 3) };
+      }
+      offset += length;
+    }
+  }
+
+  return null;
+}
+
+function isClearlyTooSmallForOcr(buffer: Buffer, fileName: string): boolean {
+  const dimensions = readImageDimensions(buffer, getFileExtension(fileName));
+  return Boolean(dimensions && dimensions.width > 0 && dimensions.height > 0 &&
+    dimensions.width * dimensions.height < MIN_RELIABLE_OCR_PIXELS);
+}
+
+function isProtectedDocx(buffer: Buffer): boolean {
+  // Intune MAM prepends a NUL byte before this marker. Accept offset zero too
+  // so the check is not tied to one platform's exported wrapper.
+  const intuneProtected = buffer.subarray(0, INTUNE_MAM_HEADER.length).equals(INTUNE_MAM_HEADER)
+    || buffer.subarray(1, INTUNE_MAM_HEADER.length + 1).equals(INTUNE_MAM_HEADER);
+
+  // Password-encrypted OOXML packages use an OLE compound container instead
+  // of the ZIP container used by an ordinary DOCX file.
+  const officeEncrypted = buffer.subarray(0, OLE_COMPOUND_HEADER.length).equals(OLE_COMPOUND_HEADER);
+  return intuneProtected || officeEncrypted;
 }
 
 function parseOcrLanguageHints(raw: string | undefined): string[] {
@@ -313,29 +366,49 @@ async function parseImageWithOcr(
   requireMeaningfulText: boolean,
 ): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
-  const imageContentBase64 = Buffer.from(arrayBuffer).toString("base64");
+  const buffer = Buffer.from(arrayBuffer);
+  const imageContentBase64 = buffer.toString("base64");
   const ocrClient = visionOcrClient ?? createGoogleVisionOcrClient();
-  const ocrText = await ocrClient.extractText({ imageContentBase64, field });
-  const cleaned = cleanupOcrText(ocrText, field);
-  const normalized = normalizeText(cleaned);
-  return requireMeaningfulText ? ensureMeaningfulText(normalized, file.name) : normalized;
+  try {
+    const ocrText = await ocrClient.extractText({ imageContentBase64, field });
+    const cleaned = cleanupOcrText(ocrText, field);
+    const normalized = normalizeText(cleaned);
+    return requireMeaningfulText ? ensureMeaningfulText(normalized, file.name) : normalized;
+  } catch (error) {
+    // Very small images can be valid files while no longer containing enough
+    // pixel information for reliable OCR. Classify that only after OCR fails,
+    // so crisp small images that do produce text remain accepted.
+    if (error instanceof Error && error.message === "TEXT_EXTRACTION_FAILED" && isClearlyTooSmallForOcr(buffer, file.name)) {
+      throw new Error("IMAGE_TOO_SMALL");
+    }
+    throw error;
+  }
 }
 
 type DocxElement = {
   type: string;
   value?: string;
   children?: DocxElement[];
+  contentType?: string;
   readAsBase64String?: () => Promise<string>;
 };
 
+type DocxImagePart = {
+  contentType: string;
+  readAsBase64String: () => Promise<string>;
+};
+
 async function parseDocx(buffer: Buffer, fileName: string, field: ParsedField, options: ParseFileOptions): Promise<string> {
-  const parts: Array<string | (() => Promise<string>)> = [];
+  const parts: Array<string | DocxImagePart> = [];
   // Walk Mammoth's document in reading order. Raw-text extraction drops images,
   // including screenshots of entire grading tables in otherwise readable DOCX files.
   const collect = (element: DocxElement): void => {
     if (element.type === "text") parts.push(element.value ?? "");
     else if (element.type === "tab") parts.push("\t");
-    else if (element.type === "image" && element.readAsBase64String) parts.push(element.readAsBase64String);
+    else if (element.type === "image" && element.readAsBase64String) parts.push({
+      contentType: element.contentType?.split(";", 1)[0].trim().toLowerCase() ?? "",
+      readAsBase64String: element.readAsBase64String,
+    });
     else {
       for (const child of element.children ?? []) collect(child);
       if (element.type === "paragraph") parts.push("\n\n");
@@ -359,9 +432,13 @@ async function parseDocx(buffer: Buffer, fileName: string, field: ParsedField, o
   let imageBytes = 0;
   for (const part of parts) {
     if (typeof part === "string") { text.push(part); continue; }
+    // Cloud Vision does not accept Word-specific vector formats such as EMF.
+    // A decorative or supplemental unsupported image must not discard native
+    // text and successfully OCRed raster content from the rest of the DOCX.
+    if (!OCR_SUPPORTED_EMBEDDED_IMAGE_TYPES.has(part.contentType)) continue;
     if (signal.aborted) visionUnavailable(field, "timeout");
     let content: string;
-    try { content = await part(); }
+    try { content = await part.readAsBase64String(); }
     catch { throw new FileParseValidationError(`Invalid or unreadable DOCX image: ${fileName}`); }
     const key = createHash("sha256").update(content).digest("hex");
     if (!recognized.has(key)) {
@@ -400,6 +477,10 @@ export async function parseFile(file: File, options: ParseFileOptions = {}): Pro
   if (extension === ".docx") {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    if (isProtectedDocx(buffer)) {
+      throw new Error("PROTECTED_FILE");
+    }
 
     return parseDocx(buffer, file.name, field, options);
   }

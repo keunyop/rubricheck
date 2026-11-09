@@ -264,6 +264,24 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(capturedFailures[0].files[0].file.name, "rubric.xyz");
       assert.equal(await capturedFailures[0].files[0].file.text(), "unparseable");
     });
+    await t.test("organization-protected DOCX gives actionable guidance without billing or diagnostic retention", async () => {
+      calls.length = 0; capturedFailures.length = 0; failure = null;
+      const protectedBytes = Buffer.concat([Buffer.from([0]), Buffer.from("MSMAMARPCRYPT\0\0AES/CBC/NoPadding"), Buffer.alloc(32)]);
+      const form = new FormData();
+      form.set("rubricText", "Thesis 10 points");
+      form.set("assignment", new File([protectedBytes], "managed.docx", {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      }));
+      const req = request();
+      const response = await POST(new Request(req.url, { method: "POST", headers: { cookie: req.headers.get("cookie")! }, body: form }));
+      assert.equal(response.status, 400);
+      const payload = await response.json();
+      assert.equal(payload.code, "PROTECTED_FILE");
+      assert.equal(payload.details.field, "assignment");
+      assert.match(payload.message, /Export an unprotected DOCX or TXT/);
+      assert.ok(!calls.some(c => c.name.includes("reserve")));
+      assert.equal(capturedFailures.length, 0, "expected protected input must not enter the failure inbox");
+    });
     await t.test("OCR failures do not charge, retain originals, and retry successfully with one or multiple images", async () => {
       process.env.GOOGLE_CLOUD_VISION_API_KEY = "test-only";
       failure = null; reserveStatus = "reserved"; credits = 5;
@@ -335,15 +353,19 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(settlements()[0].body.p_succeeded, true);
       assert.equal(capturedFailures.length, 0);
     });
-    await t.test("a short rubric image grades once while empty or punctuation-only OCR fails before billing", async () => {
+    await t.test("a readable tiny rubric grades while an unreadable thumbnail gets guidance without billing or retention", async () => {
       failure = null; reserveStatus = "reserved"; credits = 0;
       process.env.GOOGLE_CLOUD_VISION_API_KEY = "test-only";
       visionStatus = 200;
       const shortRubric = "Thesis: 10 points. State a clear argument and support it with relevant evidence.";
       assert.ok(shortRubric.length < 200);
+      const tinyPng = Buffer.alloc(24);
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(tinyPng);
+      tinyPng.writeUInt32BE(105, 16);
+      tinyPng.writeUInt32BE(70, 20);
       const rubricImageRequest = () => {
         const form = new FormData();
-        form.set("rubric", new File(["synthetic short rubric image"], "short-rubric.png", { type: "image/png" }));
+        form.set("rubric", new File([tinyPng], "short-rubric.png", { type: "image/png" }));
         form.set("assignmentText", "A clear argument with support.");
         const req = request();
         return new Request(req.url, { method: "POST", headers: { cookie: req.headers.get("cookie")! }, body: form });
@@ -369,13 +391,13 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
         const rejected = await POST(rubricImageRequest());
         assert.equal(rejected.status, 400);
         const payload = await rejected.json();
-        assert.equal(payload.code, "FILE_PARSE_FAILED");
+        assert.equal(payload.code, "IMAGE_TOO_SMALL");
         assert.equal(payload.details.field, "rubric");
+        assert.match(payload.message, /1024x768/);
         assert.equal(structureCalls, beforeStructures);
         assert.equal(evaluationCalls, beforeEvaluations);
         assert.ok(!calls.some(call => /reserve|settle|refund/.test(call.name)));
-        assert.equal(capturedFailures.length, 1);
-        assert.equal(capturedFailures[0].stage, "file_parsing");
+        assert.equal(capturedFailures.length, 0);
       }
     });
     await t.test("scanned PDF uses OCR before billing and preserves service error classification", async () => {

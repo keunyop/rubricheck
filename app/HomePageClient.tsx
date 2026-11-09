@@ -2085,6 +2085,14 @@ export default function Home() {
       return t("Image OCR is temporarily unavailable. Please retry or paste text directly.");
     }
 
+    if (message === "PROTECTED_FILE") {
+      return t("This document is encrypted or protected by your organization. Export an unprotected DOCX or TXT file, or paste the text directly.");
+    }
+
+    if (message === "IMAGE_TOO_SMALL") {
+      return t("This image is too small or blurry for reliable text reading. Upload the original image or a sharper screenshot (ideally 1024x768 or larger), or paste the text directly.");
+    }
+
     if (message === "UNSUPPORTED_FILE_TYPE") {
       return t("Unsupported file type. Please upload PDF, DOCX, TXT, PNG, JPG, or JPEG.");
     }

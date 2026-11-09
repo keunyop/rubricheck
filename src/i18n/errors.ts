@@ -57,6 +57,14 @@ export const errors: Record<string, readonly [string, string]> = {
   "Please provide both a rubric and an assignment.": ["채점 기준표와 과제를 모두 입력해 주세요.", "Sila masukkan rubrik dan tugasan."],
   "Please provide an assignment.": ["과제를 입력해 주세요.", "Sila masukkan tugasan."],
   "Image OCR is temporarily unavailable. Please retry or paste text directly.": ["현재 이미지의 글자를 읽을 수 없습니다. 다시 시도하거나 텍스트를 직접 붙여넣어 주세요.", "Pengecaman teks imej tidak tersedia buat sementara waktu. Cuba lagi atau tampal teks secara terus."],
+  "This document is encrypted or protected by your organization. Export an unprotected DOCX or TXT file, or paste the text directly.": [
+    "이 문서는 암호화되었거나 소속 기관에서 보호하고 있습니다. 보호되지 않은 DOCX 또는 TXT 파일로 내보내거나 텍스트를 직접 붙여 넣어 주세요.",
+    "Dokumen ini disulitkan atau dilindungi oleh organisasi anda. Eksport fail DOCX atau TXT tanpa perlindungan, atau tampal teks secara terus.",
+  ],
+  "This image is too small or blurry for reliable text reading. Upload the original image or a sharper screenshot (ideally 1024x768 or larger), or paste the text directly.": [
+    "이 이미지는 너무 작거나 흐려서 글자를 정확히 읽을 수 없습니다. 원본 이미지나 더 선명한 스크린샷(권장 1024x768 이상)을 업로드하거나 텍스트를 직접 붙여 넣어 주세요.",
+    "Imej ini terlalu kecil atau kabur untuk dibaca dengan tepat. Muat naik imej asal atau tangkapan skrin yang lebih jelas (sebaik-baiknya 1024x768 atau lebih besar), atau tampal teks secara terus.",
+  ],
   "This saved rubric is no longer available. Choose another rubric from My rubrics.": ["이 채점 기준표는 더 이상 사용할 수 없습니다. 내 채점 기준표에서 다른 항목을 선택하세요.", "Rubrik tersimpan ini tidak lagi tersedia. Pilih rubrik lain daripada Rubrik saya."],
   "Could not open your saved rubric. Please try again.": ["저장된 채점 기준표를 열지 못했습니다. 다시 시도해 주세요.", "Rubrik tersimpan tidak dapat dibuka. Sila cuba lagi."],
   "Invalid grading mode. Please select Standard or Strict Mode.": ["올바르지 않은 채점 모드입니다. 표준 모드 또는 엄격 모드를 선택하세요.", "Mod penilaian tidak sah. Pilih mod standard atau mod ketat."],
