@@ -1,0 +1,21 @@
+# Rubricheck 운영 일지
+
+이 일지는 최신 실행부터 읽는 역순 색인이다. 자동 작업 선택의 기계 상태는 [state.json](state.json), 우선순위는 [backlog](backlog.md), 상세 근거는 [runs/](runs/)에 있다. 공개 저장소이므로 고객 식별자나 비공개 사업 집계는 기록하지 않는다.
+
+## 2026-11-09 owner-journal-release
+
+- 모드: auto
+- 선택: OPS-002 운영 일지·자동 작업 선택·main 배포 위임 반영, QUAL-001/GROW-001 검증 후 출시, ACCESS-001 연결 안내
+- 이유: 다음 실행의 자율성을 확보하고 이미 로컬 검증된 사용자 영향 수정을 production까지 완료하기 위해서다.
+- 현재 상태: 스킬 validator, 전체 테스트 318건, 변경 코드 lint, production build, 독립 검토, staged diff 검사가 통과해 main 출시 준비 완료.
+- 보안 확인: PR #8의 구형 Node 차단은 2026-10-28 이후 신규 배포가 패치된 Node를 사용한다는 [Vercel 공식 공지](https://vercel.com/kb/bulletin/node-js-security-advisory)로 해제했다.
+- 완료 조건: skill validator, 전체 테스트, lint, build, 독립 검토, main commit/push, Vercel READY와 공개 smoke 확인, 일지·state 갱신.
+- 상세 기록: [2026-11-09 owner journal release](runs/2026-11-09-owner-journal-release.md)
+
+## 2026-11-09 bootstrap
+
+- 모드: weekly
+- 완료: owner skill·역할·운영 기준·backlog·상태 구성, 소수 배점 상한 수정, 내장 랜딩 개인정보 분류 수정.
+- 검증: 전체 테스트 318건, 공식 skill validator, JSON/TOML/링크 검사 통과.
+- 출시: 당시 미커밋·미배포. 후속 RELEASE-001로 이관.
+- 상세 기록: [2026-11-09 bootstrap](runs/2026-11-09-bootstrap.md)

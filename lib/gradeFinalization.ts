@@ -191,7 +191,7 @@ function buildStandardCriteria(
       matchedScore.estimated_range,
       rubricCriterion.max_score,
     );
-    const score = clamp(Math.round(matchedScore.score), 0, Math.max(0, Math.round(rubricCriterion.max_score)));
+    const score = clamp(Math.round(matchedScore.score), 0, Math.max(0, Math.floor(rubricCriterion.max_score)));
     const evidence = matchedScore.evidence?.slice(0, 2);
 
     const baseCriterion: FinalCriterion = {
@@ -258,7 +258,7 @@ function buildStrictCriteria(
       matchedScore.estimated_range,
       rubricCriterion.max_score,
     );
-    const score = clamp(Math.round(matchedScore.score), 0, Math.max(0, Math.round(rubricCriterion.max_score)));
+    const score = clamp(Math.round(matchedScore.score), 0, Math.max(0, Math.floor(rubricCriterion.max_score)));
 
     const baseCriterion: FinalCriterion = {
       name: rubricCriterion.name,

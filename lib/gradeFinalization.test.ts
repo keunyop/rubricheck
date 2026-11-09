@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildFinalEvaluation, restrictEvaluationFeedback } from "./gradeFinalization.ts";
+import { EvaluationSchema, RubricSchema } from "./schema.ts";
 import type { Evaluation, Rubric } from "./schema.ts";
 
 const rubric: Rubric = {
@@ -162,6 +163,38 @@ test("out-of-bounds ranges stay within rubric limits without a mode shift", () =
   assert.deepEqual(result.overall_range, [0, 100]);
   assert.deepEqual(result.criteria.map(c => c.estimated_range), [[0, 10], [0, 10]]);
 });
+
+for (const mode of ["standard", "strict"] as const) {
+  test(`${mode} never awards a point score above a fractional criterion maximum`, () => {
+    const fractionalRubric = RubricSchema.parse({
+      criteria: [
+        { name: "Thesis", max_score: 2.5, description: "Clarity of thesis." },
+        { name: "Evidence", max_score: 0.5, description: "Use of evidence." },
+        { name: "Structure", max_score: 10, description: "Organization." },
+      ],
+    });
+    const evaluation = EvaluationSchema.parse({
+      ...standardEvaluation,
+      criteria_scores: fractionalRubric.criteria.map((criterion) => ({
+        ...standardEvaluation.criteria_scores[0],
+        name: criterion.name,
+        score: 20,
+        estimated_range: [0, 20],
+        evidence: ["Synthetic assignment evidence."],
+      })),
+    });
+
+    const result = buildFinalEvaluation(fractionalRubric, evaluation, mode, "pro");
+
+    for (const criterion of result.criteria) {
+      assert.ok(criterion.score >= 0 && criterion.score <= criterion.max_score,
+        `${criterion.name}: ${criterion.score} exceeds maximum ${criterion.max_score}`);
+      assert.ok(Number.isInteger(criterion.score));
+      assert.ok(criterion.estimated_range[1] <= criterion.max_score);
+    }
+    assert.deepEqual(result.criteria.map((criterion) => criterion.score), [2, 0, 10]);
+  });
+}
 
 test("server output and legacy response filtering enforce the same tier boundaries", () => {
   const evaluation: Evaluation = { ...standardEvaluation, criteria_scores: standardEvaluation.criteria_scores.map(c => ({ ...c, detailed_breakdown: "Paid detail", example_revisions: ["Pro rewrite"] })) };

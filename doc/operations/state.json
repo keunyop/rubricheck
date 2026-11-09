@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "timezone": "America/Vancouver",
+  "last_run": "2026-11-09-owner-journal-release",
+  "last_run_record": "doc/operations/runs/2026-11-09-owner-journal-release.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-09-owner-journal-release",
+  "mode": "auto",
+  "status": "ready_to_release",
+  "repository_visibility": "public",
+  "base_commit": "90529ae",
+  "private_records": ".growth-local/owner/",
+  "private_cursors_initialized": false,
+  "source_checkpoints": {
+    "stripe": {"checked_on": "2026-11-09", "details": "private snapshot"},
+    "supabase": {"checked_on": "2026-11-09", "details": "private aggregate snapshot"},
+    "vercel": {"checked_on": "2026-11-09", "coverage": "security bulletin checked; deployment verification pending"},
+    "feedback": {"checked_on": null, "reason": "no authenticated live reader"},
+    "grading_inbox": {"checked_on": null, "reason": "no authenticated live reader"},
+    "gsc": {"checked_on": null, "reason": "no authenticated live property reader"},
+    "ga4": {"checked_on": null, "reason": "no authenticated live property reader"}
+  },
+  "work": {
+    "OPS-001": {"implementation": "verified_structure_and_first_run", "validation": "passed"},
+    "OPS-002": {"implementation": "complete", "validation": "passed"},
+    "ACCESS-001": {"implementation": "guide_complete", "live_connection": "pending_user_google_authorization"},
+    "RELEASE-001": {"implementation": "verified_local", "deployment": "pending"},
+    "QUAL-001": {"implementation": "verified_local", "deployment": "not_deployed", "production_verified": false},
+    "GROW-001": {"implementation": "verified_local", "deployment": "not_deployed", "production_verified": false}
+  },
+  "release": {
+    "default_branch": "main",
+    "direct_main_authorized": true,
+    "deployment_trigger": "git push origin main",
+    "standing_production_authorization": true,
+    "security_blocker": {
+      "status": "cleared_for_new_deployments",
+      "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
+      "checked_on": "2026-11-09"
+    },
+    "commit": null,
+    "production": null
+  },
+  "next_actions": [
+    "Finish validation and deploy RELEASE-001 through main",
+    "Connect GSC and GA4 read access",
+    "Reconcile payment failures and unique evaluation outcomes",
+    "Reassess PR #8 runtime guard against current Vercel behavior"
+  ],
+  "review_dates": {
+    "next_daily": "2026-11-10",
+    "next_weekly": "2026-11-16",
+    "next_monthly": "2026-12-01",
+    "post_deployment": "immediate smoke; +7 days quality/collection; +28 days growth"
+  },
+  "automation": {
+    "registered": false,
+    "timezone": "America/Vancouver",
+    "reason": "manual validation first; schedule and budget not approved"
+  }
+}

@@ -20,6 +20,18 @@ test("all supported languages keep public analytics paths and suppress private r
   assert.equal(publicGrowthPath("/unsupported/pricing"), "unknown");
 });
 
+test("quiz landing attribution is public in every locale without exposing queries or private quiz routes", () => {
+  for (const locale of LOCALES) {
+    const prefix = locale === "en" ? "" : `/${locale}`;
+    const landing = `${prefix}/ai-quiz-generator`;
+    const touch = acquisitionTouch(`https://rubricheck.com${landing}?email=private&quiz=secret#source`, "https://www.google.com/search?q=private");
+    assert.equal(publicGrowthPath(landing), "/ai-quiz-generator");
+    assert.deepEqual(touch, { source: "google", medium: "organic", campaign: "unknown", landing: "/ai-quiz-generator", referrer: "google.com" });
+    assert.equal(publicGrowthPath(`${landing}/private?quiz=secret`), "unknown");
+    assert.equal(publicGrowthPath(`${prefix}/quizzes?view=create&from=secret`), "unknown");
+  }
+});
+
 test("attribution drops PII, secrets, private paths and arbitrary campaign values",()=>{
   const touch=acquisitionTouch("https://rubricheck.com/?utm_source=student@example.com&utm_campaign=secret_person&utm_medium=email&assignment=secret&checkout_session_id=cs_live_secret#private","https://student.example.com/private?email=student@example.com");
   assert.deepEqual(touch,{source:"unknown",medium:"email",campaign:"unknown",landing:"/",referrer:"other"});

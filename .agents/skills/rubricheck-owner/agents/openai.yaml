@@ -1,0 +1,6 @@
+interface:
+  display_name: "Rubricheck Owner"
+  short_description: "Rubricheck 운영·품질·성장·수익을 점검하고 개선합니다"
+  default_prompt: "$rubricheck-owner 운영 일지와 상태를 확인하고 오늘 가장 중요한 일을 스스로 선택해 실행해줘."
+policy:
+  allow_implicit_invocation: true
