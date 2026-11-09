@@ -5,7 +5,7 @@
   "last_run_record": "doc/operations/runs/2026-11-09-owner-journal-release.md",
   "last_journal_entry": "doc/operations/journal.md#2026-11-09-owner-journal-release",
   "mode": "auto",
-  "status": "ready_to_release",
+  "status": "verified_production",
   "repository_visibility": "public",
   "base_commit": "90529ae",
   "private_records": ".growth-local/owner/",
@@ -13,7 +13,7 @@
   "source_checkpoints": {
     "stripe": {"checked_on": "2026-11-09", "details": "private snapshot"},
     "supabase": {"checked_on": "2026-11-09", "details": "private aggregate snapshot"},
-    "vercel": {"checked_on": "2026-11-09", "coverage": "security bulletin checked; deployment verification pending"},
+    "vercel": {"checked_on": "2026-11-09", "coverage": "production READY, public smoke passed, no post-deploy runtime errors"},
     "feedback": {"checked_on": null, "reason": "no authenticated live reader"},
     "grading_inbox": {"checked_on": null, "reason": "no authenticated live reader"},
     "gsc": {"checked_on": null, "reason": "no authenticated live property reader"},
@@ -21,11 +21,11 @@
   },
   "work": {
     "OPS-001": {"implementation": "verified_structure_and_first_run", "validation": "passed"},
-    "OPS-002": {"implementation": "complete", "validation": "passed"},
+    "OPS-002": {"implementation": "complete", "validation": "passed", "deployment": "verified_production"},
     "ACCESS-001": {"implementation": "guide_complete", "live_connection": "pending_user_google_authorization"},
-    "RELEASE-001": {"implementation": "verified_local", "deployment": "pending"},
-    "QUAL-001": {"implementation": "verified_local", "deployment": "not_deployed", "production_verified": false},
-    "GROW-001": {"implementation": "verified_local", "deployment": "not_deployed", "production_verified": false}
+    "RELEASE-001": {"implementation": "complete", "deployment": "verified_production"},
+    "QUAL-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true},
+    "GROW-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true}
   },
   "release": {
     "default_branch": "main",
@@ -37,11 +37,16 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-09"
     },
-    "commit": null,
-    "production": null
+    "commit": "881a59f1ad6e901d0b81aae836084edd6ad29d1c",
+    "production": {
+      "deployment_id": "dpl_EW6jxpfjUeAjiGorMRFoPQY3aNjT",
+      "url": "https://rubricheck.com",
+      "status": "READY",
+      "smoke": "passed",
+      "runtime_errors": 0
+    }
   },
   "next_actions": [
-    "Finish validation and deploy RELEASE-001 through main",
     "Connect GSC and GA4 read access",
     "Reconcile payment failures and unique evaluation outcomes",
     "Reassess PR #8 runtime guard against current Vercel behavior"
