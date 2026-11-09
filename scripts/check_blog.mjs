@@ -98,6 +98,36 @@ try {
   assert.equal(await staticPage.locator("h1").innerText(), analysisTitle);
   assert.ok((await staticPage.locator("article").innerText()).includes("Invented practice scenario"));
   const { default: AxeBuilder } = await import(pathToFileURL(process.env.AXE_MODULE || "node_modules/@axe-core/playwright/dist/index.mjs").href);
+  const labArticle = "/blog/lab-report-discussion-example";
+  const labTitle = "Lab Report Discussion Example: Explain Results and Limitations";
+  const labHtml = await (await fetch(base + labArticle)).text();
+  assert.ok(labHtml.includes("48.2 mL") && labHtml.includes("lab-rubric"), "Lab example is server-rendered");
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(base + "/assignment-rubric-checker");
+    await page.getByRole("link", { name: "lab report discussion example", exact: true }).click();
+    await page.getByRole("heading", { name: labTitle, exact: true }).waitFor();
+    await page.waitForFunction(expected => document.querySelector('link[rel="canonical"]')?.getAttribute("href") === expected, "https://rubricheck.com" + labArticle);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Lab guide fits viewport");
+    assert.equal(await page.locator('link[rel="alternate"][hreflang]').count(), 0);
+    const structured = await page.locator('script[type="application/ld+json"]').allTextContents();
+    assert.ok(structured.some(value => { const data = JSON.parse(value); return data["@type"] === "BlogPosting" && data.headline === labTitle && data.datePublished === "2026-11-08"; }));
+    await page.getByText("Show a possible revision", { exact: true }).focus();
+    await page.keyboard.press("Enter");
+    assert.ok(await page.getByText("The three readings have a small spread in this set, but accuracy remains unresolved.", { exact: true }).isVisible());
+    const audit = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    assert.deepEqual(audit.violations, [], "Lab article accessibility");
+    await page.screenshot({ path: `doc/verification/blog/lab-discussion-${width}.png`, fullPage: true });
+  }
+  await page.getByRole("link", { name: "Check my lab report draft →", exact: true }).click();
+  await page.locator("#rubric-checker").waitFor({ state: "visible" });
+  assert.equal(new URL(page.url()).pathname, "/workspace");
+  assert.equal(new URL(page.url()).searchParams.get("from"), "blog-lab-discussion");
+  await staticPage.goto(base + "/blog");
+  await staticPage.getByRole("link", { name: labTitle, exact: true }).click();
+  assert.ok((await staticPage.locator("article").innerText()).includes("Invented practice scenario"));
+  await staticPage.getByText("Show a possible revision", { exact: true }).click();
+  assert.ok(await staticPage.getByText("The three readings have a small spread in this set, but accuracy remains unresolved.", { exact: true }).isVisible());
   for (const width of [390, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(base + "/blog");

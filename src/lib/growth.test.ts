@@ -6,7 +6,7 @@ import { LOCALES, localizedPath } from "../i18n/config.ts";
 
 test("all supported languages keep public analytics paths and suppress private routes", () => {
   for (const locale of LOCALES) {
-    for (const path of ["/", "/pricing", "/workspace", "/help", "/essay-rubric-checker", "/blog", "/blog/assignment-requirements-checklist", "/blog/descriptive-vs-critical-analysis", "/blog/quiz-generator-from-notes", "/blog/reflective-writing-what-so-what-now-what"]) {
+    for (const path of ["/", "/pricing", "/workspace", "/help", "/essay-rubric-checker", "/blog", "/blog/assignment-requirements-checklist", "/blog/descriptive-vs-critical-analysis", "/blog/quiz-generator-from-notes", "/blog/reflective-writing-what-so-what-now-what", "/blog/lab-report-discussion-example"]) {
       const url = localizedPath(path, locale) + "?email=private&checkout_session_id=secret#assignment";
       assert.equal(publicGrowthPath(url), path, `${locale}: ${path}`);
       assert.equal(acquisitionTouch("https://rubricheck.com" + url, "").landing, path);

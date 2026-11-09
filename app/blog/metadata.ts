@@ -5,7 +5,7 @@ import { absoluteUrl, DEFAULT_OG_IMAGE_PATH } from "../../src/lib/seo";
 export function blogMetadata(post?: BlogPost): Metadata {
   const copy = post ?? BLOG_INDEX;
   const locale = post?.slug === "reflective-writing-what-so-what-now-what" ? "en_GB"
-    : post?.slug === "quiz-generator-from-notes" ? "en_CA"
+    : ["quiz-generator-from-notes", "lab-report-discussion-example"].includes(post?.slug ?? "") ? "en_CA"
       : post?.slug === "descriptive-vs-critical-analysis" ? "en_AU" : "en_US";
   return {
     title: copy.title, description: copy.description,

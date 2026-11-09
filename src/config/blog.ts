@@ -35,5 +35,12 @@ export const REFLECTIVE_WRITING_POST = {
   description: "Use a worked reflective writing example to move from description to analysis and a specific action plan, then check the draft against your marking rubric.",
   date: "2026-11-05", modified: "2026-11-05", category: "Reflective writing",
 } as const;
-export const BLOG_POSTS = [REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const LAB_DISCUSSION_POST = {
+  slug: "lab-report-discussion-example",
+  path: "/blog/lab-report-discussion-example",
+  title: "Lab Report Discussion Example: Explain Results and Limitations",
+  description: "Write a lab report discussion that explains your results instead of repeating them. Use a worked example, a specific limitation and a rubric-based revision checklist.",
+  date: "2026-11-08", modified: "2026-11-08", category: "Scientific writing",
+} as const;
+export const BLOG_POSTS = [LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];
