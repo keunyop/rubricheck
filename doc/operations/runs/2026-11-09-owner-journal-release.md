@@ -20,7 +20,7 @@ main 직접 작업과 push 후 Vercel production 확인은 2026-11-09 사용자 
 - owner skill·일지 구현: 완료, 공식 validator 통과
 - 분석 연결 가이드: 완료
 - 제품 변경: 전체 테스트 318건, 변경 코드 lint, Next.js production build, staged diff 검사 통과
-- commit/push/Vercel/smoke: 커밋 `881a59f`를 main에 push. production 배포 `dpl_EW6jxpfjUeAjiGorMRFoPQY3aNjT` READY, `rubricheck.com`과 `/ai-quiz-generator` 공개 smoke 통과. 배포 후 15분 범위의 error/fatal log와 runtime error 없음.
+- commit/push/Vercel/smoke: 커밋 `881a59f`를 main에 push. production 배포 `dpl_EW6jxpfjUeAjiGorMRFoPQY3aNjT` READY, `rubricheck.com`과 `/ai-quiz-generator` 공개 smoke 통과. 배포별 error/fatal log는 없었다. 후속 project 오류 조회에서는 `/api/evaluate`의 multipart boundary가 없는 요청 2건이 validation 단계에서 거부된 기록을 확인했다. 결제 소스가 없고 이번 변경 경로와 무관해 release 회귀로 분류하지 않았지만 운영 관찰에는 남긴다.
 - 실제 GSC/GA4 계정 연결: 사용자 Google 승인과 connector/MCP 설정 필요
 
 ## 결과와 다음 확인

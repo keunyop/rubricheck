@@ -13,7 +13,7 @@
   "source_checkpoints": {
     "stripe": {"checked_on": "2026-11-09", "details": "private snapshot"},
     "supabase": {"checked_on": "2026-11-09", "details": "private aggregate snapshot"},
-    "vercel": {"checked_on": "2026-11-09", "coverage": "production READY, public smoke passed, no post-deploy runtime errors"},
+    "vercel": {"checked_on": "2026-11-09", "coverage": "production READY and public smoke passed; no deployment error logs; two malformed multipart requests rejected during validation"},
     "feedback": {"checked_on": null, "reason": "no authenticated live reader"},
     "grading_inbox": {"checked_on": null, "reason": "no authenticated live reader"},
     "gsc": {"checked_on": null, "reason": "no authenticated live property reader"},
@@ -43,7 +43,11 @@
       "url": "https://rubricheck.com",
       "status": "READY",
       "smoke": "passed",
-      "runtime_errors": 0
+      "runtime_errors": {
+        "release_related": 0,
+        "observed_validation_rejections": 2,
+        "reason": "multipart boundary missing"
+      }
     }
   },
   "next_actions": [

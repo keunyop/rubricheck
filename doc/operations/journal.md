@@ -8,7 +8,7 @@
 - 선택: OPS-002 운영 일지·자동 작업 선택·main 배포 위임 반영, QUAL-001/GROW-001 검증 후 출시, ACCESS-001 연결 안내
 - 이유: 다음 실행의 자율성을 확보하고 이미 로컬 검증된 사용자 영향 수정을 production까지 완료하기 위해서다.
 - 완료: 스킬 validator, 전체 테스트 318건, 변경 코드 lint, production build, 독립 검토, staged diff 검사 통과. 커밋 `881a59f`를 main에 push했다.
-- 배포: Vercel production `dpl_EW6jxpfjUeAjiGorMRFoPQY3aNjT` READY. 홈과 `/ai-quiz-generator` 공개 smoke 통과, 배포 후 runtime error와 error/fatal log 없음.
+- 배포: Vercel production `dpl_EW6jxpfjUeAjiGorMRFoPQY3aNjT` READY. 홈과 `/ai-quiz-generator` 공개 smoke 통과, 배포별 error/fatal log 없음. project 오류 조회에서 malformed multipart 요청 2건이 `/api/evaluate` validation 단계에서 거부됐으며 이번 변경의 회귀 증거는 없음.
 - 보안 확인: PR #8의 구형 Node 차단은 2026-10-28 이후 신규 배포가 패치된 Node를 사용한다는 [Vercel 공식 공지](https://vercel.com/kb/bulletin/node-js-security-advisory)로 해제했다.
 - 다음 확인: 2026-11-10 daily, +7일 품질·수집, +28일 검색·첫 사용. 실제 GSC/GA4 계정 연결은 ACCESS-001 후속으로 남김.
 - 상세 기록: [2026-11-09 owner journal release](runs/2026-11-09-owner-journal-release.md)
