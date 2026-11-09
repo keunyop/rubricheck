@@ -1,0 +1,47 @@
+{
+  "releaseDate": "2026-11-05",
+  "site": "RubriCheck",
+  "articleUrl": "https://rubricheck.com/blog/reflective-writing-what-so-what-now-what",
+  "deployment": {
+    "id": "dpl_9feaxJGMSvgVVjx5FaZ8bbZDjAxJ",
+    "state": "success",
+    "statusEvidence": "GitHub Vercel context: Deployment has completed",
+    "target": "production",
+    "source": "git",
+    "branch": "main",
+    "commit": "742783a751fd82520f6623eb914d1ac799dcbf20",
+    "team": "kevins-projects-e2dcc34c",
+    "project": "rubricheck",
+    "productionDomain": "rubricheck.com",
+    "dashboardUrl": "https://vercel.com/kevins-projects-e2dcc34c/rubricheck/9feaxJGMSvgVVjx5FaZ8bbZDjAxJ",
+    "approximateBuildSecondsFromStatusTimestamps": 47
+  },
+  "localVerification": {
+    "isolatedFromAutoLoadedDotenv": true,
+    "changedFileLint": "passed",
+    "growthTestsPassed": 7,
+    "build": "passed including TypeScript and 66 generated static pages",
+    "seoPublicUrlsPassed": 117,
+    "blogBrowser": "passed existing/new articles, no-JS, 390/1280px, related landing links, CTA destination and 404s",
+    "newBlogAxeViolations": 0,
+    "runtimeErrors": 0,
+    "excluded": [
+      "real authentication",
+      "AI evaluation execution and persistence",
+      "billing",
+      "production analytics ingestion"
+    ]
+  },
+  "smoke": {
+    "checkedAt": "2026-11-05T21:01:00Z",
+    "url": "https://rubricheck.com/blog/reflective-writing-what-so-what-now-what",
+    "title": "Reflective Writing Example: Move from What? to So What? | RubriCheck",
+    "h1Present": true,
+    "bodyPresent": true,
+    "canonical": "https://rubricheck.com/blog/reflective-writing-what-so-what-now-what",
+    "robots": "index, follow",
+    "articleSchemaHeadlinePresent": true,
+    "datePublished": "2026-11-05"
+  },
+  "recordStorage": "Saved locally after the Git production release; not pushed to avoid a second deployment."
+}

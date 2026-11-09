@@ -1,0 +1,46 @@
+﻿{
+  "releaseDate": "2026-11-08",
+  "site": "RubriCheck",
+  "articleUrl": "https://rubricheck.com/blog/lab-report-discussion-example",
+  "deployment": {
+    "id": "dpl_6TWGr6tzqxPAf8m4JeDSFvZjipHS",
+    "state": "READY",
+    "target": "production",
+    "source": "git",
+    "branch": "main",
+    "commit": "5f69327a5ace7104cb869739d0d7b1d89096d23a",
+    "team": "team_VSzA796D92aso5IuzUIiOdnb",
+    "project": "prj_Xe4eu390geItnYe4rzi65ks9ozVR",
+    "url": "https://rubricheck-7i03vhl3y-kevins-projects-e2dcc34c.vercel.app"
+  },
+  "localVerification": {
+    "automaticDotenvAbsent": true,
+    "changedFileLint": "passed",
+    "growthUnitTests": 7,
+    "defaultTurbopackBuild": "passed",
+    "seoPublicUrls": 118,
+    "browser": "passed desktop/mobile, no-JS, keyboard, metadata, related links, workspace entry, 404",
+    "axeViolations": 0,
+    "pageErrors": 0,
+    "excluded": [
+      "real AI evaluation",
+      "DB/Auth",
+      "billing",
+      "production analytics ingestion"
+    ]
+  },
+  "smoke": {
+    "checkedLocalDate": "2026-11-08",
+    "status": 200,
+    "title": "Lab Report Discussion Example: Explain Results and Limitations | RubriCheck",
+    "canonical": "https://rubricheck.com/blog/lab-report-discussion-example",
+    "robots": "index, follow",
+    "bodyPresent": true,
+    "schemaPresent": true,
+    "publishedDate": "2026-11-08",
+    "workspaceLink": "/workspace?start=general&from=blog-lab-discussion#rubric-checker",
+    "method": "One public article navigation and read-only DOM inspection; no hosted regression, screenshot, accessibility or load tests"
+  },
+  "preservation": "Existing HomePageClient, grading, parsing, test-fixture and translation edits remained outside the commit. SHA256 checks for HomePageClient, grade route and parse matched before/after fast-forward.",
+  "recordStorage": "Post-release local record; intentionally not pushed to avoid a second production deployment."
+}
