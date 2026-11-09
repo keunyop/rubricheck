@@ -11,7 +11,7 @@ description: "Rubricheck 운영 책임자로 운영 일지와 상태를 먼저 �
 
 1. 저장소 루트를 확인하고 적용되는 AGENTS.md, git status, [운영 일지](../../../doc/operations/journal.md), [상태](../../../doc/operations/state.json), [단일 backlog](../../../doc/operations/backlog.md), 상태가 가리키는 마지막 실행 기록과 [운영 기준](../../../doc/operations/operating-model.md)을 먼저 읽는다. 사용자가 오늘 할 일을 다시 설명할 때까지 기다리지 말고 일지·기한·운영 근거에서 선택한다. 기존 변경의 소유권을 존중한다.
 2. 비공개 기록 `.growth-local/owner/`의 최신 집계와 cursors를 읽되 실제 인증·조회 시각으로 최신성을 판단한다. 디렉터리나 데이터가 없으면 미측정이다. 저장소 공개 여부를 매번 확인한다. 공개 저장소에는 사용자 자료·식별자·비밀·비공개 사업 집계를 넣지 않는다.
-3. 동시 실행 조정: `git rev-parse --path-format=absolute --git-common-dir` 아래 `rubricheck-owner.lock` 디렉터리를 배타적으로 생성하고 owner.json에 실행 ID·세션·시작 시각·담당 경로를 기록한다. 이미 있으면 해당 실행 상태를 확인하고 읽기 전용 조사만 진행한다. 시간 경과만으로 잠금을 빼앗지 않는다. 종료 시 자신의 실행 ID가 일치하는 잠금만 해제한다. 별도 checkout은 GitHub의 같은 작업/브랜치 상태도 확인한다.
+3. 동시 실행 조정: `git rev-parse --path-format=absolute --git-common-dir` 아래 `rubricheck-owner-active-run` 디렉터리를 배타적으로 생성하고 owner.json에 실행 ID·세션·시작 시각·담당 경로를 기록한다. 이름이 `.lock`으로 끝나는 경로는 Git/호스트 잠금으로 오인될 수 있으므로 사용하지 않는다. 이미 있으면 해당 실행 상태를 확인하고 읽기 전용 조사만 진행한다. 시간 경과만으로 잠금을 빼앗지 않는다. 종료 시 자신의 실행 ID가 일치하는 디렉터리만 해제한다. 별도 checkout은 GitHub의 같은 작업/브랜치 상태도 확인한다.
 4. [일지·오늘 할 일·출시 절차](references/journal-and-release.md)로 실행 모드와 오늘 완료할 작업 1–3개를 정한다. 사용 가능한 실제 도구/모델을 확인한 뒤 독립 작업만 최대 3개 하위 에이전트에 위임한다. 목표·입력 근거·산출물·완료 기준·수정 범위를 명시한다. PO가 통합하고 작성자 이외의 관점에서 핵심 변경을 검토한다. 지원되지 않으면 순차 수행한다.
 
 ## 모드

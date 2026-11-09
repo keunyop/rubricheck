@@ -26,3 +26,5 @@ main 직접 작업과 push 후 Vercel production 확인은 2026-11-09 사용자 
 ## 결과와 다음 확인
 
 OPS-002, RELEASE-001, QUAL-001, GROW-001은 production 검증까지 완료했다. ACCESS-001은 연결 가이드가 완료됐고 실제 계정 연결만 남았다. 2026-11-10 daily에서 결제 실패와 고유 평가 결과를 확인하고, 배포 후 +7일에는 점수 품질과 퀴즈 랜딩 수집을, +28일에는 검색·첫 사용 변화를 확인한다.
+
+호스트 호환성 정정: git common dir의 이름이 `.lock`으로 끝나는 owner 실행 디렉터리가 agent의 저장소 초기화와 충돌할 수 있어 `rubricheck-owner-active-run`으로 변경했다. 배타 생성과 실행 ID 확인 규칙은 유지한다.

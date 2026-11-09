@@ -11,6 +11,7 @@
 - 배포: Vercel production `dpl_EW6jxpfjUeAjiGorMRFoPQY3aNjT` READY. 홈과 `/ai-quiz-generator` 공개 smoke 통과, 배포별 error/fatal log 없음. project 오류 조회에서 malformed multipart 요청 2건이 `/api/evaluate` validation 단계에서 거부됐으며 이번 변경의 회귀 증거는 없음.
 - 보안 확인: PR #8의 구형 Node 차단은 2026-10-28 이후 신규 배포가 패치된 Node를 사용한다는 [Vercel 공식 공지](https://vercel.com/kb/bulletin/node-js-security-advisory)로 해제했다.
 - 다음 확인: 2026-11-10 daily, +7일 품질·수집, +28일 검색·첫 사용. 실제 GSC/GA4 계정 연결은 ACCESS-001 후속으로 남김.
+- 호스트 정정: Git 잠금으로 오인될 수 있는 `.lock` 접미사 대신 `rubricheck-owner-active-run` 디렉터리로 동시 실행을 조정한다.
 - 상세 기록: [2026-11-09 owner journal release](runs/2026-11-09-owner-journal-release.md)
 
 ## 2026-11-09 bootstrap
