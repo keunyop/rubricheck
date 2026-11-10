@@ -3,7 +3,7 @@
 - Run: `2026-11-10-grading-content`, America/Vancouver.
 - 요청: PO가 누적 grading failures를 직접 챙기고 새 블로그 글의 작성 시점을 확정한다.
 - 선택: GRADE-001 운영 실패 분류·입력 파싱 수정, CONTENT-001 영어 글 초안 완료. 이전 성장·퀴즈 작업은 기존 확인일대로 유지한다.
-- 상태: `verified_local` (출시·운영 재확인 전). 관리자 보관함 전체 조회는 인증 부재로 미완료이며 0건으로 해석하지 않는다.
+- 상태: `verified_production` (코드 출시 확인). 관리자 보관함 전체 조회는 인증 부재로 미완료이며 0건으로 해석하지 않는다.
 
 ## 평가 실패 분류와 조치
 
@@ -20,5 +20,6 @@
 ## 검증·후속
 
 - malformed multipart 회귀, 사용량/보관·기존 평가 경로 및 i18n 합성 테스트 34건 통과. 수정 파일 ESLint와 production build 통과. 실제 운영 원본·유료 AI 호출은 실행하지 않았다.
+- [변경 커밋](https://github.com/keunyop/rubricheck/commit/d5626b6b0bdf54a113ebb0d2382bda2c5183fb7d)의 Vercel production `dpl_CsPkbudF3xWdjXHP2hJnwZGWZTRp`가 READY이고 rubricheck.com에 연결됐다. 운영 도메인에 합성 malformed multipart POST를 보내 `400 INVALID_FORM_DATA`와 재시도 안내를 확인했다. 해당 배포에 경고 로그가 남았고 같은 범위의 error/fatal 로그는 없었다. 합성 검증은 정상 사용자의 업로드 성공률을 증명하지 않는다.
 - 배포 뒤 실제 `/api/evaluate` 400 응답과 신규 `INVALID_FORM_DATA` warning 추이를 확인한다. 다음 daily에는 최신 보관함 stage/code와 first-party terminal 결과를 다시 대조하고, 루브릭 구조화 실패가 반복되면 인증된 최소 원본으로 재현한다. 관리자 요약을 받기 전까지 보관함 해결 완료로 표시하지 않는다.
 - 기존 업로드의 성공률 개선은 신규 요청을 관찰하기 전에는 주장하지 않는다. 수정으로 정상 FormData가 거부되거나 요금 예약/환불 회귀가 보이면 해당 최소 변경을 revert한다.

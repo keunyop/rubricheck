@@ -5,7 +5,7 @@
   "last_run_record": "doc/operations/runs/2026-11-10-grading-content.md",
   "last_journal_entry": "doc/operations/journal.md#2026-11-10-grading-content",
   "mode": "daily+incident+content",
-  "status": "verified_local",
+  "status": "verified_production",
   "repository_visibility": "public",
   "base_commit": "41852611938108e56a0f5558c2e75f65a85941a6",
   "private_records": ".growth-local/owner/",
@@ -21,7 +21,7 @@
     },
     "vercel": {
       "checked_on": "2026-11-10",
-      "coverage": "latest production READY; malformed multipart validation and rubric total-score mismatch classified with individual runtime logs; request-log retention bounded"
+      "coverage": "d5626b6 production READY and aliased; synthetic malformed multipart returned 400; deployment warning seen and scoped error/fatal empty; earlier rubric mismatch classified; request-log retention bounded"
     },
     "feedback": {
       "checked_on": null,
@@ -117,7 +117,7 @@
       "investigation": "runtime_stage_code_and_first_party_terminal_reconciled; admin_archive_unread",
       "implementation": "malformed_form_data_400_and_localized_guidance",
       "validation": "focused34; changed_lint; production_build",
-      "deployment": "pending",
+      "deployment": "verified_production",
       "review": "2026-11-11 inbox summary and new malformed/rubric structure attempts"
     },
     "CONTENT-001": {
@@ -136,17 +136,17 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "6a97abab8738ca4830384ff634fef19987e70ec9",
+    "commit": "d5626b6b0bdf54a113ebb0d2382bda2c5183fb7d",
     "production": {
-      "deployment_id": "dpl_Cd6wtWrdpwZSJJ42c3cyV2zzL1ov",
+      "deployment_id": "dpl_CsPkbudF3xWdjXHP2hJnwZGWZTRp",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "passed six groups; mobile quiz CTA, clean GA4 queue, English landing, seven locales, sitemap",
+      "smoke": "synthetic malformed multipart POST /api/evaluate returned 400 INVALID_FORM_DATA with guidance; home loaded; deployment warning confirmed",
       "runtime_errors": {
-        "scan": "deployment scoped error/fatal 30m",
+        "scan": "deployment scoped error/fatal after release",
         "observed": 0
       },
-      "limits": "no live model execution or GA4 ingestion confirmation; admin quiz aggregate unauthenticated"
+      "limits": "no live model execution; admin grading archive unauthenticated; new genuine client attempts and rubric mismatch recurrence need follow-up"
     }
   },
   "next_actions": [

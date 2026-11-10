@@ -7,7 +7,7 @@
 - 모드: 사용자 후속 요청에 따른 daily + incident + content. 선택: GRADE-001 운영 실패 분류와 업로드 예외 수정, CONTENT-001 신규 글 작성.
 - 결과: malformed multipart가 평가 전 500으로 기록되던 경로를 400·재시도 안내로 수정했다. 루브릭 총점 불일치 실패는 후속 성공을 대조했으나 원본 없이 원인을 확정하지 않았다. 관리자 보관함 전체는 미열람이며 해결 0건/전체 해결로 단정하지 않는다.
 - 새 영어 글 [초안](../seo/drafts/2026-11-10-compare-essay-drafts-with-rubric.md)을 오늘 작성·검토했다. 공개 게시는 별도 승인 전까지 보류한다.
-- 상태: `verified_local`; focused 34, lint, build 통과. 배포와 운영 재확인 결과는 상세 [실행 기록](runs/2026-11-10-grading-content.md)에 갱신한다.
+- 상태: `verified_production`; focused 34, lint, build 통과. 커밋 `d5626b6` production READY·도메인 연결, 합성 malformed 요청 400과 배포 warning 확인, 배포별 error/fatal 0건. 실제 신규 업로드 성공률과 관리자 보관함 전체는 미확인. 상세 [실행 기록](runs/2026-11-10-grading-content.md).
 
 ## 2026-11-10 growth-quiz
 
