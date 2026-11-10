@@ -201,6 +201,30 @@ try {
   assert.equal(login.pathname, "/workspace");
   assert.equal(login.searchParams.get("start"), "login");
   assert.equal(login.searchParams.get("returnTo"), "/quizzes?view=create", "Sign-in preserves the create destination");
+  const draftsArticle = "/blog/compare-essay-drafts-with-rubric";
+  const draftsTitle = "How to Compare Essay Drafts with the Same Rubric";
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(base + "/blog");
+    await page.getByRole("link", { name: draftsTitle, exact: true }).click();
+    await page.getByRole("heading", { name: draftsTitle, exact: true }).waitFor();
+    await page.waitForFunction(expected => document.querySelector('link[rel="canonical"]')?.getAttribute("href") === expected, "https://rubricheck.com" + draftsArticle);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Draft comparison fits viewport");
+    assert.equal(await page.locator('link[rel="alternate"][hreflang]').count(), 0);
+    assert.equal(await page.locator("h1").count(), 1);
+    const structured = await page.locator('script[type="application/ld+json"]').allTextContents();
+    assert.ok(structured.some(value => { const data = JSON.parse(value); return data["@type"] === "BlogPosting" && data.headline === draftsTitle && data.datePublished === "2026-11-10"; }));
+    assert.ok((await page.locator("article").innerText()).includes("15 of the 24 respondents"));
+    assert.ok((await page.locator("article").innerText()).includes("Still to check"));
+    const audit = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    assert.deepEqual(audit.violations, [], "Draft comparison accessibility");
+  }
+  await staticPage.goto(base + draftsArticle);
+  assert.equal(await staticPage.locator("h1").innerText(), draftsTitle);
+  assert.ok((await staticPage.locator("article").innerText()).includes("Everything in this exercise is fictional"));
+  await page.getByRole("link", { name: "Review my revised draft →", exact: true }).click();
+  await page.locator("#rubric-checker").waitFor({ state: "visible" });
+  assert.equal(new URL(page.url()).pathname, "/workspace");
   await noJs.close();
   assert.equal((await fetch(base + "/ko/blog")).status, 404);
   assert.deepEqual(errors, []);

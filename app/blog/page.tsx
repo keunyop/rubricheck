@@ -14,7 +14,7 @@ export default function BlogPage() {
       <nav className={styles.breadcrumb} aria-label="Breadcrumb"><Link href="/">Home</Link><span aria-hidden="true"> / </span><span aria-current="page">Blog</span></nav>
       <header className={styles.indexHeader}><p className={styles.eyebrow}>THE RUBRICHECK BLOG</p><h1>A clearer next step.<br />For writing and studying.</h1><p>{BLOG_INDEX.description}</p></header>
       {BLOG_POSTS.map(post => <article key={post.path} className={styles.postCard}>
-        <p className={styles.eyebrow}>{post.category} · 4 min read</p>
+        <p className={styles.eyebrow}>{post.category} · {"readingMinutes" in post ? post.readingMinutes : 4} min read</p>
         <h2><Link href={post.path}>{post.title}</Link></h2>
         <p>{post.description}</p>
         <time dateTime={post.date}>{post.date}</time>

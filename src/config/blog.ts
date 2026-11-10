@@ -42,5 +42,12 @@ export const LAB_DISCUSSION_POST = {
   description: "Write a lab report discussion that explains your results instead of repeating them. Use a worked example, a specific limitation and a rubric-based revision checklist.",
   date: "2026-11-08", modified: "2026-11-08", category: "Scientific writing",
 } as const;
-export const BLOG_POSTS = [LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const COMPARE_DRAFTS_POST = {
+  slug: "compare-essay-drafts-with-rubric",
+  path: "/blog/compare-essay-drafts-with-rubric",
+  title: "How to Compare Essay Drafts with the Same Rubric",
+  description: "Compare two essay drafts with the same rubric. Use a worked revision log to check stronger evidence, interpret AI score ranges and choose your next edit.",
+  date: "2026-11-10", modified: "2026-11-10", category: "Assignment revision", readingMinutes: 7,
+} as const;
+export const BLOG_POSTS = [COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];

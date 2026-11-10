@@ -4,9 +4,9 @@ export const errors: Record<string, readonly [string, string]> = {
     'Tiada kriteria pemarkahan ditemui dalam input rubrik. Semak sama ada rubrik dan tugasan anda tertukar. Gunakan arahan penilaian sebagai rubrik, atau pilih "{noRubric}".',
   ],
   "Swap rubric and assignment": ["루브릭과 과제 서로 바꾸기", "Tukar tempat rubrik dan tugasan"],
-  'We could not read the grading criteria. Paste the rubric text or upload a clearer copy. If you do not have a rubric, choose "{noRubric}".': [
-    '채점 기준을 읽지 못했습니다. 기준을 텍스트로 붙여 넣거나 더 선명한 파일을 올려 주세요. 채점 기준이 없다면 "{noRubric}"을 선택하세요.',
-    'Kriteria pemarkahan tidak dapat dibaca. Tampal teks rubrik atau muat naik salinan yang lebih jelas. Jika tiada rubrik, pilih "{noRubric}".',
+  'We could not read the grading criteria. Check that the criterion points add up to the stated total; if no point breakdown is given, ask for one. You can also paste the rubric text or upload a clearer copy.': [
+    '채점 기준을 읽지 못했습니다. 항목별 배점 합계가 표시된 총점과 일치하는지 확인하고, 배점 내역이 없다면 담당자에게 문의해 주세요. 기준을 텍스트로 붙여 넣거나 더 선명한 파일을 올릴 수도 있습니다.',
+    'Kriteria pemarkahan tidak dapat dibaca. Semak sama ada jumlah markah setiap kriteria sepadan dengan jumlah keseluruhan; jika tiada pecahan markah, minta pecahan itu. Anda juga boleh menampal teks rubrik atau memuat naik salinan yang lebih jelas.',
   ],
   "We could not finish grading this assignment. Please try again in a moment.": [
     "과제 채점을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.",

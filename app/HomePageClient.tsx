@@ -2061,7 +2061,7 @@ export default function Home() {
     }
 
     if (message === "RUBRIC_STRUCTURE_FAILED") {
-      return t('We could not read the grading criteria. Paste the rubric text or upload a clearer copy. If you do not have a rubric, choose "{noRubric}".', { noRubric: t("No rubric") });
+      return t('We could not read the grading criteria. Check that the criterion points add up to the stated total; if no point breakdown is given, ask for one. You can also paste the rubric text or upload a clearer copy.');
     }
 
     if (message === "RUBRIC_CRITERIA_NOT_FOUND") {

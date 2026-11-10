@@ -30,11 +30,11 @@ export const newLanguages: Record<string, readonly [string, string, string, stri
     "Khi trích xuất tệp hoặc chấm điểm thất bại, chúng tôi có thể lưu dữ liệu đầu vào gốc, tệp đã tải lên, văn bản đã trích xuất và chi tiết lỗi tối đa 7 ngày để xử lý sự cố. Hồ sơ chẩn đoán được mã hóa, chỉ quản trị viên được ủy quyền mới có thể truy cập và được tự động xóa sau 7 ngày. Chúng không được dùng để huấn luyện mô hình. Hãy liên hệ bộ phận hỗ trợ để yêu cầu xóa sớm hơn.",
     "如果文件提取或评分失败，我们可能会保留原始输入、上传文件、提取的文本和错误详情最多7天，用于排查故障。诊断记录经过加密，仅供授权管理员访问，并在7天后自动删除。这些记录不用于模型训练。如需提前删除，请联系支持团队。",
   ],
-  'We could not read the grading criteria. Paste the rubric text or upload a clearer copy. If you do not have a rubric, choose "{noRubric}".': [
-    'मूल्यांकन मानदंड पढ़े नहीं जा सके। रूब्रिक का टेक्स्ट पेस्ट करें या अधिक स्पष्ट प्रति अपलोड करें। यदि आपके पास रूब्रिक नहीं है, तो "{noRubric}" चुनें।',
-    'جانچ کے معیار پڑھے نہیں جا سکے۔ روبرک کا متن پیسٹ کریں یا زیادہ واضح نقل اپ لوڈ کریں۔ اگر آپ کے پاس روبرک نہیں ہے تو "{noRubric}" منتخب کریں۔',
-    'Không thể đọc tiêu chí chấm điểm. Hãy dán văn bản tiêu chí hoặc tải lên bản rõ hơn. Nếu không có tiêu chí, hãy chọn "{noRubric}".',
-    '无法读取评分标准。请粘贴评分标准文本或上传更清晰的文件。如果没有评分标准，请选择“{noRubric}”。',
+  'We could not read the grading criteria. Check that the criterion points add up to the stated total; if no point breakdown is given, ask for one. You can also paste the rubric text or upload a clearer copy.': [
+    'मूल्यांकन मानदंड पढ़े नहीं जा सके। जाँचें कि मानदंडों के अंक दिए गए कुल से मेल खाते हैं; यदि अंकों का विवरण नहीं है, तो वह माँगें। आप रूब्रिक का टेक्स्ट पेस्ट कर सकते हैं या अधिक स्पष्ट प्रति अपलोड कर सकते हैं।',
+    'جانچ کے معیار پڑھے نہیں جا سکے۔ دیکھیں کہ معیار کے نمبر درج کل سے ملتے ہیں؛ اگر نمبروں کی تفصیل نہیں دی گئی تو وہ طلب کریں۔ آپ روبرک کا متن پیسٹ یا زیادہ واضح نقل اپ لوڈ بھی کر سکتے ہیں۔',
+    'Không thể đọc tiêu chí chấm điểm. Hãy kiểm tra tổng điểm từng tiêu chí có khớp với tổng điểm đã ghi không; nếu không có phân bổ điểm, hãy yêu cầu cung cấp. Bạn cũng có thể dán văn bản tiêu chí hoặc tải lên bản rõ hơn.',
+    '无法读取评分标准。请检查各项分数之和是否等于标注的总分；如未提供分项分数，请索取明细。您也可以粘贴评分标准文本或上传更清晰的文件。',
   ],
   "We could not finish grading this assignment. Please try again in a moment.": [
     "इस असाइनमेंट का मूल्यांकन पूरा नहीं हो सका। कृपया थोड़ी देर बाद फिर से प्रयास करें।",
