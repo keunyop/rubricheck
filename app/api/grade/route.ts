@@ -299,7 +299,15 @@ async function runGrade(request: Request) {
       originalAssignmentText = typeof original.assignmentText === "string" ? original.assignmentText : null;
       originalInstructions = typeof original.assignmentInstructions === "string" ? original.assignmentInstructions : "";
     } else {
-      const formData = await request.formData();
+      let formData: FormData;
+      try {
+        formData = await request.formData();
+      } catch {
+        // A missing multipart boundary is a malformed client request, not a
+        // grading outage. No usage reservation or diagnostic original exists yet.
+        console.warn("INVALID_FORM_DATA", { requestId: context.requestId });
+        return errorResponse(context, 400, "INVALID_FORM_DATA", "The upload could not be read. Please retry the upload or paste the text.");
+      }
       const modeInput = formData.get("mode");
       const parsedRequest = GradeRequestSchema.safeParse({
         mode: typeof modeInput === "string" ? modeInput : undefined,

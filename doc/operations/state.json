@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-10-growth-quiz",
-  "last_run_record": "doc/operations/runs/2026-11-10-growth-quiz.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-10-growth-quiz",
-  "mode": "weekly",
-  "status": "verified_production",
+  "last_run": "2026-11-10-grading-content",
+  "last_run_record": "doc/operations/runs/2026-11-10-grading-content.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-10-grading-content",
+  "mode": "daily+incident+content",
+  "status": "verified_local",
   "repository_visibility": "public",
-  "base_commit": "ca7cce31a75923594cc5148f6db13a8c62f74854",
+  "base_commit": "41852611938108e56a0f5558c2e75f65a85941a6",
   "private_records": ".growth-local/owner/",
   "private_cursors_initialized": false,
   "source_checkpoints": {
@@ -17,11 +17,11 @@
     },
     "supabase": {
       "checked_on": "2026-11-10",
-      "coverage": "bounded consent-based growth aggregates; first collection 2026-10-29; no complete prior window or mature retention inference"
+      "coverage": "bounded first-party terminal attempts and growth aggregates; first collection 2026-10-29; grading failures classified against runtime logs; no complete prior window or mature retention inference"
     },
     "vercel": {
       "checked_on": "2026-11-10",
-      "coverage": "6a97aba production READY and aliased; six public smoke groups passed; scoped error/fatal 30m empty"
+      "coverage": "latest production READY; malformed multipart validation and rubric total-score mismatch classified with individual runtime logs; request-log retention bounded"
     },
     "feedback": {
       "checked_on": null,
@@ -29,7 +29,7 @@
     },
     "grading_inbox": {
       "checked_on": null,
-      "reason": "no authenticated live reader"
+      "reason": "no authenticated live reader; 7-day diagnostic archive count and original-stage reconciliation remain unknown despite Vercel and first-party fallback"
     },
     "gsc": {
       "checked_on": "2026-11-10",
@@ -112,6 +112,18 @@
     "GROW-002": {
       "implementation": "planned",
       "review": "2026-11-17 collection/activation; 2026-12-08 mature cohorts/verified recurring payments"
+    },
+    "GRADE-001": {
+      "investigation": "runtime_stage_code_and_first_party_terminal_reconciled; admin_archive_unread",
+      "implementation": "malformed_form_data_400_and_localized_guidance",
+      "validation": "focused34; changed_lint; production_build",
+      "deployment": "pending",
+      "review": "2026-11-11 inbox summary and new malformed/rubric structure attempts"
+    },
+    "CONTENT-001": {
+      "implementation": "english_article_draft_complete",
+      "validation": "sources_product_links_mobile_preview_reviewed",
+      "publication": "awaiting_approval"
     }
   },
   "release": {
@@ -138,10 +150,12 @@
     }
   },
   "next_actions": [
+    "2026-11-11 grading: reconcile authenticated 7-day inbox stage/code with terminal attempts; do not infer empty or resolved from missing access or retention; classify new malformed multipart warnings and rubric mismatch",
+    "Publish CONTENT-001 only after separate blog publication approval and final route/canonical/sitemap verification",
     "2026-11-17 review quiz exposure/selection/sample/create-click collection and authorized admin generation/outcome aggregate; do not infer zero from missing access",
     "2026-11-17 review English rubric-checker indexability, US/AU/CA/MY search cohorts and first/second successful evaluation paths",
     "2026-12-08 assess full 28-day growth and mature repeat-use cohorts against verified recurring payments",
-    "Next daily reconcile unresolved feedback and new evaluation/payment failures; existing authenticated admin access required",
+    "Next daily reconcile unresolved feedback and new evaluation/payment failures; use Vercel + first-party fallback when admin authentication is unavailable, and retain unknown inbox status",
     "Keep next report manifest timezone, latest complete date, filters and key event definitions; add same-window daily/country/landing breakdowns when available"
   ],
   "review_dates": {

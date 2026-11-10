@@ -94,6 +94,18 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
   }
   const settlements = () => calls.filter(c => c.name === "rubricheck_settle_free_evaluate");
   try {
+    await t.test("malformed multipart request returns input guidance without a grading failure", async () => {
+      calls.length = 0; capturedFailures.length = 0; failure = null;
+      const response = await POST(new Request("https://example.com/api/grade", {
+        method: "POST",
+        headers: { "content-type": "multipart/form-data" },
+        body: "unparseable multipart body",
+      }));
+      assert.equal(response.status, 400);
+      assert.equal((await response.json()).code, "INVALID_FORM_DATA");
+      assert.equal(capturedFailures.length, 0);
+      assert.equal(calls.length, 0);
+    });
     for (const [kind, status, code] of [
       ["rubric", 400, "RUBRIC_STRUCTURE_FAILED"],
       ["rubricProvider", 503, "RUBRIC_MODEL_UNAVAILABLE"],

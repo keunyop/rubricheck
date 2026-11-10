@@ -2125,6 +2125,10 @@ export default function Home() {
       return t("Please provide valid rubric and assignment inputs.");
     }
 
+    if (message === "INVALID_FORM_DATA") {
+      return t("The upload could not be read. Please retry the upload or paste the text.");
+    }
+
     if (message === "FREE_LIMIT_REACHED") {
       return t("You've used the 3 free trial evaluations for this account. Upgrade to Pro or buy credits to continue.");
     }

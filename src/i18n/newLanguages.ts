@@ -1692,6 +1692,12 @@ export const newLanguages: Record<string, readonly [string, string, string, stri
     "Chế độ chấm điểm không hợp lệ. Vui lòng chọn chế độ Tiêu chuẩn hoặc Nghiêm ngặt.",
     "评分模式无效。请选择“标准”或“严格”模式。"
   ],
+  "The upload could not be read. Please retry the upload or paste the text.": [
+    "अपलोड पढ़ा नहीं जा सका। कृपया दोबारा अपलोड करें या पाठ चिपकाएँ।",
+    "اپ لوڈ پڑھا نہیں جا سکا۔ دوبارہ اپ لوڈ کریں یا متن چسپاں کریں۔",
+    "Không thể đọc tệp tải lên. Vui lòng tải lên lại hoặc dán văn bản.",
+    "无法读取上传内容。请重新上传或粘贴文本。",
+  ],
   "Please provide valid rubric and assignment inputs.": [
     "कृपया मान्य रूब्रिक और असाइनमेंट इनपुट दें।",
     "براہِ کرم درست روبریک اور اسائنمنٹ کی معلومات فراہم کریں۔",

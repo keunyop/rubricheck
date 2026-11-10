@@ -69,6 +69,7 @@ export const errors: Record<string, readonly [string, string]> = {
   "Could not open your saved rubric. Please try again.": ["저장된 채점 기준표를 열지 못했습니다. 다시 시도해 주세요.", "Rubrik tersimpan tidak dapat dibuka. Sila cuba lagi."],
   "Invalid grading mode. Please select Standard or Strict Mode.": ["올바르지 않은 채점 모드입니다. 표준 모드 또는 엄격 모드를 선택하세요.", "Mod penilaian tidak sah. Pilih mod standard atau mod ketat."],
   "Please provide valid rubric and assignment inputs.": ["채점 기준표와 과제 입력 내용을 확인해 주세요.", "Sila masukkan rubrik dan tugasan yang sah."],
+  "The upload could not be read. Please retry the upload or paste the text.": ["업로드 내용을 읽지 못했습니다. 다시 업로드하거나 텍스트를 붙여 넣어 주세요.", "Muat naik tidak dapat dibaca. Sila cuba muat naik semula atau tampal teks."],
   "You've used the 3 free trial evaluations for this account. Upgrade to Pro or buy credits to continue.": ["이 계정의 무료 채점 3회를 모두 사용했습니다. 계속 이용하려면 Pro로 업그레이드하거나 크레딧을 구매하세요.", "Anda telah menggunakan 3 penilaian percuma untuk akaun ini. Naik taraf ke Pro atau beli kredit untuk meneruskan."],
   "Something went wrong. Please try again.": ["문제가 발생했습니다. 다시 시도해 주세요.", "Sesuatu tidak kena. Sila cuba lagi."],
   "Log in to grade your assignment.": ["과제를 채점하려면 로그인해 주세요.", "Log masuk untuk menilai tugasan anda."],
