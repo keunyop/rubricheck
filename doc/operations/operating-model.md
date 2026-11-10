@@ -42,8 +42,8 @@ main/production 지속 위임은 [owner 출시 절차](../../.agents/skills/rubr
 | 문서/모델 사용비 | 추가 연결 필요 | 모델 설정과 실패 분류 코드만 확인. 토큰·OCR billing/전체 비용 미확인 |
 | Supabase | 접근 가능 | MCP 읽기 전용 admin summary/schema/growth aggregate 성공. 원문 조회 없음 |
 | Stripe | 접근 가능 | live 구독·가격·charges·refunds·balance transactions 확인. 상세 합계는 비공개 기록 |
-| GSC | 추가 연결 필요 | 기존 CSV는 과거 snapshot. 현 property 인증/최신 수집 직접 조회 없음 |
-| GA4 | 추가 연결 필요 | 코드 태그와 이벤트 경로 확인; 숫자 property/Viewer·수익 제한·key events·GSC link 최신 상태 미확인 |
+| GSC | 로컬 보고서 분석 가능 | 2026-11-08까지의 날짜별 export로 28일 비교 가능. query×page와 필터/timezone manifest는 없음; property API 직접 조회 없음 |
+| GA4 | 로컬 보고서 부분 분석 가능 | 2026-11-08까지의 Events export 확인. 랜딩·유입별 sessions와 property timezone·threshold·key events 설정은 미확인; 직접 조회 없음 |
 | 블로그 | 접근 가능 | src/config/blog.ts와 app/blog, 기존 doc/seo 절차. 이번 공개 HTTP 확인은 외부 실행 거절 |
 
 GSC/GA4는 [읽기 연결 절차](google-analytics-access.md)를 따른다. 해당 property만 GSC Restricted/`webmasters.readonly`, GA4 Viewer/`analytics.readonly`로 연결하며 비밀번호·token·JSON key를 채팅이나 저장소에 넣지 않는다. 연결이 어려우면 [필드와 기간](../../.agents/skills/rubricheck-owner/references/measurement.md)에 맞춘 최신 완결 56일 CSV를 제공한다.

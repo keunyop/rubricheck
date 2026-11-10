@@ -1,0 +1,4 @@
+# Uploaded reports stay local, including manifests and nested exports.
+*
+!.gitignore
+!README.md

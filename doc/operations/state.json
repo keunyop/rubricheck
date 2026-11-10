@@ -1,33 +1,36 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-09-report-ingestion",
-  "last_run_record": "doc/operations/runs/2026-11-09-report-ingestion.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-09-report-ingestion",
+  "last_run": "2026-11-10-report-analysis",
+  "last_run_record": "doc/operations/runs/2026-11-10-report-analysis.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-10-report-analysis",
   "mode": "auto",
-  "status": "verified_production",
+  "status": "verified_local",
   "repository_visibility": "public",
-  "base_commit": "77b274c",
+  "base_commit": "648eed5",
   "private_records": ".growth-local/owner/",
   "private_cursors_initialized": false,
   "source_checkpoints": {
-    "stripe": {"checked_on": "2026-11-09", "details": "private snapshot"},
+    "stripe": {"checked_on": "2026-11-10", "details": "historical failure attempts reconciled in private record; paid invoice and active subscription"},
     "supabase": {"checked_on": "2026-11-09", "details": "private aggregate snapshot"},
     "vercel": {"checked_on": "2026-11-09", "coverage": "report workflow commit 2358f9c deployed READY to production and aliased to rubricheck.com"},
     "feedback": {"checked_on": null, "reason": "no authenticated live reader"},
     "grading_inbox": {"checked_on": null, "reason": "no authenticated live reader"},
-    "gsc": {"checked_on": null, "reason": "periodic doc/report upload selected; latest complete report pending"},
-    "ga4": {"checked_on": null, "reason": "periodic doc/report upload selected; latest complete report pending"},
-    "report_upload": {"checked_on": "2026-11-09", "latest_complete_date": null, "status": "pending_fresh_upload"}
+    "gsc": {"checked_on": "2026-11-10", "latest_complete_date": "2026-11-08", "coverage": "two complete 28-day chart windows; 90-day page/query breakdowns; query-by-page missing"},
+    "ga4": {"checked_on": "2026-11-10", "latest_complete_date": "2026-11-08", "coverage": "Events by date only; landing/acquisition sessions, key events, timezone and threshold unknown"},
+    "report_upload": {"checked_on": "2026-11-10", "latest_complete_date": "2026-11-08", "status": "partially_usable_metadata_missing; raw files gitignored"}
   },
   "work": {
     "OPS-001": {"implementation": "verified_structure_and_first_run", "validation": "passed"},
     "OPS-002": {"implementation": "complete", "validation": "passed", "deployment": "verified_production"},
-    "ACCESS-001": {"implementation": "periodic_report_workflow_complete", "live_connection": "not_required", "latest_report": "pending"},
+    "ACCESS-001": {"implementation": "periodic_report_workflow_complete", "live_connection": "not_required", "latest_report": "partial_events_and_gsc; landing_acquisition_manifest_missing"},
     "OPS-003": {"implementation": "complete", "validation": "passed", "deployment": "verified_production"},
     "RELEASE-001": {"implementation": "complete", "deployment": "verified_production"},
     "QUAL-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true},
-    "GROW-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true}
+    "GROW-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true},
+    "BILL-001": {"investigation": "source_reconciled", "validation": "stripe_live_crosscheck", "deployment": "not_applicable"},
+    "DATA-001": {"investigation": "ga4_form_event_definition_break_identified", "validation": "event_dates_and_code_history", "first_party_reconciliation": "pending"},
+    "SEO-001": {"investigation": "page_candidates_identified", "query_by_page": "pending"}
   },
   "release": {
     "default_branch": "main",
@@ -53,8 +56,8 @@
     }
   },
   "next_actions": [
-    "Ingest the newest complete GSC and GA4 upload from doc/report",
-    "Reconcile payment failures and unique evaluation outcomes",
+    "Obtain GA4 landing page and traffic acquisition sessions, key events, property timezone/threshold manifest, and GSC query-by-page for the latest 56 days",
+    "Reconcile first-party unique evaluation terminal outcomes and unresolved feedback; recheck new payment failures at next daily",
     "Reassess PR #8 runtime guard against current Vercel behavior"
   ],
   "review_dates": {

@@ -10,12 +10,12 @@
 | QUAL-001 | 높음: 허용된 소수 배점 2.5에서 점수 3 출력 재현 | Standard/Strict 최종 점수 상한 수정, 정수 배점/권한 유지, 두 회귀 통과 | verified_local; 전체 318 pass. preview/배포 대기 |
 | GROW-001 | 높음: 공개 퀴즈 랜딩이 공통 계측 allowlist에서 누락 | 기존 pageview/attribution에 7개 언어 공개 경로 포함, 쿼리 제거·private 차단 유지 | verified_local; 관련10/full318 pass. preview/배포 대기 |
 | SEC-008 | 배포 전 확인: 기존 runtime 보안 PR 차단 상태 | 기존 [PR #8](https://github.com/keunyop/rubricheck/pull/8)의 실제 runtime patch 재검증, 같은 PR 갱신 | open/외부 상태 확인 필요; 별도 신규 PR 만들지 않음 |
-| BILL-001 | 높음: live Stripe 결제 실패 관측 | failure code·unique invoice/subscription·재시도/갱신 맥락을 개인정보 없이 분류; 접근 가능한 원인만 수정 | 미완료; 고객 연락·환불·결제 재시도 자동 수행 금지 |
-| DATA-001 | 높음: 수집 시작이 비교 기간 중간, 실패 이벤트 해석 필요 | expected access/validation와 server failure 분리, attempt별 guest/account terminal outcome reconcile; 완결 cohort 설정 | 미완료; 원시 로그 개수로 실패율 계산 금지 |
-| SEO-001 | 중간: 기존 GSC snapshot의 검색 수요/낮은 CTR | 최신 query×page 확보 후 rubric-feedback-tool 또는 rubric-checker 한 페이지 개선 | 접근 대기; 신규 유사 글 대신 기존 랜딩 후보 |
-| ACCESS-001 | 중간: GSC/GA4 최신 읽기 없음 | [업로드 안내](../report/README.md)에 따라 최근 완결 56일 GSC·GA4 집계 업로드, timezone/latest date/filters 확인 | 절차 작성; 최신 보고서 업로드 대기 |
+| BILL-001 | 높음: live Stripe 결제 실패 관측 | failure code·unique invoice/subscription·재시도/갱신 맥락을 개인정보 없이 분류; 접근 가능한 원인만 수정 | 원천 대조 완료: 과거 실패는 동일 청구의 반복 시도, 이후 결제 완료·구독 active. 신규 실패는 daily 재확인; 고객 연락·환불·재시도 자동 수행 금지 |
+| DATA-001 | 높음: 수집 시작이 비교 기간 중간, 실패 이벤트 해석 필요 | expected access/validation와 server failure 분리, attempt별 guest/account terminal outcome reconcile; 완결 cohort 설정 | 미완료. GA4 폼·스크롤 이벤트는 2026-10-22 이후 중단됐고 측정 설정 변경과 일치하므로 전환 KPI로 사용 금지; first-party 결과로 확인 |
+| SEO-001 | 중간: GSC의 기존 랜딩 노출 대비 낮은 클릭 | 최신 query×page 56일 집계로 검색 의도 확인 후 기존 랜딩 한 페이지 개선 | GSC 날짜별 비교·90일 페이지 표 확인. `/rubric-checker` 등 후보가 있으나 query×page가 없어 문구 수정 보류 |
+| ACCESS-001 | 중간: GSC/GA4 최신 읽기 불완전 | [업로드 안내](../report/README.md)에 따라 최근 완결 56일 GSC·GA4 집계와 timezone/latest date/filters 확인 | 로컬 GSC 28일 비교·GA4 Events 분석 완료. GA4 landing/traffic sessions, key events와 manifest 누락; 원본은 Git 제외 |
 
-| OPS-003 | 높음: owner가 수동 업로드 보고서를 자동 발견해야 함 | `doc/report/` 최신 유효 기간 판별, 개인정보 차단, 28일 대 28일 비교, stale 상태 기록 | 구현·검증·production 배포 완료 (`2358f9c`) |
+| OPS-003 | 높음: owner가 수동 업로드 보고서를 자동 발견해야 함 | `doc/report/` 최신 유효 기간 판별, 원본 Git 제외, 28일 대 28일 비교, stale 상태 기록 | 보고서 탐색은 배포 완료 (`2358f9c`); 원본 Git 제외 규칙은 이번 실행에서 추가 |
 
 ACCESS-001의 기본 수집 방식은 API 연결에서 [주간 보고서 업로드](../report/README.md)로 변경했다. 최신 유효 업로드가 있으면 API 연결은 요구하지 않는다.
 
@@ -25,4 +25,4 @@ QUAL-001 대상은 소수 배점 rubric 사용자, 근거는 실제 schema를 �
 
 GROW-001은 퀴즈 랜딩 유입을 기존 수집 범위에서 누락하지 않게 한다. 정확한 유입 집계가 목적이며 신규 수집 동의/이벤트/무료 한도는 변경하지 않는다. 기존 analytics 전송량의 누락 복구분은 증가할 수 있으나 금액 미측정이다. private 경로나 쿼리가 유출되면 즉시 배포 중단/복구한다. 공개 경로 한 항목과 회귀만 되돌릴 수 있다.
 
-우선 완료한 세 작업은 OPS-001·QUAL-001·GROW-001이다. BILL-001·DATA-001은 실제 관측을 근거로 다음 실행에서 우선 분류한다. SEC-008은 기존 보안 blocker이며 미해결 상태를 보존한다. 확인 기한은 [state](state.json)에 둔다.
+초기 완료 작업은 OPS-001·QUAL-001·GROW-001이다. BILL-001의 과거 실패는 원천 대조를 마쳤고, DATA-001의 고유 평가 결과는 미완료다. SEC-008의 기존 PR 상태는 별도 확인 대상으로 유지한다. 확인 기한은 [state](state.json)에 둔다.

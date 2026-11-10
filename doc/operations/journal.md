@@ -2,6 +2,23 @@
 
 이 일지는 최신 실행부터 읽는 역순 색인이다. 자동 작업 선택의 기계 상태는 [state.json](state.json), 우선순위는 [backlog](backlog.md), 상세 근거는 [runs/](runs/)에 있다. 공개 저장소이므로 고객 식별자나 비공개 사업 집계는 기록하지 않는다.
 
+## 2026-11-10 report-analysis
+
+- 모드: auto 후속. 선택: ACCESS-001 보고서 분석·Git 제외, DATA-001 GA4 이벤트 정의 점검, SEO-001 다음 근거 정리.
+- 결과: 업로드 원본을 Git에서 제외하고 owner 스킬의 분석 중단 규칙을 제거했다. GSC 두 28일 구간 비교를 완료했고 검색 클릭·노출·CTR 개선을 확인했다. GA4 폼·스크롤 이벤트는 측정 변경 이후 보이지 않아 제품 전환 지표로 사용하지 않는다.
+- 상태: Git 제외 규칙·skill validator·JSON·diff·production build 검증 통과. GA4 랜딩·유입 sessions, key events, property timezone·threshold와 GSC query×page는 미확인. 상세 수치는 Git 제외 비공개 기록에 보관.
+- 다음: 필요한 보완 export 확보 후 한 기존 랜딩 개선; first-party 고유 평가 결과 점검.
+- 상세 기록: [2026-11-10 report analysis](runs/2026-11-10-report-analysis.md)
+
+## 2026-11-09 first-report
+
+- 모드: auto. 현지 2026-11-09에 시작해 2026-11-10에 종료.
+- 선택: ACCESS-001 새 업로드 점검, BILL-001 결제 실패 원천 대조.
+- 결과: 공개 저장소의 GA4 업로드 메타데이터에서 개인 계정명을 발견해 보고서 분석과 커밋을 보류했다. Stripe live에서는 이전 실패 기록이 동일 청구의 반복 시도이며 이후 결제 완료·구독 active임을 확인했다.
+- 상태: GSC/GA4 지표는 미측정. 코드 변경·배포 없음. 비공개 상세는 Git 제외 기록에 보관.
+- 재개: 식별 정보를 제거한 보고서와 기간·필터 manifest가 필요하다. 다음 daily에는 신규 결제 실패와 평가 결과를 확인한다.
+- 상세 기록: [2026-11-09 first report](runs/2026-11-09-first-report.md)
+
 ## 2026-11-09 report-ingestion
 
 - 모드: 운영 설정 변경
