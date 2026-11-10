@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-09-owner-journal-release",
-  "last_run_record": "doc/operations/runs/2026-11-09-owner-journal-release.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-09-owner-journal-release",
+  "last_run": "2026-11-09-report-ingestion",
+  "last_run_record": "doc/operations/runs/2026-11-09-report-ingestion.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-09-report-ingestion",
   "mode": "auto",
-  "status": "verified_production",
+  "status": "ready_to_release",
   "repository_visibility": "public",
-  "base_commit": "90529ae",
+  "base_commit": "77b274c",
   "private_records": ".growth-local/owner/",
   "private_cursors_initialized": false,
   "source_checkpoints": {
@@ -16,13 +16,15 @@
     "vercel": {"checked_on": "2026-11-09", "coverage": "production READY and public smoke passed; no deployment error logs; two malformed multipart requests rejected during validation"},
     "feedback": {"checked_on": null, "reason": "no authenticated live reader"},
     "grading_inbox": {"checked_on": null, "reason": "no authenticated live reader"},
-    "gsc": {"checked_on": null, "reason": "no authenticated live property reader"},
-    "ga4": {"checked_on": null, "reason": "no authenticated live property reader"}
+    "gsc": {"checked_on": null, "reason": "periodic doc/report upload selected; latest complete report pending"},
+    "ga4": {"checked_on": null, "reason": "periodic doc/report upload selected; latest complete report pending"},
+    "report_upload": {"checked_on": "2026-11-09", "latest_complete_date": null, "status": "pending_fresh_upload"}
   },
   "work": {
     "OPS-001": {"implementation": "verified_structure_and_first_run", "validation": "passed"},
     "OPS-002": {"implementation": "complete", "validation": "passed", "deployment": "verified_production"},
-    "ACCESS-001": {"implementation": "guide_complete", "live_connection": "pending_user_google_authorization"},
+    "ACCESS-001": {"implementation": "periodic_report_workflow_complete", "live_connection": "not_required", "latest_report": "pending"},
+    "OPS-003": {"implementation": "complete", "validation": "passed", "deployment": "pending"},
     "RELEASE-001": {"implementation": "complete", "deployment": "verified_production"},
     "QUAL-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true},
     "GROW-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true}
@@ -51,13 +53,14 @@
     }
   },
   "next_actions": [
-    "Connect GSC and GA4 read access",
+    "Ingest the newest complete GSC and GA4 upload from doc/report",
     "Reconcile payment failures and unique evaluation outcomes",
     "Reassess PR #8 runtime guard against current Vercel behavior"
   ],
   "review_dates": {
     "next_daily": "2026-11-10",
     "next_weekly": "2026-11-16",
+    "next_report_upload": "2026-11-16",
     "next_monthly": "2026-12-01",
     "post_deployment": "immediate smoke; +7 days quality/collection; +28 days growth"
   },

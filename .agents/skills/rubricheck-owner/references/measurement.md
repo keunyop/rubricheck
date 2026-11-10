@@ -26,6 +26,12 @@
 
 완결된 최근 28일과 이전 28일이 기본이다. Vancouver 자정은 DST 때문에 고정 UTC offset이 아니다. GSC 날짜, GA4 property timezone, Stripe timestamp의 기준을 별도로 기록한다. 성과를 인과 효과로 단정하지 않는다.
 
+## doc/report 업로드 사용
+
+[업로드 안내](../../../../doc/report/README.md)에 맞는 최신 폴더를 먼저 찾는다. 주간 보고서는 업로드일이 아니라 `latest_complete_date`가 10일 이내인지 확인하고, 월간 보고서는 40일 이내인지 확인한다. 56일 자료가 있으면 최근 완결 28일과 직전 28일을 같은 timezone·필터·정의로 비교한다. CSV 이름이 달라도 열 헤더로 GSC queries/pages/dates와 GA4 landing page/traffic acquisition/events를 식별한다.
+
+manifest가 없으면 CSV 안의 날짜 범위와 파일 수정 시각으로 임시 판단하되 `metadata_missing` 한계를 남긴다. GSC export의 query/page/country/device/date 표는 서로 다른 breakdown이므로 합산하지 않는다. GA4의 landing page, source/medium, event 표도 중복 사용자를 합산하지 않는다. 업로드 자료가 최신이고 필요한 범위를 포함하면 GSC/GA4 API 연결은 요구하지 않는다.
+
 ## 접근이 없는 경우
 
 GSC는 해당 property Restricted, GA4는 해당 property Viewer와 수익 데이터 제한 상태부터 확인한다. 조회용 권한과 GA4–GSC 연결 생성 권한은 다르다. 커넥터가 설치됐다는 이유로 접근 가능 처리하지 않는다. 비밀번호·토큰을 채팅으로 받지 않는다.

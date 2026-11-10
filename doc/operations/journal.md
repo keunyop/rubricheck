@@ -2,6 +2,15 @@
 
 이 일지는 최신 실행부터 읽는 역순 색인이다. 자동 작업 선택의 기계 상태는 [state.json](state.json), 우선순위는 [backlog](backlog.md), 상세 근거는 [runs/](runs/)에 있다. 공개 저장소이므로 고객 식별자나 비공개 사업 집계는 기록하지 않는다.
 
+## 2026-11-09 report-ingestion
+
+- 모드: 운영 설정 변경
+- 선택: OPS-003 보고서 업로드 방식 추가, ACCESS-001 API 연결 요구 제거
+- 이유: GSC·GA4 API 연결 부담 없이 owner가 최신 집계 근거를 반복 사용할 수 있게 하기 위해서다.
+- 현재 상태: `doc/report/` 규격과 주기, 개인정보 경계, 최신성 판정, owner 자동 탐색 규칙 작성. skill validator·JSON·링크·diff 검사 통과, 커밋·배포 대기.
+- 사용자 작업: 매주 월요일 최근 완결 56일 GSC·GA4 보고서를 업로드한다. 월간 retention 보고서는 매월 첫 월요일에 추가한다.
+- 상세 기록: [2026-11-09 report ingestion](runs/2026-11-09-report-ingestion.md)
+
 ## 2026-11-09 owner-journal-release
 
 - 모드: auto

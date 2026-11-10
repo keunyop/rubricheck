@@ -13,7 +13,11 @@
 | BILL-001 | 높음: live Stripe 결제 실패 관측 | failure code·unique invoice/subscription·재시도/갱신 맥락을 개인정보 없이 분류; 접근 가능한 원인만 수정 | 미완료; 고객 연락·환불·결제 재시도 자동 수행 금지 |
 | DATA-001 | 높음: 수집 시작이 비교 기간 중간, 실패 이벤트 해석 필요 | expected access/validation와 server failure 분리, attempt별 guest/account terminal outcome reconcile; 완결 cohort 설정 | 미완료; 원시 로그 개수로 실패율 계산 금지 |
 | SEO-001 | 중간: 기존 GSC snapshot의 검색 수요/낮은 CTR | 최신 query×page 확보 후 rubric-feedback-tool 또는 rubric-checker 한 페이지 개선 | 접근 대기; 신규 유사 글 대신 기존 랜딩 후보 |
-| ACCESS-001 | 중간: GSC/GA4 최신 읽기 없음 | [연결 절차](google-analytics-access.md)로 property별 최소 읽기 또는 56일 CSV, timezone/latest date/GA4-GSC link 확인 | 절차 작성; 사용자 계정 연결 필요 |
+| ACCESS-001 | 중간: GSC/GA4 최신 읽기 없음 | [업로드 안내](../report/README.md)에 따라 최근 완결 56일 GSC·GA4 집계 업로드, timezone/latest date/filters 확인 | 절차 작성; 최신 보고서 업로드 대기 |
+
+| OPS-003 | 높음: owner가 수동 업로드 보고서를 자동 발견해야 함 | `doc/report/` 최신 유효 기간 판별, 개인정보 차단, 28일 대 28일 비교, stale 상태 기록 | 구현·검증 완료; 배포 대기 |
+
+ACCESS-001의 기본 수집 방식은 API 연결에서 [주간 보고서 업로드](../report/README.md)로 변경했다. 최신 유효 업로드가 있으면 API 연결은 요구하지 않는다.
 
 ## 변경 평가와 복구
 
