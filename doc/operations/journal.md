@@ -6,8 +6,8 @@
 
 - 모드: weekly + daily 후속. 사용자 요청: 새 보고서를 반영해 국제 유입·구독 성장 및 퀴즈 미사용 원인을 조사하고 개선 실행.
 - 선택: ACCESS-001 새 보고서 재분석, SEO-001 기존 랜딩 개선, QUIZ-001 발견·첫 사용·측정 점검.
-- 상태: `verified_local`. 신규 보고서·동의 기반 first-party·구독 스냅샷 분석, 영어 랜딩 안내와 퀴즈 샘플→생성 CTA/공개 계측 구현. 전체320·브라우저14그룹·수정 lint·build·독립검토 통과.
-- 배포 확인 대기. 운영 퀴즈 관리자 집계와 GA4 실제 수신은 미확인. 11/17 수집/첫 사용 경로, 12/08 28일 성장·재사용·구독 검토. 상세: [growth-quiz](runs/2026-11-10-growth-quiz.md).
+- 상태: `verified_production`. 신규 보고서·동의 기반 first-party·구독 스냅샷 분석, 영어 랜딩 안내와 퀴즈 샘플→생성 CTA/공개 계측 구현. 전체320·브라우저14그룹·수정 lint·build·독립검토 통과.
+- 커밋 `6a97aba` production READY·도메인 연결·운영 smoke6그룹 통과, 배포별 error/fatal 기록 없음. 운영 퀴즈 관리자 집계와 GA4 실제 수신은 미확인. 11/17 수집/첫 사용 경로, 12/08 28일 성장·재사용·구독 검토. 상세: [growth-quiz](runs/2026-11-10-growth-quiz.md).
 
 ## 2026-11-10 report-analysis
 

@@ -3,7 +3,7 @@
 - Run: `2026-11-10-growth-quiz`, America/Vancouver.
 - 요청: 새 업로드 보고서를 반영해 국제 유입과 구독 성장을 개선하고 퀴즈 미사용 원인을 확인·조치한다.
 - 선택: ACCESS-001 보고서 보완 분석, SEO-001 기존 검색 랜딩 개선, QUIZ-001 발견부터 생성까지의 경로 개선.
-- 상태: `verified_local`. 전체 320개 테스트·수정 코드 lint·production build 통과. 운영 배포 확인 대기.
+- 상태: `verified_production`. 전체 320개 테스트·수정 코드 lint·production build·운영 smoke 통과. 성장 효과와 실제 운영 퀴즈 집계는 후속 확인.
 
 ## 근거와 한계
 
@@ -39,6 +39,14 @@
 - 개인정보 계측 단위 테스트 2개와 수정 소스 ESLint 통과. 샘플 답변 이벤트는 mounted card당 첫 답변에 기록하며 재마운트할 수 있다. 이벤트 횟수를 고유 사용자 수로 취급하지 않는다.
 - 관리자 운영 퀴즈 집계는 현재 브라우저 인증이 없어 `/admin`에서 `/pricing`으로 이동했으므로 미확인이다. 실제 생성·실패·중단·학습 건수만 추가 확인 요청했다. 과거 Redis 직접 접근 제한을 우회하지 않았다.
 - 출시 전 [Vercel 보안 공지](https://vercel.com/kb/bulletin/node-js-security-advisory)를 다시 열어 2026-10-28 11:00 PT 이후 신규 배포의 patched Node 적용을 확인했다. 기존 보안 출시 차단 해제 근거가 유지된다.
-- 전체 회귀 320/320, production build(TypeScript 포함), staged diff 검사 통과. 별도 preview 배포는 수행하지 않았고 로컬 브라우저로 검증했다. 커밋별 Vercel READY와 공개 smoke는 배포 후 확정한다.
+- 전체 회귀 320/320, production build(TypeScript 포함), staged diff 검사 통과. 별도 preview 배포는 수행하지 않았고 로컬 브라우저로 검증했다. [변경 커밋](https://github.com/keunyop/rubricheck/commit/6a97abab8738ca4830384ff634fef19987e70ec9)의 Vercel `dpl_Cd6wtWrdpwZSJJ42c3cyV2zzL1ov`가 READY이며 rubricheck.com alias 연결을 확인했다.
 
 샘플 CTA·계측은 기존 평가/생성/결제 정책을 변경하지 않는다. private 경로/원문 유출, 탐색 방해, 회귀가 발견되면 관련 변경을 revert하고 main Git 배포로 복구한다. 운영 배포 성공은 구독/퀴즈 사용 증가의 증명이 아니다.
+
+## 운영 확인 완료
+
+- 2026-11-10 11:06 America/Vancouver: 실제 production 모바일 홈 퀴즈 탭→샘플 답변→생성 진입, 참거짓 샘플 CTA, 공개 GA4 큐, 영어 랜딩 문구, 7개 언어 응답/hreflang, sitemap 수정일 확인. 브라우저 pageerror 없음.
+- 합성 smoke는 GA4 전송과 모델/결제 쓰기를 차단했다. 실제 GA4 수신·모델 생성 성공을 증명하지 않는다. sitemap 초기 검사식의 태그 순서 가정을 고쳐 재검사했으며 제품 변경은 없었다.
+- 새 배포의 최근 30분 error/fatal grouped runtime 조회에서 항목 없음. 장기간 전체 장애율이나 새로운 오류가 없을 것이라는 보장은 아니다.
+- 다음 보고서에서 `quiz_discovery_viewed`, `quiz_mode_selected`, `quiz_sample_answered`, `quiz_create_clicked`를 확인한다. `quiz_surface`(home/product/overview), `quiz_placement`(tab/hero/sample)는 닫힌 값이며 원문·답안·퀴즈 ID는 보내지 않는다. 이벤트 횟수 대신 해당 세션/사용자 분모로 비교한다.
+- 별도 preview·가격/한도·광고·블로그 발행·예약·외부 연락 변경 없음. 운영 퀴즈 집계 접근만 후속 입력으로 남았으며 개선 배포에는 추가 결정이 필요하지 않았다.

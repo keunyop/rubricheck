@@ -5,7 +5,7 @@
   "last_run_record": "doc/operations/runs/2026-11-10-growth-quiz.md",
   "last_journal_entry": "doc/operations/journal.md#2026-11-10-growth-quiz",
   "mode": "weekly",
-  "status": "verified_local",
+  "status": "verified_production",
   "repository_visibility": "public",
   "base_commit": "ca7cce31a75923594cc5148f6db13a8c62f74854",
   "private_records": ".growth-local/owner/",
@@ -21,7 +21,7 @@
     },
     "vercel": {
       "checked_on": "2026-11-10",
-      "coverage": "current production READY; error/fatal grouped scan 30m empty; 24h outside retention request rejected"
+      "coverage": "6a97aba production READY and aliased; six public smoke groups passed; scoped error/fatal 30m empty"
     },
     "feedback": {
       "checked_on": null,
@@ -99,15 +99,19 @@
     "SEO-001": {
       "investigation": "new_query_page_export_supports_existing_english_tool_intent",
       "implementation": "verified_local",
-      "deployment": "pending",
+      "deployment": "verified_production",
       "validation": "full320; focused browser14 groups; changed lint; production build passed"
     },
     "QUIZ-001": {
       "investigation": "public_entry_exists; short_observation; live_admin_unavailable",
       "implementation": "verified_local",
-      "deployment": "pending",
+      "deployment": "verified_production",
       "measurement": "public GA4 discovery only; generation outcomes remain admin aggregate",
       "validation": "full320; focused browser14 groups; changed lint; production build passed"
+    },
+    "GROW-002": {
+      "implementation": "planned",
+      "review": "2026-11-17 collection/activation; 2026-12-08 mature cohorts/verified recurring payments"
     }
   },
   "release": {
@@ -118,19 +122,19 @@
     "security_blocker": {
       "status": "cleared_for_new_deployments",
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
-      "checked_on": "2026-11-09"
+      "checked_on": "2026-11-10"
     },
-    "commit": "881a59f1ad6e901d0b81aae836084edd6ad29d1c",
+    "commit": "6a97abab8738ca4830384ff634fef19987e70ec9",
     "production": {
-      "deployment_id": "dpl_EW6jxpfjUeAjiGorMRFoPQY3aNjT",
+      "deployment_id": "dpl_Cd6wtWrdpwZSJJ42c3cyV2zzL1ov",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "passed",
+      "smoke": "passed six groups; mobile quiz CTA, clean GA4 queue, English landing, seven locales, sitemap",
       "runtime_errors": {
-        "release_related": 0,
-        "observed_validation_rejections": 2,
-        "reason": "multipart boundary missing"
-      }
+        "scan": "deployment scoped error/fatal 30m",
+        "observed": 0
+      },
+      "limits": "no live model execution or GA4 ingestion confirmation; admin quiz aggregate unauthenticated"
     }
   },
   "next_actions": [
