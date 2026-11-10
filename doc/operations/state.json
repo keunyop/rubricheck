@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-10-grading-content",
-  "last_run_record": "doc/operations/runs/2026-11-10-grading-content.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-10-grading-content",
+  "last_run": "2026-11-10-admin-blog-publish",
+  "last_run_record": "doc/operations/runs/2026-11-10-admin-blog-publish.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-10-admin-blog-publish",
   "mode": "daily+incident+content",
   "status": "verified_production",
   "repository_visibility": "public",
-  "base_commit": "41852611938108e56a0f5558c2e75f65a85941a6",
+  "base_commit": "1461d72065ef432922bd37e00e98f354b991755c",
   "private_records": ".growth-local/owner/",
   "private_cursors_initialized": false,
   "source_checkpoints": {
@@ -24,12 +24,12 @@
       "coverage": "d5626b6 production READY and aliased; synthetic malformed multipart returned 400; deployment warning seen and scoped error/fatal empty; earlier rubric mismatch classified; request-log retention bounded"
     },
     "feedback": {
-      "checked_on": null,
-      "reason": "no authenticated live reader"
+      "checked_on": "2026-11-10",
+      "coverage": "authenticated production admin read; inbox and reply status checked; private counts retained locally"
     },
     "grading_inbox": {
-      "checked_on": null,
-      "reason": "no authenticated live reader; 7-day diagnostic archive count and original-stage reconciliation remain unknown despite Vercel and first-party fallback"
+      "checked_on": "2026-11-10",
+      "coverage": "authenticated 7-day archive list and complete original details reconciled with available runtime logs; point-total conflict and missing row allocations classified; private counts retained locally"
     },
     "gsc": {
       "checked_on": "2026-11-10",
@@ -48,8 +48,8 @@
     },
     "quiz_admin": {
       "checked_on": "2026-11-10",
-      "status": "unavailable",
-      "reason": "existing browser /admin redirected to /pricing; live generation and practice totals unknown"
+      "status": "available",
+      "coverage": "authenticated complete generation and attempt snapshot; small sample, discovery funnel still pending"
     }
   },
   "work": {
@@ -114,16 +114,23 @@
       "review": "2026-11-17 collection/activation; 2026-12-08 mature cohorts/verified recurring payments"
     },
     "GRADE-001": {
-      "investigation": "runtime_stage_code_and_first_party_terminal_reconciled; admin_archive_unread",
-      "implementation": "malformed_form_data_400_and_localized_guidance",
-      "validation": "focused34; changed_lint; production_build",
+      "investigation": "runtime_stage_code_and_first_party_terminal_reconciled; authenticated_admin_archive_reviewed; inconsistent_point_totals_and_missing_row_allocations_classified",
+      "implementation": "malformed_form_data_400_and_localized_guidance; seven_language_rubric_point_guidance",
+      "validation": "full321; seo119; changed_lint; production_build; blog_browser",
       "deployment": "verified_production",
-      "review": "2026-11-11 inbox summary and new malformed/rubric structure attempts"
+      "review": "2026-11-11 new malformed and rubric structure attempts after guidance"
     },
     "CONTENT-001": {
-      "implementation": "english_article_draft_complete",
-      "validation": "sources_product_links_mobile_preview_reviewed",
-      "publication": "awaiting_approval"
+      "implementation": "english_article_published",
+      "validation": "sources_product_links_mobile_browser_seo119_build_and_production_smoke",
+      "publication": "verified_production",
+      "published_on": "2026-11-10",
+      "review": "2026-11-17 index and links; 2026-12-08 search/first and second evaluations/verified subscriptions"
+    },
+    "ADMIN-001": {
+      "implementation": "existing_production_admin_secret_route_reused_without_otp_or_new_bypass",
+      "validation": "authenticated_grading_quiz_feedback_reads_200; no_secret_persisted",
+      "status": "verified_production"
     }
   },
   "release": {
@@ -136,26 +143,26 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "d5626b6b0bdf54a113ebb0d2382bda2c5183fb7d",
+    "commit": "c7b5f18267461acbb5c7e346b5f74061f24ba804",
     "production": {
-      "deployment_id": "dpl_CsPkbudF3xWdjXHP2hJnwZGWZTRp",
+      "deployment_id": "dpl_GUXBaix2hZKTpfY4TXuAKYqaiAKB",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "synthetic malformed multipart POST /api/evaluate returned 400 INVALID_FORM_DATA with guidance; home loaded; deployment warning confirmed",
+      "smoke": "new blog article and index loaded on production; canonical, BlogPosting date, sitemap, CTA verified; previous malformed multipart smoke remains recorded in prior run",
       "runtime_errors": {
-        "scan": "deployment scoped error/fatal after release",
-        "observed": 0
+        "scan": "bounded new deployment runtime query returned no entries; no denominator or error-rate inference",
+        "observed": null
       },
-      "limits": "no live model execution; admin grading archive unauthenticated; new genuine client attempts and rubric mismatch recurrence need follow-up"
+      "limits": "no live model execution; new genuine client attempts, rubric mismatch recurrence and content performance need follow-up"
     }
   },
   "next_actions": [
-    "2026-11-11 grading: reconcile authenticated 7-day inbox stage/code with terminal attempts; do not infer empty or resolved from missing access or retention; classify new malformed multipart warnings and rubric mismatch",
-    "Publish CONTENT-001 only after separate blog publication approval and final route/canonical/sitemap verification",
-    "2026-11-17 review quiz exposure/selection/sample/create-click collection and authorized admin generation/outcome aggregate; do not infer zero from missing access",
+    "2026-11-11 grading: recheck authenticated 7-day inbox against terminal attempts, new malformed multipart warnings and rubric mismatch after clearer guidance; history count is not unresolved queue size",
+    "2026-11-17 review CONTENT-001 indexability, internal links and click collection; 2026-12-08 compare search, first/second successful evaluations and verified subscriptions",
+    "2026-11-17 review quiz exposure/selection/sample/create-click collection and authenticated admin generation/outcome aggregate; current nonzero sample is too small to identify the main adoption bottleneck",
     "2026-11-17 review English rubric-checker indexability, US/AU/CA/MY search cohorts and first/second successful evaluation paths",
     "2026-12-08 assess full 28-day growth and mature repeat-use cohorts against verified recurring payments",
-    "Next daily reconcile unresolved feedback and new evaluation/payment failures; use Vercel + first-party fallback when admin authentication is unavailable, and retain unknown inbox status",
+    "Next daily reconcile feedback and new evaluation/payment failures through authenticated admin reads; use Vercel + first-party fallback if authentication fails",
     "Keep next report manifest timezone, latest complete date, filters and key event definitions; add same-window daily/country/landing breakdowns when available"
   ],
   "review_dates": {

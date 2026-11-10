@@ -14,9 +14,12 @@
 ## 콘텐츠
 
 - [완성 원고](../../seo/drafts/2026-11-10-compare-essay-drafts-with-rubric.md)를 `/blog/compare-essay-drafts-with-rubric`에 반영했다. 같은 루브릭으로 두 초안을 비교하는 가상 사례, 수정 기록, AI 점수 범위의 해석 한계, 프로젝트 버전·재평가 CTA를 포함한다.
-- 외부 출처 두 곳은 2026-11-10 확인했다. canonical, 영어 전용 hreflang, BlogPosting 날짜, sitemap, 내부 링크, 모바일 및 키보드 사용을 게시 전 검증한다.
-- 실제 게시일은 운영 도메인 확인 후 기록하고, 게시 +7일 색인·링크, +28일 검색·첫/두 번째 평가·검증 결제를 비교한다. 클릭만으로 구독 효과를 주장하지 않는다.
+- 외부 출처 두 곳은 2026-11-10 확인했다. canonical, 영어 전용 hreflang, BlogPosting 날짜, sitemap, 내부 링크, 모바일 및 키보드 사용을 게시 전 검증했다.
+- 2026-11-10 production 게시를 확인했다. 2026-11-17 색인·링크, 2026-12-08 검색·첫/두 번째 평가·검증 결제를 비교한다. 클릭만으로 구독 효과를 주장하지 않는다.
 
 ## 검증·출시
 
-- `npm run test:seo`는 119개 공개 페이지 검사에 통과했다. 관련 성장 경로 단위 테스트도 통과했다. 전체 회귀·lint·production build·브라우저 검사 및 배포 결과는 완료 후 이 기록에 추가한다.
+- 전체 단위·API 회귀 321건, `npm run test:seo` 119개 공개 페이지, 관련 성장 경로 8건, 수정 파일 lint, production build가 통과했다.
+- 환경변수 없는 격리 worktree에서 블로그 브라우저 검사가 통과했다. 320/390/1280px 화면, 접근성, canonical, 구조화 데이터, 자바스크립트 없이 읽히는 본문, 내부 CTA, 기존 글 링크, 404 및 runtime 오류를 확인했다. 테스트 도구 `@axe-core/playwright`는 검증 전용 임시 폴더에만 설치했다.
+- main 커밋 `c7b5f18267461acbb5c7e346b5f74061f24ba804`의 production 배포 `dpl_GUXBaix2hZKTpfY4TXuAKYqaiAKB`가 READY다. 운영 도메인에서 글과 블로그 목록, canonical, BlogPosting 날짜, sitemap 및 CTA를 확인했다. 실제 사용자 생성/평가 성공률이나 검색/구독 성과는 아직 검증되지 않았다.
+- 출시 직후 bounded runtime 로그 조회에는 해당 배포의 항목이 없었다. 오류 0건이나 성공률로 해석하지 않고, 다음 실제 요청 이후 재확인한다.

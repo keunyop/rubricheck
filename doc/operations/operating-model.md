@@ -43,14 +43,14 @@ PO daily 점검에서 관리자 실패 보관함의 신규 항목과 최근 24�
 | 테스트/CI | 접근 가능 / CI 설정 미확인 | test:all·lint·build 스크립트 있음; 로컬 전체 테스트 실행. 저장소에 GitHub workflow 없음. 배포 build가 테스트 실행을 보장하지 않음 |
 | Vercel | 접근 가능 | rubricheck project, 최근 production READY, Node 24.x 설정. 정확한 runtime patch는 확인 안 됨. preview는 custom domain 외 SSO 보호 |
 | 현재 배포 | 접근 가능 | 기존 dpl_DDPKYWKZEhpV7yoFW4XYDeiAiin5 확인. 이번 변경 배포 아님 |
-| Feedback/Grading failures | 평가 실패 접근 가능; 피드백 미확인 | 기존 비밀키로 grading-failures 읽기 API 200과 7일 보관함 요약·진단을 확인. 피드백 읽기는 별도 확인 필요. 보관함은 미해결 작업 큐가 아님 |
+| Feedback/Grading failures | 접근 가능 | 기존 비밀키로 grading-failures·feedback 읽기 API 200과 7일 보관함 요약·진단·피드백 답변 상태를 확인. 보관함은 미해결 작업 큐가 아님 |
 | 애플리케이션 오류 | 접근 가능(부분) | Vercel 오류 cluster 읽기 성공. cluster first/last는 요청 window를 벗어나므로 고유 실패율 산출에 쓰지 않음 |
 | 문서/모델 사용비 | 추가 연결 필요 | 모델 설정과 실패 분류 코드만 확인. 토큰·OCR billing/전체 비용 미확인 |
 | Supabase | 접근 가능 | MCP 읽기 전용 admin summary/schema/growth aggregate 성공. 원문 조회 없음 |
 | Stripe | 접근 가능 | live 구독·가격·charges·refunds·balance transactions 확인. 상세 합계는 비공개 기록 |
 | GSC | 로컬 보고서 분석 가능 | 2026-11-08까지의 날짜별 export로 28일 비교 가능. query×page와 필터/timezone manifest는 없음; property API 직접 조회 없음 |
 | GA4 | 로컬 보고서 부분 분석 가능 | 2026-11-08까지의 Events export 확인. 랜딩·유입별 sessions와 property timezone·threshold·key events 설정은 미확인; 직접 조회 없음 |
-| 블로그 | 접근 가능 | registry·route·sitemap과 게시 위임 확인. 새 글의 production URL은 배포 후 검증 |
+| 블로그 | 접근 가능 | registry·route·sitemap과 게시 위임 확인. 새 글의 production URL·canonical·BlogPosting·목록 노출 확인 |
 
 GSC/GA4는 [읽기 연결 절차](google-analytics-access.md)를 따른다. 해당 property만 GSC Restricted/`webmasters.readonly`, GA4 Viewer/`analytics.readonly`로 연결하며 비밀번호·token·JSON key를 채팅이나 저장소에 넣지 않는다. 연결이 어려우면 [필드와 기간](../../.agents/skills/rubricheck-owner/references/measurement.md)에 맞춘 최신 완결 56일 CSV를 제공한다.
 

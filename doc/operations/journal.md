@@ -7,6 +7,7 @@
 - 모드: 사용자 지침에 따른 daily + incident + content. 기존 관리자 비밀키 인증을 통해 평가 실패·퀴즈 집계 읽기 경로를 확인했다. 이메일 인증 우회용 무인증 경로를 추가하지 않았다.
 - 평가 실패 보관함의 구조화 오류를 원본과 로그로 대조했다. 항목 배점 합계와 총점이 충돌하거나 항목별 배점이 빠진 기준표가 확인됐다. 임의 점수 보정 없이 7개 언어 사용자 안내에 배점 점검·배점 내역 확인을 추가했다.
 - 신규 영어 글의 실제 블로그 route, 메타데이터, 내부 CTA, sitemap을 구현했다. 사용자 상시 게시 위임에 따라 별도 승인 없이 검증 후 production에 게시한다. 세부 상태는 [실행 기록](runs/2026-11-10-admin-blog-publish.md)에 남긴다.
+- 상태: `verified_production`. 전체 321·SEO 119경로·lint·production build·격리 브라우저 검사 통과. main 커밋 `c7b5f18`의 Vercel 배포가 READY이고 운영 도메인의 글·목록·canonical·BlogPosting·sitemap을 확인했다. 11/17 색인·새 평가 실패, 12/08 콘텐츠/재사용/구독 성과를 재검토한다.
 
 ## 2026-11-10 grading-content
 

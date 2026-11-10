@@ -1,5 +1,5 @@
 ---
-status: publication_ready
+status: published
 language: en
 title: "How to Compare Essay Drafts with the Same Rubric"
 slug: compare-essay-drafts-with-rubric
@@ -10,9 +10,9 @@ author: RubriCheck
 drafted_on: 2026-11-10
 source_checked_on: 2026-11-10
 publication_authorized: true
-published_on: null
-index_review_on: null
-outcome_review_on: null
+published_on: 2026-11-10
+index_review_on: 2026-11-17
+outcome_review_on: 2026-12-08
 ---
 
 ## 편집·게시 검토 메모 — 본문에 포함하지 않음
@@ -25,9 +25,9 @@ outcome_review_on: null
 - 제품·개인정보 확인: `src/lib/scorePresentation.ts`의 범위·동일 모드 비교 안내, `app/components/AssignmentProjectView.tsx`의 버전 목록·New version, `app/HomePageClient.tsx`의 프로젝트 저장·재평가 흐름을 2026-11-10 확인했다. 자동 문장 차이 비교, 공식 성적 예측, 자료 진위 검증, 무제한 무료 재평가를 제공한다고 쓰지 않는다. 예제는 전부 창작이며 학생 자료·개인 식별자 없음.
 - 외부 출처 확인일: 2026-11-10. Carnegie Mellon의 rubric 기준 설명과 MTSU의 수정 전략을 실제 열람했다. 출처의 페이지 게시일은 미표기이므로 확인일과 구분한다. 인용문·후기·효과 수치를 만들지 않았다.
 - 게시 형식: 기존 영어 블로그 구조의 H1·H2·짧은 문단·목록·예문 구성. 넓은 표·이미지·외부 embed가 필요 없다. registry·route·sitemap·구조화 데이터에 반영했고 실제 production 공개 확인을 남겨 두었다.
-- 로컬 검증일·결과: 2026-11-10. 본문 약 1,395단어, title 48자·meta description 153자, H1 한 개, slug 중복 없음, 내부 링크 다섯 개의 목적지 registry/route 확인, 내부 UTM 없음, 발행일·성과 검토일 null 확인. 기존 blog CSS를 적용한 비공개 정적 미리보기에서 320·390·1280px 가로 넘침 없음·CTA 목적지·예문 노출·runtime 오류 없음 확인. 이는 실제 Next 게시 경로나 색인·운영 클릭 검증을 대신하지 않는다.
-- 게시 전 최종 확인: 실제 블로그 route의 모바일·키보드·CTA·canonical·BlogPosting·날짜·sitemap·영어 전용 hreflang 정책을 검증한다. 별도 게시 승인은 2026-11-10 사용자 지침으로 면제됐다. 실제 게시일은 production 공개 확인 후 기록한다.
-- 검토일: 게시 T+7일 색인·링크·유입 수집, T+28일 같은 기간의 검색과 첫 성공·두 번째 성공·검증된 결제를 검토한다. 현재 미게시이므로 두 날짜는 null이다. 검색 클릭·workspace 진입만으로 구독 전환을 판정하지 않는다.
+- 로컬 검증일·결과: 2026-11-10. 본문 약 1,395단어, title 48자·meta description 153자, H1 한 개, slug 중복 없음, 내부 링크 다섯 개의 목적지 registry/route 확인, 내부 UTM 없음. 기존 blog CSS를 적용한 비공개 정적 미리보기에서 320·390·1280px 가로 넘침 없음·CTA 목적지·예문 노출·runtime 오류 없음 확인. 이후 격리 Next 브라우저 검사와 production 경로 확인을 완료했다.
+- 게시 확인: 실제 블로그 route의 모바일·키보드·CTA·canonical·BlogPosting·날짜·sitemap·영어 전용 hreflang 정책을 검증했다. 별도 게시 승인은 2026-11-10 사용자 지침으로 면제됐으며 같은 날 production 공개를 확인했다.
+- 검토일: 2026-11-17 색인·링크·유입 수집, 2026-12-08 같은 기간의 검색과 첫 성공·두 번째 성공·검증된 결제를 검토한다. 2026-11-10 production 경로·canonical·BlogPosting·sitemap·블로그 목록을 확인했다. 검색 클릭·workspace 진입만으로 구독 전환을 판정하지 않는다.
 
 ---
 
