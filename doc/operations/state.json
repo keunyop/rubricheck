@@ -5,7 +5,7 @@
   "last_run_record": "doc/operations/runs/2026-11-09-report-ingestion.md",
   "last_journal_entry": "doc/operations/journal.md#2026-11-09-report-ingestion",
   "mode": "auto",
-  "status": "ready_to_release",
+  "status": "verified_production",
   "repository_visibility": "public",
   "base_commit": "77b274c",
   "private_records": ".growth-local/owner/",
@@ -13,7 +13,7 @@
   "source_checkpoints": {
     "stripe": {"checked_on": "2026-11-09", "details": "private snapshot"},
     "supabase": {"checked_on": "2026-11-09", "details": "private aggregate snapshot"},
-    "vercel": {"checked_on": "2026-11-09", "coverage": "production READY and public smoke passed; no deployment error logs; two malformed multipart requests rejected during validation"},
+    "vercel": {"checked_on": "2026-11-09", "coverage": "report workflow commit 2358f9c deployed READY to production and aliased to rubricheck.com"},
     "feedback": {"checked_on": null, "reason": "no authenticated live reader"},
     "grading_inbox": {"checked_on": null, "reason": "no authenticated live reader"},
     "gsc": {"checked_on": null, "reason": "periodic doc/report upload selected; latest complete report pending"},
@@ -24,7 +24,7 @@
     "OPS-001": {"implementation": "verified_structure_and_first_run", "validation": "passed"},
     "OPS-002": {"implementation": "complete", "validation": "passed", "deployment": "verified_production"},
     "ACCESS-001": {"implementation": "periodic_report_workflow_complete", "live_connection": "not_required", "latest_report": "pending"},
-    "OPS-003": {"implementation": "complete", "validation": "passed", "deployment": "pending"},
+    "OPS-003": {"implementation": "complete", "validation": "passed", "deployment": "verified_production"},
     "RELEASE-001": {"implementation": "complete", "deployment": "verified_production"},
     "QUAL-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true},
     "GROW-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true}

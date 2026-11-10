@@ -7,7 +7,7 @@
 - 모드: 운영 설정 변경
 - 선택: OPS-003 보고서 업로드 방식 추가, ACCESS-001 API 연결 요구 제거
 - 이유: GSC·GA4 API 연결 부담 없이 owner가 최신 집계 근거를 반복 사용할 수 있게 하기 위해서다.
-- 현재 상태: `doc/report/` 규격과 주기, 개인정보 경계, 최신성 판정, owner 자동 탐색 규칙 작성. skill validator·JSON·링크·diff 검사 통과, 커밋·배포 대기.
+- 현재 상태: `doc/report/` 규격과 주기, 개인정보 경계, 최신성 판정, owner 자동 탐색 규칙 작성. skill validator·JSON·링크·diff 검사 통과. 구현 커밋 `2358f9c`가 Vercel production `READY`이고 `rubricheck.com`에 연결됨.
 - 사용자 작업: 매주 월요일 최근 완결 56일 GSC·GA4 보고서를 업로드한다. 월간 retention 보고서는 매월 첫 월요일에 추가한다.
 - 상세 기록: [2026-11-09 report ingestion](runs/2026-11-09-report-ingestion.md)
 

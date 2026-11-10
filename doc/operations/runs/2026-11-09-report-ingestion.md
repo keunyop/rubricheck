@@ -19,4 +19,5 @@
 - skill·측정 기준·업로드 안내: 구현 완료
 - 첫 최신 보고서: 대기
 - skill validator·JSON·링크·diff 검사: 통과
-- 커밋·배포: 대기
+- 구현 커밋: `2358f9c`
+- 배포: Vercel production `READY`, `rubricheck.com` alias 확인

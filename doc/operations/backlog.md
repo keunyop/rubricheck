@@ -15,7 +15,7 @@
 | SEO-001 | 중간: 기존 GSC snapshot의 검색 수요/낮은 CTR | 최신 query×page 확보 후 rubric-feedback-tool 또는 rubric-checker 한 페이지 개선 | 접근 대기; 신규 유사 글 대신 기존 랜딩 후보 |
 | ACCESS-001 | 중간: GSC/GA4 최신 읽기 없음 | [업로드 안내](../report/README.md)에 따라 최근 완결 56일 GSC·GA4 집계 업로드, timezone/latest date/filters 확인 | 절차 작성; 최신 보고서 업로드 대기 |
 
-| OPS-003 | 높음: owner가 수동 업로드 보고서를 자동 발견해야 함 | `doc/report/` 최신 유효 기간 판별, 개인정보 차단, 28일 대 28일 비교, stale 상태 기록 | 구현·검증 완료; 배포 대기 |
+| OPS-003 | 높음: owner가 수동 업로드 보고서를 자동 발견해야 함 | `doc/report/` 최신 유효 기간 판별, 개인정보 차단, 28일 대 28일 비교, stale 상태 기록 | 구현·검증·production 배포 완료 (`2358f9c`) |
 
 ACCESS-001의 기본 수집 방식은 API 연결에서 [주간 보고서 업로드](../report/README.md)로 변경했다. 최신 유효 업로드가 있으면 API 연결은 요구하지 않는다.
 
