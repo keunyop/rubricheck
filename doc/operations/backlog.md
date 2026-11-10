@@ -12,12 +12,22 @@
 | SEC-008 | 배포 전 확인: 기존 runtime 보안 PR 차단 상태 | 기존 [PR #8](https://github.com/keunyop/rubricheck/pull/8)의 실제 runtime patch 재검증, 같은 PR 갱신 | open/외부 상태 확인 필요; 별도 신규 PR 만들지 않음 |
 | BILL-001 | 높음: live Stripe 결제 실패 관측 | failure code·unique invoice/subscription·재시도/갱신 맥락을 개인정보 없이 분류; 접근 가능한 원인만 수정 | 원천 대조 완료: 과거 실패는 동일 청구의 반복 시도, 이후 결제 완료·구독 active. 신규 실패는 daily 재확인; 고객 연락·환불·재시도 자동 수행 금지 |
 | DATA-001 | 높음: 수집 시작이 비교 기간 중간, 실패 이벤트 해석 필요 | expected access/validation와 server failure 분리, attempt별 guest/account terminal outcome reconcile; 완결 cohort 설정 | 미완료. GA4 폼·스크롤 이벤트는 2026-10-22 이후 중단됐고 측정 설정 변경과 일치하므로 전환 KPI로 사용 금지; first-party 결과로 확인 |
-| SEO-001 | 중간: GSC의 기존 랜딩 노출 대비 낮은 클릭 | 최신 query×page 56일 집계로 검색 의도 확인 후 기존 랜딩 한 페이지 개선 | GSC 날짜별 비교·90일 페이지 표 확인. `/rubric-checker` 등 후보가 있으나 query×page가 없어 문구 수정 보류 |
-| ACCESS-001 | 중간: GSC/GA4 최신 읽기 불완전 | [업로드 안내](../report/README.md)에 따라 최근 완결 56일 GSC·GA4 집계와 timezone/latest date/filters 확인 | 로컬 GSC 28일 비교·GA4 Events 분석 완료. GA4 landing/traffic sessions, key events와 manifest 누락; 원본은 Git 제외 |
+| SEO-001 | 높음: 신규 query×page에서 영어 도구 사용 의도 확인, 기존 안내와 불일치 | 기존 영어 rubric-checker 제목·설명·무료 체험/일반 기준 FAQ 개선; locale/CTA 유지 | 2026-11-10 구현. 검증·배포 상태는 최신 run/state 참조; +7일 수집/+28일 성과 확인 |
+| ACCESS-001 | 중간: 최신 보고서의 기간·측정 설정 불완전 | [업로드 안내](../report/README.md)에 따른 완결 날짜·timezone·필터와 같은 창의 breakdown | 새 landing/source/query×page 분석 완료. 미제공으로 남기던 과거 기록 정정. GA4 key events 정의·manifest·일별 breakdown은 여전히 미확인; 원본 Git 제외 |
+| QUIZ-001 | 높음: 신규 기능의 짧은 관찰 기간과 발견→생성 측정 공백 | 샘플 답변 후 생성 CTA, 공개 노출/선택/체험/생성 클릭 계측; 동의·private 경로 제외·7개 언어 유지 | 2026-11-10 구현. 실제 생성/학습 집계는 관리자 접근 부재로 미확인; 기능 사용 0으로 해석 금지 |
+| GROW-002 | 높음: 관측된 가입 cohort에서 첫 성공 이후 재사용·구매 연결 확인 필요 | 수집 기간을 충족한 cohort의 첫/두 번째 성공·검증된 recurring 결제 관찰 후 기존 결과→다음 버전 경로 개선 1건 선택 | 계획 수립. 2026-11-17 수집/첫 사용 경로, 2026-12-08 성숙 cohort 확인. 국가별 결제율·인과 효과 미측정 |
 
 | OPS-003 | 높음: owner가 수동 업로드 보고서를 자동 발견해야 함 | `doc/report/` 최신 유효 기간 판별, 원본 Git 제외, 28일 대 28일 비교, stale 상태 기록 | 보고서 탐색은 배포 완료 (`2358f9c`); 원본 Git 제외 규칙은 이번 실행에서 추가 |
 
 ACCESS-001의 기본 수집 방식은 API 연결에서 [주간 보고서 업로드](../report/README.md)로 변경했다. 최신 유효 업로드가 있으면 API 연결은 요구하지 않는다.
+
+2026-11-10 상태 정정: 위 과거 행의 OPS-002·RELEASE-001·QUAL-001·GROW-001·OPS-003 배포 대기 표기는 오래된 기록이다. 후속 운영 일지와 state의 `verified_production`으로 완료됐으며 이번 시작 시 현재 main production도 READY였다. DATA-001은 bounded first-party attempt terminal 집계 대조를 완료했으나, 미해결 피드백과 성숙 유지 cohort는 남아 있다.
+
+## 2026-11-10 성장·퀴즈 실험 기준
+
+- SEO-001: 영어 기존 페이지를 미국 우선·호주/캐나다 보조로 관찰하며 말레이시아 기반을 유지한다. 신규 번역/광고 비용 없음. 검색 의도와 제품의 불일치 수정이 최소 범위다. 잘못된 무료 범위 안내·CTA 오류가 발견되면 해당 문구/링크를 복구한다.
+- QUIZ-001: 기존 샘플 체험 위치에서 생성으로 이어지게 한다. 노출→선택→샘플→생성 클릭은 GA4 공개 화면 관측이며 관리자 생성/학습 집계와 동일한 사용자 퍼널이 아니다. 모델 실행·가격·무료 한도·DB migration 없음. 추적 동의 위반·private 정보 전송·UI 방해 시 즉시 revert한다.
+- GROW-002: 성공한 다른 attempt를 두 번째 사용으로 정의한다. 기존 수집 시작 이전의 결측을 0으로 채우지 않는다. 가입 후 관찰 기간과 동의 누락을 명시한다. 11월 17일 경로 확인 후 12월 8일 재사용·실제 구독 결과를 보고 다음 변경을 정한다. 표본이 부족하면 관찰 연장, 근거 없이 가격·무료 한도를 변경하지 않는다.
 
 ## 변경 평가와 복구
 

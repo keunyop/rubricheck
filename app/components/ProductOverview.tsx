@@ -3,6 +3,8 @@
 import { LandingEntry } from "./LandingEntry";
 import { HomeResources } from "./HomeResources";
 import { QuizSample } from "./QuizSample";
+import { useQuizDiscovery } from "./useQuizDiscovery";
+import { trackQuiz } from "../../src/lib/quizAnalytics";
 import { useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "./LanguageProvider";
@@ -20,6 +22,11 @@ export function ProductOverview({ home = false }: { home?: boolean }) {
   const { t, href } = useLanguage();
   const [selected, setSelected] = useState(1);
   const [mode, setMode] = useState<"assignment" | "quiz">("assignment");
+  const quizEntry = useQuizDiscovery<HTMLButtonElement>("tab");
+  function selectMode(value: "assignment" | "quiz") {
+    if (value === "quiz" && mode !== "quiz") trackQuiz("quiz_mode_selected", "tab");
+    setMode(value);
+  }
   const criterion = sample.rubric[selected];
   return <main id="main-content" tabIndex={-1} className={styles.page}>
     <div className={styles.container}>
@@ -28,14 +35,15 @@ export function ProductOverview({ home = false }: { home?: boolean }) {
         <div className={styles.modeTabs} role="tablist" aria-label={t("Product")}>
           {(["assignment", "quiz"] as const).map(value => <button
             key={value} id={`product-tab-${value}`} type="button" role="tab"
+            ref={value === "quiz" ? quizEntry : undefined}
             aria-selected={mode === value} aria-controls="product-panel"
             tabIndex={mode === value ? 0 : -1} data-mode={value}
-            onClick={() => setMode(value)}
+            onClick={() => selectMode(value)}
             onKeyDown={event => {
               if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
               event.preventDefault();
               const next = event.key === "Home" ? "assignment" : event.key === "End" ? "quiz" : mode === "assignment" ? "quiz" : "assignment";
-              setMode(next);
+              selectMode(next);
               document.getElementById(`product-tab-${next}`)?.focus();
             }}
           ><span aria-hidden="true" className={styles.modeDot} />{t(value === "assignment" ? "Assignment" : "Quiz generator")}</button>)}
@@ -46,7 +54,7 @@ export function ProductOverview({ home = false }: { home?: boolean }) {
           <h1 id="product-title">{mode === "assignment" ? <>{t("Know what to improve.")} <span>{t("Before you submit.")}</span></> : t("Turn your study materials into quizzes")}</h1>
           <p className={styles.intro}>{t(mode === "assignment" ? "Upload your assignment and rubric. Get clear feedback for your next draft." : "Create multiple-choice and true/false questions from assignments, PDFs, slides and notes.")}</p>
           <div className={styles.actions}>
-            <Link href={href(mode === "assignment" ? "/workspace" : "/quizzes?view=create")} className={styles.primary}>{t(mode === "assignment" ? "Check my draft for free" : "Create a quiz")} <span aria-hidden="true">↗</span></Link>
+            <Link href={href(mode === "assignment" ? "/workspace" : "/quizzes?view=create")} className={styles.primary} onClick={() => { if (mode === "quiz") trackQuiz("quiz_create_clicked", "hero"); }}>{t(mode === "assignment" ? "Check my draft for free" : "Create a quiz")} <span aria-hidden="true">↗</span></Link>
           </div>
           <p className={styles.note}>{t(mode === "assignment" ? "One free summary preview. No sign-up or card required." : "Sign up for 10 free questions in total.")}</p>
           {mode === "quiz" && <Link href={href("/ai-quiz-generator")} className={styles.textLink}>{t("Explore the quiz generator")} <span aria-hidden="true">→</span></Link>}
@@ -66,7 +74,7 @@ export function ProductOverview({ home = false }: { home?: boolean }) {
             <div id="sample-criterion-feedback" className={styles.feedback} aria-live="polite" aria-atomic="true"><p>{t(criterion.name)}</p><p>{t(criterion.feedback)}</p></div>
             <p className={styles.sampleNote}>{t("Prepared example. No check is used. AI estimates are not official grades.")}</p>
           </div>
-        </section> : <QuizSample />}
+        </section> : <QuizSample showCreateAction />}
         </div>
       </section>
 

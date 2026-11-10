@@ -90,11 +90,11 @@ export const HOME_INTERNAL_LINKS: SeoLink[] = [
 export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
   {
     "slug": "rubric-checker",
-    "title": "How a Rubric Checker Works: Criteria and Feedback",
-    "description": "Learn how to check a draft against a rubric, prepare your scoring criteria, and turn feedback into revisions. Includes a rubric checklist example.",
+    "title": "Rubric Checker: Check Your Draft Against a Rubric",
+    "description": "Check your essay or assignment against your rubric with AI. Try a free summary without signing up, then use the feedback to plan revisions before submission.",
     "h1": "How to Check Your Draft Against a Rubric",
     "eyebrow": "Understand your grading criteria",
-    "intro": "A rubric checker compares your draft with the criteria and performance levels in your grading rubric. RubriCheck helps you see where the assignment meets those expectations, where evidence is missing, and what to revise before you submit.",
+    "intro": `Add your essay or assignment draft and your instructor's rubric to get a free AI summary without signing up. Use the summary to plan your next revision before submission. Sign up for ${FREE_TRIAL_LIMIT} free checks; credits or Pro unlock detailed criterion feedback. All scores are estimates, not official grades.`,
     "primaryKeyword": "rubric checker",
     "keywords": [
       "rubric checker",
@@ -153,11 +153,11 @@ export const SEO_LANDING_PAGES: SeoLandingPageContent[] = [
       },
       {
         "question": "Can I check an assignment without a rubric?",
-        "answer": "RubriCheck needs rubric criteria to evaluate the draft. If you only have assignment instructions, first turn the explicit requirements into a review checklist. Ask your instructor about any missing weights or grading expectations."
+        "answer": "Yes. Choose Check without a rubric to review task focus, reasoning, evidence, organization, and clarity using general criteria. You can add assignment instructions to guide the review. These estimates use general criteria rather than your instructor's grading scheme."
       },
       {
         "question": "Is RubriCheck free to try?",
-        "answer": `RubriCheck includes ${FREE_TRIAL_LIMIT} free trial evaluations. Detailed criterion feedback and Strict mode require credits or Pro; rewrite suggestions require Pro. See pricing for the current plan details.`
+        "answer": `Try one summary-only preview of your own assignment without signing up. Sign up for ${FREE_TRIAL_LIMIT} free checks with no card required, including estimated scores and the leading improvement priority. Detailed criterion feedback and Strict mode require credits or Pro; rewrite suggestions require Pro.`
       }
     ],
     "ctaLabel": "Check my draft",

@@ -1,36 +1,114 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-10-report-analysis",
-  "last_run_record": "doc/operations/runs/2026-11-10-report-analysis.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-10-report-analysis",
-  "mode": "auto",
+  "last_run": "2026-11-10-growth-quiz",
+  "last_run_record": "doc/operations/runs/2026-11-10-growth-quiz.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-10-growth-quiz",
+  "mode": "weekly",
   "status": "verified_local",
   "repository_visibility": "public",
-  "base_commit": "648eed5",
+  "base_commit": "ca7cce31a75923594cc5148f6db13a8c62f74854",
   "private_records": ".growth-local/owner/",
   "private_cursors_initialized": false,
   "source_checkpoints": {
-    "stripe": {"checked_on": "2026-11-10", "details": "historical failure attempts reconciled in private record; paid invoice and active subscription"},
-    "supabase": {"checked_on": "2026-11-09", "details": "private aggregate snapshot"},
-    "vercel": {"checked_on": "2026-11-09", "coverage": "report workflow commit 2358f9c deployed READY to production and aliased to rubricheck.com"},
-    "feedback": {"checked_on": null, "reason": "no authenticated live reader"},
-    "grading_inbox": {"checked_on": null, "reason": "no authenticated live reader"},
-    "gsc": {"checked_on": "2026-11-10", "latest_complete_date": "2026-11-08", "coverage": "two complete 28-day chart windows; 90-day page/query breakdowns; query-by-page missing"},
-    "ga4": {"checked_on": "2026-11-10", "latest_complete_date": "2026-11-08", "coverage": "Events by date only; landing/acquisition sessions, key events, timezone and threshold unknown"},
-    "report_upload": {"checked_on": "2026-11-10", "latest_complete_date": "2026-11-08", "status": "partially_usable_metadata_missing; raw files gitignored"}
+    "stripe": {
+      "checked_on": "2026-11-10",
+      "details": "existing authorized live analytical snapshot; recurring states separated from terminal ends; no MRR recalculation"
+    },
+    "supabase": {
+      "checked_on": "2026-11-10",
+      "coverage": "bounded consent-based growth aggregates; first collection 2026-10-29; no complete prior window or mature retention inference"
+    },
+    "vercel": {
+      "checked_on": "2026-11-10",
+      "coverage": "current production READY; error/fatal grouped scan 30m empty; 24h outside retention request rejected"
+    },
+    "feedback": {
+      "checked_on": null,
+      "reason": "no authenticated live reader"
+    },
+    "grading_inbox": {
+      "checked_on": null,
+      "reason": "no authenticated live reader"
+    },
+    "gsc": {
+      "checked_on": "2026-11-10",
+      "latest_complete_date": "2026-11-08",
+      "coverage": "two complete 28-day chart windows; longer country/page breakdowns; query-by-page newly available with exact period missing"
+    },
+    "ga4": {
+      "checked_on": "2026-11-10",
+      "latest_reported_date": "2026-11-09",
+      "coverage": "aggregate landing and acquisition 2026-08-12 through 11-09; no daily split; key event configuration/timezone/threshold/complete-date manifest unknown"
+    },
+    "report_upload": {
+      "checked_on": "2026-11-10",
+      "latest_reported_date": "2026-11-09",
+      "status": "new_landing_acquisition_query_page_analyzed; metadata_missing; raw_files_gitignored"
+    },
+    "quiz_admin": {
+      "checked_on": "2026-11-10",
+      "status": "unavailable",
+      "reason": "existing browser /admin redirected to /pricing; live generation and practice totals unknown"
+    }
   },
   "work": {
-    "OPS-001": {"implementation": "verified_structure_and_first_run", "validation": "passed"},
-    "OPS-002": {"implementation": "complete", "validation": "passed", "deployment": "verified_production"},
-    "ACCESS-001": {"implementation": "periodic_report_workflow_complete", "live_connection": "not_required", "latest_report": "partial_events_and_gsc; landing_acquisition_manifest_missing"},
-    "OPS-003": {"implementation": "complete", "validation": "passed", "deployment": "verified_production"},
-    "RELEASE-001": {"implementation": "complete", "deployment": "verified_production"},
-    "QUAL-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true},
-    "GROW-001": {"implementation": "verified_local", "deployment": "deployed", "production_verified": true},
-    "BILL-001": {"investigation": "source_reconciled", "validation": "stripe_live_crosscheck", "deployment": "not_applicable"},
-    "DATA-001": {"investigation": "ga4_form_event_definition_break_identified", "validation": "event_dates_and_code_history", "first_party_reconciliation": "pending"},
-    "SEO-001": {"investigation": "page_candidates_identified", "query_by_page": "pending"}
+    "OPS-001": {
+      "implementation": "verified_structure_and_first_run",
+      "validation": "passed"
+    },
+    "OPS-002": {
+      "implementation": "complete",
+      "validation": "passed",
+      "deployment": "verified_production"
+    },
+    "ACCESS-001": {
+      "implementation": "periodic_report_workflow_complete",
+      "live_connection": "not_required",
+      "latest_report": "new_landing_acquisition_query_page_analyzed; metadata_missing"
+    },
+    "OPS-003": {
+      "implementation": "complete",
+      "validation": "passed",
+      "deployment": "verified_production"
+    },
+    "RELEASE-001": {
+      "implementation": "complete",
+      "deployment": "verified_production"
+    },
+    "QUAL-001": {
+      "implementation": "complete",
+      "deployment": "verified_production",
+      "production_verified": true
+    },
+    "GROW-001": {
+      "implementation": "complete",
+      "deployment": "verified_production",
+      "production_verified": true
+    },
+    "BILL-001": {
+      "investigation": "source_reconciled",
+      "validation": "stripe_live_crosscheck",
+      "deployment": "not_applicable"
+    },
+    "DATA-001": {
+      "investigation": "ga4_form_event_definition_break_identified",
+      "validation": "event_dates_and_code_history",
+      "first_party_reconciliation": "bounded_aggregate_complete; collection_begins_2026-10-29; unresolved_feedback_unavailable"
+    },
+    "SEO-001": {
+      "investigation": "new_query_page_export_supports_existing_english_tool_intent",
+      "implementation": "verified_local",
+      "deployment": "pending",
+      "validation": "full320; focused browser14 groups; changed lint; production build passed"
+    },
+    "QUIZ-001": {
+      "investigation": "public_entry_exists; short_observation; live_admin_unavailable",
+      "implementation": "verified_local",
+      "deployment": "pending",
+      "measurement": "public GA4 discovery only; generation outcomes remain admin aggregate",
+      "validation": "full320; focused browser14 groups; changed lint; production build passed"
+    }
   },
   "release": {
     "default_branch": "main",
@@ -56,16 +134,20 @@
     }
   },
   "next_actions": [
-    "Obtain GA4 landing page and traffic acquisition sessions, key events, property timezone/threshold manifest, and GSC query-by-page for the latest 56 days",
-    "Reconcile first-party unique evaluation terminal outcomes and unresolved feedback; recheck new payment failures at next daily",
-    "Reassess PR #8 runtime guard against current Vercel behavior"
+    "2026-11-17 review quiz exposure/selection/sample/create-click collection and authorized admin generation/outcome aggregate; do not infer zero from missing access",
+    "2026-11-17 review English rubric-checker indexability, US/AU/CA/MY search cohorts and first/second successful evaluation paths",
+    "2026-12-08 assess full 28-day growth and mature repeat-use cohorts against verified recurring payments",
+    "Next daily reconcile unresolved feedback and new evaluation/payment failures; existing authenticated admin access required",
+    "Keep next report manifest timezone, latest complete date, filters and key event definitions; add same-window daily/country/landing breakdowns when available"
   ],
   "review_dates": {
-    "next_daily": "2026-11-10",
-    "next_weekly": "2026-11-16",
+    "next_daily": "2026-11-11",
+    "next_weekly": "2026-11-17",
     "next_report_upload": "2026-11-16",
     "next_monthly": "2026-12-01",
-    "post_deployment": "immediate smoke; +7 days quality/collection; +28 days growth"
+    "post_deployment": "immediate smoke; +7 days quality/collection; +28 days growth",
+    "growth_quiz_collection": "2026-11-17",
+    "growth_quiz_outcomes": "2026-12-08"
   },
   "automation": {
     "registered": false,

@@ -18,5 +18,10 @@
 .mark { margin-inline-start: auto; font-size: 18px; }
 .explanation { min-height: 88px; display: flex; align-items: center; margin-top: 16px; padding: 12px 14px; border-inline-start: 2px solid #6cb6a9; background: #f5faf7; color: #476660; font-size: 12px; line-height: 1.75; }
 .explanation > span { color: #64748b; }
+.createAction { margin-top: 16px; }
+.createAction a { display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 44px; padding: 10px 16px; border-radius: 9px; background: #0f766e; color: #fff; font-size: 13px; font-weight: 600; }
+.createAction a:hover { background: #115e59; }
+.createAction a:focus-visible { outline: 3px solid #0f766e; outline-offset: 3px; }
+.createAction p { margin-top: 8px; color: #64748b; font-size: 11px; line-height: 1.7; }
 @media (max-width: 700px) { .sampleGrid { grid-template-columns: 1fr; } .body { padding: 20px; } }
 @media (max-width: 359px) { .body { padding: 16px; } .top { padding-inline: 16px; } }
