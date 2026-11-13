@@ -50,8 +50,8 @@ function SummaryCard({ score, summary }: { score: string; summary: string }) {
   const { t } = useLanguage();
   return <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 md:p-5">
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("Estimated Score Range")}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-indigo-700 md:text-4xl">
+      <p className="text-sm font-medium text-slate-600">{t("Estimated Score Range")}</p>
+      <p className="mt-2 text-3xl font-medium tabular-nums tracking-tight text-slate-900 md:text-4xl">
         {score} <span className="text-xl md:text-2xl">/ 100</span>
       </p>
       <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500 md:text-sm">{t(SCORE_RANGE_NOTICE)}</p>

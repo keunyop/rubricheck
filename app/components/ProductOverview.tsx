@@ -63,7 +63,7 @@ export function ProductOverview({ home = false }: { home?: boolean }) {
           <div className={styles.previewTop}><span className={styles.statusDot} aria-hidden="true" />{t("Sample · Illustrative result")}</div>
           <div className={styles.previewBody}>
             <h2 id="preview-title">{t(sample.title)}</h2>
-            <div className={styles.scoreRow}><div><p>{t("Estimated Score Range")}</p><strong>{sample.overallRange}<small> / 100</small></strong></div><span className={styles.scoreMark} aria-hidden="true">↗</span></div>
+            <div className={styles.scoreRow}><div><p>{t("Estimated Score Range")}</p><strong>{sample.overallRange}<small> / 100</small></strong></div></div>
             <p className={styles.previewHint}>{t("Explore a criterion to see the feedback.")}</p>
             <div className={styles.criteria} role="group" aria-label={t("Sample rubric")}>
               {sample.rubric.map((item, index) => <button type="button" key={item.name} aria-pressed={selected === index} aria-controls="sample-criterion-feedback" onClick={() => setSelected(index)}>

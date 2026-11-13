@@ -1,27 +1,27 @@
 .samples { margin: 24px 0; }
 .sampleGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 16px; align-items: start; }
-.card { min-width: 0; border: 1px solid #dce5e2; border-radius: 18px; background: #fff; box-shadow: 0 16px 48px -24px #33415540; overflow: hidden; }
-.top { display: flex; align-items: center; gap: 8px; padding: 14px 22px; background: #f6fbf9; border-bottom: 1px solid #e2ebe7; color: #64748b; font-size: 11px; }
+.card { min-width: 0; border: 1px solid var(--rc-border); border-radius: 12px; background: #fff; box-shadow: 0 4px 16px #00000008; overflow: hidden; }
+.top { display: flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--rc-subtle); border-bottom: 1px solid var(--rc-border); color: var(--rc-secondary); font-size: 12px; }
 .dot { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: #0f766e; }
 .body { padding: 24px; }
-.source { padding: 14px; background: #f0f7f4; border-radius: 10px; color: #476660; font-size: 12px; line-height: 1.8; }
-.questionHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; color: #0f766e; font-size: 11px; font-weight: 600; }
+.source { padding: 16px; background: var(--rc-subtle); border-radius: 8px; color: var(--rc-secondary); font-size: 13px; line-height: 1.75; }
+.questionHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; color: var(--rc-secondary); font-size: 12px; font-weight: 500; }
 .source + .questionHeading { margin-top: 24px; }
 .card .question { margin: 0; color: #172033; font-size: 17px; line-height: 1.5; font-weight: 600; letter-spacing: -.3px; }
-.options { display: grid; gap: 9px; margin-top: 20px; }
+.options { display: grid; gap: 8px; margin-top: 20px; }
 .options button { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 9px 12px; border: 1px solid #dce5e2; border-radius: 10px; font-size: 14px; text-align: start; cursor: pointer; }
 .options button:hover { border-color: #5eaaa0; background: #f6fbf9; }
 .options button:focus-visible { outline: 3px solid #0f766e; outline-offset: 3px; }
 .options button[data-correct="true"] { border-color: #0d9488; background: #ecfdf5; color: #115e59; }
 .options button[data-incorrect="true"] { border-color: #e9a8a8; background: #fff7f7; color: #9f3434; }
-.letter { display: grid; place-items: center; flex-shrink: 0; width: 27px; height: 27px; border-radius: 7px; background: #f1f5f3; color: #576c65; font-size: 11px; font-weight: 600; }
+.letter { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: 4px; background: var(--rc-subtle); color: var(--rc-secondary); font-size: 12px; font-weight: 500; }
 .mark { margin-inline-start: auto; font-size: 18px; }
-.explanation { min-height: 88px; display: flex; align-items: center; margin-top: 16px; padding: 12px 14px; border-inline-start: 2px solid #6cb6a9; background: #f5faf7; color: #476660; font-size: 12px; line-height: 1.75; }
+.explanation { min-height: 88px; display: flex; align-items: center; margin-top: 16px; padding: 12px 16px; border-inline-start: 3px solid var(--rc-quiz); background: var(--rc-subtle); color: var(--rc-secondary); font-size: 13px; line-height: 1.75; }
 .explanation > span { color: #64748b; }
 .createAction { margin-top: 16px; }
 .createAction a { display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 44px; padding: 10px 16px; border-radius: 9px; background: #0f766e; color: #fff; font-size: 13px; font-weight: 600; }
 .createAction a:hover { background: #115e59; }
 .createAction a:focus-visible { outline: 3px solid #0f766e; outline-offset: 3px; }
-.createAction p { margin-top: 8px; color: #64748b; font-size: 11px; line-height: 1.7; }
+.createAction p { margin-top: 8px; color: var(--rc-muted); font-size: 12px; line-height: 1.7; }
 @media (max-width: 700px) { .sampleGrid { grid-template-columns: 1fr; } .body { padding: 20px; } }
 @media (max-width: 359px) { .body { padding: 16px; } .top { padding-inline: 16px; } }

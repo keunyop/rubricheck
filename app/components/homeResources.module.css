@@ -1,5 +1,5 @@
 .resources { display: grid; align-items: start; gap: 32px; padding: 16px 4px 8px; }
-.resources h2 { margin-bottom: 16px; color: #334155; font-size: 15px; font-weight: 600; letter-spacing: -.2px; }
+.resources h2 { margin-bottom: 16px; color: var(--rc-text); font-size: 16px; font-weight: 600; }
 .guides { display: grid; }
 .guides a { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; border-radius: 8px; padding: 10px 0; font-size: 13px; color: #475569; }
 .guides a:hover { color: #4f46e5; }
