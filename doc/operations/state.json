@@ -1,48 +1,48 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-12-daily-blog",
-  "last_run_record": "doc/operations/runs/2026-11-12-daily-blog.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-12-daily-blog",
-  "mode": "content+skill-maintenance",
+  "last_run": "2026-11-13-daily-grading",
+  "last_run_record": "doc/operations/runs/2026-11-13-daily-grading.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-13-daily-grading",
+  "mode": "daily+incident+content+skill-maintenance",
   "status": "verified_production",
   "repository_visibility": "public",
-  "base_commit": "1461d72065ef432922bd37e00e98f354b991755c",
+  "base_commit": "b8b342b39f46ce2d858638dcea1121a0a78d1bbe",
   "private_records": ".growth-local/owner/",
   "private_cursors_initialized": false,
   "source_checkpoints": {
     "stripe": {
-      "checked_on": "2026-11-11",
-      "details": "live recent charges checked since prior admin snapshot; no new charge; no MRR recalculation"
+      "checked_on": "2026-11-13",
+      "details": "read-only live recurring and recent/prior complete charge windows reconciled by currency; no new failed charge since prior snapshot and no refund in recent complete window; older failures remain in that window; private amounts kept outside public state"
     },
     "supabase": {
-      "checked_on": "2026-11-11",
-      "coverage": "bounded first-party terminal attempts since prior admin snapshot, historical guest recovery, and billing webhook failures; DB clock differed from operating clock; no whole-site failure-rate inference"
+      "checked_on": "2026-11-13",
+      "coverage": "bounded seven-day first-party evaluation terminal attempts and validation events; guest/account and terminal deduplication limits noted; no whole-site failure-rate inference; recent billing webhook failure ledger empty"
     },
     "vercel": {
-      "checked_on": "2026-11-11",
-      "coverage": "24h evaluation route runtime error clusters empty; individual 24h runtime logs unavailable under plan retention; previous deployment verification retained"
+      "checked_on": "2026-11-13",
+      "coverage": "grading route runtime error clusters classified; final production deployment READY and error/fatal group empty after synthetic expected 400; one prior release logged expected 400 and was corrected"
     },
     "feedback": {
-      "checked_on": "2026-11-11",
-      "coverage": "authenticated production admin read; no new item and existing reply sent; private counts retained locally"
+      "checked_on": "2026-11-13",
+      "coverage": "authenticated production admin read; no new feedback item; private details excluded"
     },
     "grading_inbox": {
-      "checked_on": "2026-11-11",
-      "coverage": "authenticated production list; historical recovered entries deleted at user request; list empty on recheck; source rubric issue may recur"
+      "checked_on": "2026-11-13",
+      "coverage": "authenticated production list; actual linked-image DOCX reproduced and fixed; only resolved parse record deleted by ID and absent on recheck; unresolved rubric total mismatches retained"
     },
     "gsc": {
-      "checked_on": "2026-11-10",
+      "checked_on": "2026-11-13",
       "latest_complete_date": "2026-11-08",
       "coverage": "two complete 28-day chart windows; longer country/page breakdowns; query-by-page newly available with exact period missing"
     },
     "ga4": {
-      "checked_on": "2026-11-10",
+      "checked_on": "2026-11-13",
       "latest_reported_date": "2026-11-09",
       "coverage": "aggregate landing and acquisition 2026-08-12 through 11-09; no daily split; key event configuration/timezone/threshold/complete-date manifest unknown"
     },
     "report_upload": {
-      "checked_on": "2026-11-10",
+      "checked_on": "2026-11-13",
       "latest_reported_date": "2026-11-09",
       "status": "new_landing_acquisition_query_page_analyzed; metadata_missing; raw_files_gitignored"
     },
@@ -114,12 +114,12 @@
       "review": "2026-11-17 collection/activation; 2026-12-08 mature cohorts/verified recurring payments"
     },
     "GRADE-001": {
-      "investigation": "runtime_stage_code_and_first_party_terminal_reconciled; authenticated_admin_archive_reviewed; inconsistent_point_totals_and_missing_row_allocations_classified",
-      "implementation": "malformed_form_data_400_and_localized_guidance; seven_language_rubric_point_guidance",
-      "validation": "full321; seo119; changed_lint; production_build; blog_browser",
+      "investigation": "linked_external_docx_image_reproduced_from_archived_original; other rubric total mismatches remain unresolved",
+      "implementation": "external_docx_image_400_localized_guidance_no_billing_no_archive_no_error_log; prior malformed form and rubric point guidance retained",
+      "validation": "full323_initial_322_pass_one_stale_expectation; corrected_focused44_and_log_regression30_pass; changed_lint; final_production_build; synthetic_production_400",
       "deployment": "verified_production",
-      "archive_cleanup": "recovered_historical_records_deleted_and_list_empty",
-      "review": "2026-11-12 new malformed and rubric structure attempts after guidance"
+      "archive_cleanup": "resolved_parse_record_deleted_by_id_and_absent_on_recheck; unresolved_rubric_structure_records_retained; local_original_copies_deleted",
+      "review": "2026-11-14 unresolved rubric total mismatches and any new grading failures"
     },
     "CONTENT-001": {
       "implementation": "english_article_published",
@@ -129,12 +129,12 @@
       "review": "2026-11-17 index and links; 2026-12-08 search/first and second evaluations/verified subscriptions"
     },
     "CONTENT-DAILY": {
-      "implementation": "daily_owner_guidance_and_english_discussion_response_article",
-      "validation": "sources; build; seo120; mobile_browser_wcag; growth_route_test8; production_smoke",
+      "implementation": "english_counterargument_example_article_published; daily_owner_guidance_retained",
+      "validation": "sources; build; seo121; isolated_mobile_browser_wcag_no_js_cta; production_smoke",
       "publication": "verified_production",
-      "published_on": "2026-11-12",
-      "url": "https://rubricheck.com/blog/discussion-board-response-example",
-      "review": "2026-11-19 index, links and CTA; 2026-12-10 complete-window search and first successful evaluation"
+      "published_on": "2026-11-13",
+      "url": "https://rubricheck.com/blog/counterargument-paragraph-example",
+      "review": "2026-11-20 index, links and CTA; 2026-12-11 complete-window search and first successful evaluation"
     },
     "ADMIN-001": {
       "implementation": "existing_production_admin_secret_route_reused_without_otp_or_new_bypass",
@@ -152,22 +152,23 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "ec173af6bed1701e64865bd6be3ecc5c06c24545",
+    "commit": "54a20cd99c5a89659cc4cafbcdf5702ba5f0026b",
     "production": {
-      "deployment_id": "dpl_8jTFxMEXHHV4jxhM178QNP4Wu4v4",
+      "deployment_id": "dpl_3p5t63wAektMDktPYMW3V6Ns97qK",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "new discussion response article and blog index, sitemap, workspace loaded on production; canonical, BlogPosting date, example, CTA verified",
+      "smoke": "new counterargument article, blog index, sitemap and workspace loaded; canonical, BlogPosting date, fictional example and CTA verified; synthetic linked-image DOCX returned 400 EXTERNAL_DOCX_IMAGE",
       "runtime_errors": {
-        "scan": "not_checked_for_static_content_release",
-        "observed": null
+        "scan": "final deployment error/fatal group after synthetic expected 400",
+        "observed": 0
       },
-      "limits": "no live model execution or deployment-specific runtime query; content search and evaluation performance need follow-up"
+      "limits": "no live model grading; original user DOCX still needs embedded-image re-export or complete text; search and evaluation performance need follow-up"
     }
   },
   "next_actions": [
-    "2026-11-19 review new discussion response article indexability, internal links and CTA collection; 2026-12-10 compare complete-window URL/query clicks with first successful evaluation path",
-    "2026-11-12 grading: recheck authenticated inbox against terminal attempts, new malformed multipart warnings and rubric mismatch after clearer guidance; deleted history does not prove permanent resolution",
+    "2026-11-20 review new counterargument article indexability, internal links and CTA collection; 2026-12-11 compare complete-window URL/query clicks with first successful evaluation path",
+    "2026-11-14 grading: recheck authenticated inbox, retained rubric total mismatches and new terminal attempts; deletion of resolved DOCX record does not prove source rubric issues fixed",
+    "2026-11-19 review prior discussion response article indexability, internal links and CTA collection; 2026-12-10 compare complete-window URL/query clicks with first successful evaluation path",
     "2026-11-17 review CONTENT-001 indexability, internal links and click collection; 2026-12-08 compare search, first/second successful evaluations and verified subscriptions",
     "2026-11-17 review quiz exposure/selection/sample/create-click collection and authenticated admin generation/outcome aggregate; current nonzero sample is too small to identify the main adoption bottleneck",
     "2026-11-17 review English rubric-checker indexability, US/AU/CA/MY search cohorts and first/second successful evaluation paths",
@@ -176,8 +177,8 @@
     "Keep next report manifest timezone, latest complete date, filters and key event definitions; add same-window daily/country/landing breakdowns when available"
   ],
   "review_dates": {
-    "next_daily": "2026-11-12",
-    "last_daily": "2026-11-11",
+    "next_daily": "2026-11-14",
+    "last_daily": "2026-11-13",
     "next_weekly": "2026-11-17",
     "next_report_upload": "2026-11-16",
     "next_monthly": "2026-12-01",
