@@ -647,7 +647,9 @@ async function runGrade(request: Request) {
       ? undefined
       : gradingFailureCode(error, error instanceof FileParseValidationError ? "FILE_PARSE_FAILED" : "INTERNAL_SERVER_ERROR");
     await releaseReservation();
-    console.error("GRADE_REQUEST_FAILED", { requestId: context.requestId, stage, billingSource: usage?.billingSource, error });
+    if (!(error instanceof Error && error.message.startsWith("EXTERNAL_DOCX_IMAGE:"))) {
+      console.error("GRADE_REQUEST_FAILED", { requestId: context.requestId, stage, billingSource: usage?.billingSource, error });
+    }
     if (error instanceof Error && error.message === "UPSTASH_REDIS_CONFIG_MISSING") {
       return errorResponse(context, 503, "REDIS_UNAVAILABLE", "Usage verification is temporarily unavailable. Please retry shortly.");
     }

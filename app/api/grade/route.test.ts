@@ -300,7 +300,11 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       form.set("rubric", await docxFixture(["Thesis: 10 points", { image: "unused external image", external: true }]));
       form.set("assignmentText", "A clear argument.");
       const req = request();
-      const response = await POST(new Request(req.url, { method: "POST", headers: { cookie: req.headers.get("cookie")! }, body: form }));
+      const logged: unknown[][] = [];
+      const originalConsoleError = console.error;
+      console.error = (...args: unknown[]) => { logged.push(args); };
+      const response = await POST(new Request(req.url, { method: "POST", headers: { cookie: req.headers.get("cookie")! }, body: form }))
+        .finally(() => { console.error = originalConsoleError; });
       assert.equal(response.status, 400);
       const payload = await response.json();
       assert.equal(payload.code, "EXTERNAL_DOCX_IMAGE");
@@ -308,6 +312,7 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.match(payload.message, /images embedded/);
       assert.ok(!calls.some(c => /reserve|settle|refund/.test(c.name)));
       assert.equal(capturedFailures.length, 0);
+      assert.equal(logged.length, 0, "expected upload guidance must not produce runtime error logs");
     });
     await t.test("OCR failures do not charge, retain originals, and retry successfully with one or multiple images", async () => {
       process.env.GOOGLE_CLOUD_VISION_API_KEY = "test-only";
