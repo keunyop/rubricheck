@@ -10,6 +10,7 @@
 | QUAL-001 | 높음: 허용된 소수 배점 2.5에서 점수 3 출력 재현 | Standard/Strict 최종 점수 상한 수정, 정수 배점/권한 유지, 두 회귀 통과 | verified_local; 전체 318 pass. preview/배포 대기 |
 | GROW-001 | 높음: 공개 퀴즈 랜딩이 공통 계측 allowlist에서 누락 | 기존 pageview/attribution에 7개 언어 공개 경로 포함, 쿼리 제거·private 차단 유지 | verified_local; 관련10/full318 pass. preview/배포 대기 |
 | SEC-008 | 배포 전 확인: 기존 runtime 보안 PR 차단 상태 | 기존 [PR #8](https://github.com/keunyop/rubricheck/pull/8)의 실제 runtime patch 재검증, 같은 PR 갱신 | open/외부 상태 확인 필요; 별도 신규 PR 만들지 않음 |
+| SEC-009 | 높음: production Next.js 및 문서 파서 의존성에 보안 권고 | 패치 버전 설치·전체 회귀·빌드·production audit·운영 smoke 통과; 개발 도구 경고는 영향 범위 분리 | Next.js 16.4.6·Zod 4.6.7·전이 의존성 패치 production 검증 완료, `npm audit --omit=dev` 0건. 개발 도구 전이 의존성 경고와 기존 홈 화면 effect lint 경고는 11/17 별도 검토; 근거 없이 앱 동작을 넓게 변경하지 않음 |
 | BILL-001 | 높음: live Stripe 결제 실패 관측 | failure code·unique invoice/subscription·재시도/갱신 맥락을 개인정보 없이 분류; 접근 가능한 원인만 수정 | 원천 대조 완료: 과거 실패는 동일 청구의 반복 시도, 이후 결제 완료·구독 active. 신규 실패는 daily 재확인; 고객 연락·환불·재시도 자동 수행 금지 |
 | DATA-001 | 높음: 수집 시작이 비교 기간 중간, 실패 이벤트 해석 필요 | expected access/validation와 server failure 분리, attempt별 guest/account terminal outcome reconcile; 완결 cohort 설정 | 미완료. GA4 폼·스크롤 이벤트는 2026-10-22 이후 중단됐고 측정 설정 변경과 일치하므로 전환 KPI로 사용 금지; first-party 결과로 확인 |
 | SEO-001 | 높음: 신규 query×page에서 영어 도구 사용 의도 확인, 기존 안내와 불일치 | 기존 영어 rubric-checker 제목·설명·무료 체험/일반 기준 FAQ 개선; locale/CTA 유지 | 2026-11-10 구현. 검증·배포 상태는 최신 run/state 참조; +7일 수집/+28일 성과 확인 |

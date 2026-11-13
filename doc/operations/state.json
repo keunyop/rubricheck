@@ -21,7 +21,7 @@
     },
     "vercel": {
       "checked_on": "2026-11-13",
-      "coverage": "grading route runtime error clusters classified; final production deployment READY and error/fatal group empty after synthetic expected 400; one prior release logged expected 400 and was corrected"
+      "coverage": "grading route runtime error clusters classified; final patched production deployment READY and error/fatal group empty after synthetic expected 400; one prior release logged expected 400 and was corrected"
     },
     "feedback": {
       "checked_on": "2026-11-13",
@@ -121,6 +121,13 @@
       "archive_cleanup": "resolved_parse_record_deleted_by_id_and_absent_on_recheck; unresolved_rubric_structure_records_retained; local_original_copies_deleted",
       "review": "2026-11-14 unresolved rubric total mismatches and any new grading failures"
     },
+    "SEC-009": {
+      "investigation": "production Next.js critical and grading parser transitive dependency advisories found during local dependency restore",
+      "implementation": "next_16.4.6_zod_4.6.7_and_patched_transitives; eslint_config_aligned_with_existing_home_effects_as_warnings",
+      "validation": "production_audit_zero; full323_pass; build; seo121; changed_lint_zero_errors_seven_existing_warnings; production_smoke_and_runtime_logs",
+      "deployment": "verified_production",
+      "review": "2026-11-17 triage remaining development-tool audit advisories and legacy home effect warnings"
+    },
     "CONTENT-001": {
       "implementation": "english_article_published",
       "validation": "sources_product_links_mobile_browser_seo119_build_and_production_smoke",
@@ -152,12 +159,17 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "54a20cd99c5a89659cc4cafbcdf5702ba5f0026b",
+    "commit": "7d3780887444d9b6ab7ba9a987ca8d80eeb2a64e",
+    "security_audit": {
+      "production_total": 0,
+      "checked_on": "2026-11-13",
+      "development_tooling_follow_up": "2026-11-17"
+    },
     "production": {
-      "deployment_id": "dpl_3p5t63wAektMDktPYMW3V6Ns97qK",
+      "deployment_id": "dpl_5JMhGqrCxckZBMv1HofvDswiN832",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "new counterargument article, blog index, sitemap and workspace loaded; canonical, BlogPosting date, fictional example and CTA verified; synthetic linked-image DOCX returned 400 EXTERNAL_DOCX_IMAGE",
+      "smoke": "patched dependency release: new counterargument article, blog index, sitemap and workspace loaded; canonical, BlogPosting date, fictional example and CTA verified; synthetic linked-image DOCX returned 400 EXTERNAL_DOCX_IMAGE; unresolved inbox records unchanged",
       "runtime_errors": {
         "scan": "final deployment error/fatal group after synthetic expected 400",
         "observed": 0
@@ -168,6 +180,7 @@
   "next_actions": [
     "2026-11-20 review new counterargument article indexability, internal links and CTA collection; 2026-12-11 compare complete-window URL/query clicks with first successful evaluation path",
     "2026-11-14 grading: recheck authenticated inbox, retained rubric total mismatches and new terminal attempts; deletion of resolved DOCX record does not prove source rubric issues fixed",
+    "2026-11-17 triage remaining development-tool npm audit advisories and legacy HomePageClient effect lint warnings without changing grading semantics",
     "2026-11-19 review prior discussion response article indexability, internal links and CTA collection; 2026-12-10 compare complete-window URL/query clicks with first successful evaluation path",
     "2026-11-17 review CONTENT-001 indexability, internal links and click collection; 2026-12-08 compare search, first/second successful evaluations and verified subscriptions",
     "2026-11-17 review quiz exposure/selection/sample/create-click collection and authenticated admin generation/outcome aggregate; current nonzero sample is too small to identify the main adoption bottleneck",
@@ -184,7 +197,8 @@
     "next_monthly": "2026-12-01",
     "post_deployment": "immediate smoke; +7 days quality/collection; +28 days growth",
     "growth_quiz_collection": "2026-11-17",
-    "growth_quiz_outcomes": "2026-12-08"
+    "growth_quiz_outcomes": "2026-12-08",
+    "security_tooling": "2026-11-17"
   },
   "automation": {
     "registered": false,

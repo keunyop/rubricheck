@@ -8,7 +8,8 @@
 - 외부 연결 이미지가 있는 DOCX가 평가 전에 파싱 실패한 원인을 실제 보관 원본으로 재현했다. 외부 파일 접근 차단을 유지하면서 400·재저장/PDF/텍스트 안내, 과금·진단 보관 제외와 언어별 메시지를 구현했다. 예상된 400은 서버 오류 로그에서도 제외했다.
 - 루브릭 총점 불일치 구조화 사례는 안전한 복구가 확인되지 않아 보관함에 유지한다. 사용자 요청에 따라 **처리 완료된 파싱 사례만** ID별 삭제하고 재조회했다. 삭제는 원래 DOCX가 자동으로 평가 가능해졌다는 뜻이 아니다.
 - 미국 영어권 논증 과제용 [Counterargument Paragraph Example](https://rubricheck.com/blog/counterargument-paragraph-example)을 게시했다. 근거 자료·가상 예시·모바일·접근성·SEO·CTA를 확인했고 검색·전환 성과는 미측정이다.
-- 상태: `verified_production`. main `54a20cd`의 Vercel 배포 READY, 운영 글·목록·sitemap·CTA 및 합성 DOCX 400, error/fatal 로그 없음 확인. 삭제한 항목은 재조회에서 사라졌다. 다음은 11/14 미해결 평가 실패, 11/20 새 글 색인·CTA, 12/11 완결 검색·첫 평가 경로 확인. 상세는 [실행 기록](runs/2026-11-13-daily-grading.md).
+- 의존성 복원 중 기존 Next.js의 critical 보안 권고를 발견해 패치했다. production 의존성 감사 0건, 전체 테스트 323/323, build·SEO 121 통과. 개발 도구 감사 경고와 기존 홈 화면 lint 경고는 후속으로 유지한다.
+- 상태: `verified_production`. 제품 변경 main `7d37808`의 Vercel 배포 READY, 운영 글·목록·sitemap·CTA 및 합성 DOCX 400, 배포별 error/fatal 로그 없음 확인. 삭제한 항목은 재조회에서 사라졌다. 다음은 11/14 미해결 평가 실패, 11/20 새 글 색인·CTA, 12/11 완결 검색·첫 평가 경로 확인. 상세는 [실행 기록](runs/2026-11-13-daily-grading.md).
 
 ## 2026-11-12 daily-blog
 
