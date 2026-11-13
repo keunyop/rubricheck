@@ -49,5 +49,12 @@ export const COMPARE_DRAFTS_POST = {
   description: "Compare two essay drafts with the same rubric. Use a worked revision log to check stronger evidence, interpret AI score ranges and choose your next edit.",
   date: "2026-11-10", modified: "2026-11-10", category: "Assignment revision", readingMinutes: 7,
 } as const;
-export const BLOG_POSTS = [COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const DISCUSSION_RESPONSE_POST = {
+  slug: "discussion-board-response-example",
+  path: "/blog/discussion-board-response-example",
+  title: "Discussion Board Response Example: Add Evidence and Move the Conversation Forward",
+  description: "See a discussion board response example that answers a classmate with course evidence and a useful question. Revise a weak reply and check it against your rubric.",
+  date: "2026-11-12", modified: "2026-11-12", category: "Online discussion", readingMinutes: 6,
+} as const;
+export const BLOG_POSTS = [DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];

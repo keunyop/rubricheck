@@ -225,6 +225,31 @@ try {
   await page.getByRole("link", { name: "Review my revised draft →", exact: true }).click();
   await page.locator("#rubric-checker").waitFor({ state: "visible" });
   assert.equal(new URL(page.url()).pathname, "/workspace");
+  const discussionArticle = "/blog/discussion-board-response-example";
+  const discussionTitle = "Discussion Board Response Example: Add Evidence and Move the Conversation Forward";
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(base + "/blog");
+    await page.getByRole("link", { name: discussionTitle, exact: true }).click();
+    await page.getByRole("heading", { name: discussionTitle, exact: true }).waitFor();
+    await page.waitForFunction(expected => document.querySelector('link[rel="canonical"]')?.getAttribute("href") === expected, "https://rubricheck.com" + discussionArticle);
+    assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), "https://rubricheck.com" + discussionArticle);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Discussion guide fits viewport");
+    assert.equal(await page.locator('link[rel="alternate"][hreflang]').count(), 0);
+    assert.equal(await page.locator("h1").count(), 1);
+    const structured = await page.locator('script[type="application/ld+json"]').allTextContents();
+    assert.ok(structured.some(value => { const data = JSON.parse(value); return data["@type"] === "BlogPosting" && data.headline === discussionTitle && data.datePublished === "2026-11-12"; }));
+    assert.ok((await page.locator("article").innerText()).includes("18 of 30 respondents"));
+    const audit = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    assert.deepEqual(audit.violations, [], "Discussion guide accessibility");
+  }
+  await staticPage.goto(base + discussionArticle);
+  assert.equal(await staticPage.locator("h1").innerText(), discussionTitle);
+  assert.ok((await staticPage.locator("article").innerText()).includes("Invented practice scenario"));
+  await page.getByRole("link", { name: "Check my response draft →", exact: true }).click();
+  await page.locator("#rubric-checker").waitFor({ state: "visible" });
+  assert.equal(new URL(page.url()).pathname, "/workspace");
+  assert.equal(new URL(page.url()).searchParams.get("from"), "blog-discussion-response");
   await noJs.close();
   assert.equal((await fetch(base + "/ko/blog")).status, 404);
   assert.deepEqual(errors, []);
