@@ -2,6 +2,13 @@
 
 이 일지는 최신 실행부터 읽는 역순 색인이다. 자동 작업 선택의 기계 상태는 [state.json](state.json), 우선순위는 [backlog](backlog.md), 상세 근거는 [runs/](runs/)에 있다. 공개 저장소이므로 고객 식별자나 비공개 사업 집계는 기록하지 않는다.
 
+## 2026-11-12 daily-blog
+
+- 요청: owner auto/daily에 매일 글 1편을 추가하고 오늘 글을 즉시 게시. 현지 날짜별 중복 확인과 국가·검색어 근거 판단을 지침에 넣었다.
+- 미국 영어권의 `discussion board response example` 글을 게시했다. 미국 검색 유입과 기존 콘텐츠 공백을 근거로 선택했으며 이 검색어의 국가별 검색량·전환은 미측정이다.
+- 상태: `verified_production`. main `ec173af6`의 Vercel 배포 READY, 운영 글·목록·sitemap·CTA 및 canonical·BlogPosting 확인. build·SEO 120·모바일/접근성 브라우저·성장 경로 테스트 통과.
+- 다음: 11/19 색인·링크·CTA, 12/10 완결된 검색·첫 평가 경로 검토. 11/12의 일반 daily 운영 점검은 별도 미완료. 상세는 [실행 기록](runs/2026-11-12-daily-blog.md).
+
 ## 2026-11-11 daily-grading-cleanup
 
 - 모드: auto에서 기한이 된 daily 선택, 사용자 요청으로 기존 관리자 평가 실패 기록의 해결 여부와 삭제를 추가 확인했다.
