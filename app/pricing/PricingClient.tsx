@@ -4,7 +4,6 @@ import { PlanFitNote } from "../components/PlanFitNote";
 
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Modal } from "../components/Modal";
 import { useAccountSummary } from "../components/AccountSummaryProvider";
@@ -113,6 +112,7 @@ export function PricingClient() {
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const billingMenuRef = useRef<HTMLDivElement | null>(null);
   const isTopUpsLocked = accountPlan === "pro";
+  const selectedPricingTab = isTopUpsLocked ? "pro" : activePricingTab;
   const canAccessAdmin = isKnownAdminEmail(signedInEmail);
 
   function openLoginModal(infoMessage?: string) {
@@ -127,13 +127,9 @@ export function PricingClient() {
   }
 
   useEffect(() => {
-    if (isTopUpsLocked && activePricingTab === "topups") {
-      setActivePricingTab("pro");
-    }
-  }, [activePricingTab, isTopUpsLocked]);
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("tab") === "topups" && !isTopUpsLocked) setActivePricingTab("topups");
+    if (isTopUpsLocked || new URLSearchParams(window.location.search).get("tab") !== "topups") return;
+    const timer = window.setTimeout(() => setActivePricingTab("topups"), 0);
+    return () => window.clearTimeout(timer);
   }, [isTopUpsLocked]);
 
   useEffect(() => {
@@ -421,15 +417,14 @@ export function PricingClient() {
   }
 
   return (
-    <main id="main-content" tabIndex={-1} className="min-h-screen bg-slate-50 px-3 py-6 sm:px-6 md:py-12">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-white px-4 py-8 sm:px-6 md:py-12">
       <div className="mx-auto w-full max-w-4xl space-y-8">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-8">
+        <section className="bg-white sm:px-8">
           <SubpageBackHomeLink className="mb-3 inline-block text-sm font-medium text-indigo-700 transition hover:text-indigo-600" />
           <div className="border-b border-slate-100 pb-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3">
-                <Image src="/rubricheck-logo.svg" alt={t("RubriCheck logo")} width={135} height={36} className="h-auto w-10 shrink-0" />
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-900">{t("Pricing")}</h1>
+                <h1 className="text-3xl font-medium tracking-tight text-slate-900">{t("Pricing")}</h1>
               </div>
               <div className="inline-flex items-center gap-2">
                 {signedInEmail ? (
@@ -507,7 +502,7 @@ export function PricingClient() {
                   <button
                     type="button"
                     onClick={() => openLoginModal()}
-                    className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                    className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:text-slate-900"
                   > {t("Log in")} </button>
                 )}
               </div>
@@ -520,10 +515,10 @@ export function PricingClient() {
           <div role="group" aria-label={t("Plan type")} className="mt-6 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
             <button
               type="button"
-              aria-pressed={activePricingTab === "pro"}
+              aria-pressed={selectedPricingTab === "pro"}
               onClick={() => setActivePricingTab("pro")}
               className={`min-h-11 rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                activePricingTab === "pro"
+                selectedPricingTab === "pro"
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-600 hover:text-slate-900"
               }`}
@@ -536,9 +531,9 @@ export function PricingClient() {
                 }
               }}
               disabled={isTopUpsLocked}
-              aria-pressed={activePricingTab === "topups"}
+              aria-pressed={selectedPricingTab === "topups"}
               className={`min-h-11 rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                activePricingTab === "topups"
+                selectedPricingTab === "topups"
                   ? "bg-white text-slate-900 shadow-sm"
                   : isTopUpsLocked
                     ? "cursor-not-allowed text-slate-400"
@@ -548,7 +543,7 @@ export function PricingClient() {
             > {t("Evaluation Top-Ups")} </button>
           </div>
 
-          {activePricingTab === "pro" || isTopUpsLocked ? (
+          {selectedPricingTab === "pro" ? (
             <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
               <h2 className="text-lg font-semibold text-slate-900">{t("Upgrade to Pro")}</h2>
               {accountPlan === "pro" ? (
@@ -597,7 +592,7 @@ export function PricingClient() {
                 </p>
               ) : null}
               <div aria-live="polite" className="my-6 px-1">
-                <p className="flex flex-wrap items-baseline gap-x-1 gap-y-1 text-4xl font-semibold tracking-tight text-slate-900">
+                <p className="flex flex-wrap items-baseline gap-x-1 gap-y-1 text-4xl font-medium tabular-nums tracking-tight text-slate-900">
                   <PricingAmount label={selectedCheckoutPlanDisplay.price} />
                   <span className="whitespace-nowrap text-sm font-normal text-slate-500">
                     {t(selectedCheckoutPlanDisplay.periodLabel)}
@@ -663,11 +658,11 @@ export function PricingClient() {
                     key={packId}
                     className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/60 p-4"
                   >
-                    <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
+                    <p className="text-sm font-medium text-slate-600">
                       {t(getCreditPackMarketingLabel(packId))}
                     </p>
                     <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{t(getCreditPackLabel(packId))}</p>
-                    <p className="mt-2 text-3xl font-bold text-slate-900"><PricingAmount label={getCreditPackPriceLabel(packId)} /></p>
+                    <p className="mt-2 text-3xl font-medium tabular-nums text-slate-900"><PricingAmount label={getCreditPackPriceLabel(packId)} /></p>
                     <p className="mt-2 text-sm text-slate-600">{t("One-time payment")}</p>
                     <button
                       type="button"

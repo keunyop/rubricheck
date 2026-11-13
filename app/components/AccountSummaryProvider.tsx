@@ -6,7 +6,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 import type { AccountFeatureTier } from "../../src/lib/accountFeatureAccess";
@@ -43,7 +42,6 @@ export function AccountSummaryProvider({ children }: { children: ReactNode }) {
   const [remainingEvaluations, setRemainingEvaluations] = useState<number | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [hasLoadedAccountSummary, setHasLoadedAccountSummary] = useState(false);
-  const didRunInitialFetchRef = useRef(false);
 
   const applySignedOutSummary = useCallback(() => {
     setSignedInEmail("");
@@ -80,11 +78,9 @@ export function AccountSummaryProvider({ children }: { children: ReactNode }) {
   }, [applySignedOutSummary]);
 
   useEffect(() => {
-    if (didRunInitialFetchRef.current) {
-      return;
-    }
-
-    didRunInitialFetchRef.current = true;
+    // Each setup owns its timer, including Strict Mode's setup/cleanup replay.
+    // A persistent "already ran" ref would skip the replacement timer and leave
+    // the workspace waiting for account initialization indefinitely.
     const timer = window.setTimeout(() => {
       void refreshAccountSummary();
     }, 0);

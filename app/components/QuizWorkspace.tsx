@@ -18,7 +18,7 @@ export function QuizWorkspace({ children, access, ...sidebar }: Omit<ComponentPr
       <div className={styles.workspaceContent}>
         <header className={styles.workspaceHeader} aria-label={t("Workspace header")}>
           <div className={workspaceStyles.topbar}>
-            <div className={workspaceStyles.brand}><Image src="/rubricheck-logo.svg" alt="" width={135} height={36} /><span>RubriCheck</span></div>
+            <div className={workspaceStyles.brand}><Image src="/rubricheck-tab-icon.svg" alt="" width={32} height={32} /><span>RubriCheck</span></div>
             <div className={styles.workspaceActions}>
               <Link href={href("/pricing")} className={styles.headerAction}>{t("Pricing")}</Link>
               {email ? <>

@@ -12,21 +12,20 @@
 .choice {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
   padding: 16px;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: #fff;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
 }
 
 .choice[aria-pressed="true"] {
-  border-color: #818cf8;
-  background: #f5f5ff;
-  box-shadow: 0 0 0 1px #818cf81a;
+  border-color: var(--rc-accent);
+  background: var(--rc-accent-soft);
 }
 
 .choiceIcon {
@@ -57,16 +56,15 @@
   font-size: 14px;
   font-weight: 600;
   line-height: 1.5;
-  letter-spacing: -.15px;
 }
 
 .choice[aria-pressed="true"] .choiceTitle { color: #3730a3; }
 
 .choiceDescription {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   color: #64748b;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
@@ -132,7 +130,7 @@
 @media (hover: hover) {
   .choice:hover:not(:disabled) { border-color: #a5b4fc; background: #f8faff; }
   .choice[aria-pressed="true"]:hover:not(:disabled) { border-color: #6366f1; background: #eeeefe; }
-  .nextStepButton:hover { background: #4338ca; box-shadow: 0 3px 8px #4f46e51a; }
+  .nextStepButton:hover { background: #4338ca; }
 }
 
 @container (max-width: 600px) {

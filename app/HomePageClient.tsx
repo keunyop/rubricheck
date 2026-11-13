@@ -2793,7 +2793,7 @@ export default function Home() {
           <div className={workspaceView === "compose" ? styles.header : styles.headerCompact}>
             <div className={styles.topbar}>
               <div className={styles.brand}>
-                <Image src="/rubricheck-logo.svg" alt="" width={135} height={36} />
+                <Image src="/rubricheck-tab-icon.svg" alt="" width={32} height={32} />
                 <span>RubriCheck</span>
               </div>
               <div className="inline-flex items-center gap-2">
@@ -2802,7 +2802,7 @@ export default function Home() {
                     <Link
                       href={href(gradeResult?.evaluation_id ? "/pricing?evaluation_id=" + encodeURIComponent(gradeResult.evaluation_id) : "/pricing")}
                       onClick={(event: import("react").MouseEvent<HTMLAnchorElement>) => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); void goToPricingPage(); } }}
-                      className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                      className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:text-slate-900"
                     > {t("Pricing")} </Link>
                     {signedInEmail ? (
                       <>
@@ -2887,7 +2887,7 @@ export default function Home() {
                       <button
                         type="button"
                         onClick={() => maybeOpenLoginModal()}
-                        className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900"
+                        className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:text-slate-900"
                       > {t("Log in")} </button>
                     )}
                   </>
