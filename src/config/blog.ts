@@ -56,5 +56,12 @@ export const DISCUSSION_RESPONSE_POST = {
   description: "See a discussion board response example that answers a classmate with course evidence and a useful question. Revise a weak reply and check it against your rubric.",
   date: "2026-11-12", modified: "2026-11-12", category: "Online discussion", readingMinutes: 6,
 } as const;
-export const BLOG_POSTS = [DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const COUNTERARGUMENT_POST = {
+  slug: "counterargument-paragraph-example",
+  path: "/blog/counterargument-paragraph-example",
+  title: "Counterargument Paragraph Example: Answer an Objection Fairly",
+  description: "Build a counterargument paragraph with a fair objection, a concession and a reasoned response. Use a worked example and check the revision against your rubric.",
+  date: "2026-11-13", modified: "2026-11-13", category: "Argumentative writing", readingMinutes: 6,
+} as const;
+export const BLOG_POSTS = [COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];

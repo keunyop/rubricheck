@@ -120,6 +120,10 @@ function mapFieldParseError(error: unknown, field: FieldName): never {
     throw new Error(`IMAGE_TOO_SMALL:${field}`);
   }
 
+  if (error instanceof Error && error.message === "EXTERNAL_DOCX_IMAGE") {
+    throw new Error(`EXTERNAL_DOCX_IMAGE:${field}`);
+  }
+
   throw error;
 }
 
@@ -639,7 +643,7 @@ async function runGrade(request: Request) {
     // Protected Office files and unreadable thumbnails are valid user inputs
     // that need actionable upload guidance, not unexpected-failure retention.
     diagnosticCode = error instanceof Error &&
-      (error.message.startsWith("PROTECTED_FILE:") || error.message.startsWith("IMAGE_TOO_SMALL:"))
+      (error.message.startsWith("PROTECTED_FILE:") || error.message.startsWith("IMAGE_TOO_SMALL:") || error.message.startsWith("EXTERNAL_DOCX_IMAGE:"))
       ? undefined
       : gradingFailureCode(error, error instanceof FileParseValidationError ? "FILE_PARSE_FAILED" : "INTERNAL_SERVER_ERROR");
     await releaseReservation();
@@ -696,6 +700,13 @@ async function runGrade(request: Request) {
         "This image is too small or blurry for reliable text reading. Upload the original image or a sharper screenshot (ideally 1024x768 or larger), or paste the text directly.",
         { field },
       );
+    }
+
+    if (error instanceof Error && error.message.startsWith("EXTERNAL_DOCX_IMAGE:")) {
+      const field = error.message.split(":")[1] as FieldName;
+      return errorResponse(context, 400, "EXTERNAL_DOCX_IMAGE",
+        "This DOCX links to images that cannot be read. Save a new copy with images embedded, export it as a PDF, or paste the complete text.",
+        { field });
     }
 
     if (error instanceof Error && error.message.startsWith("MULTI_FILE_IMAGES_ONLY:")) {

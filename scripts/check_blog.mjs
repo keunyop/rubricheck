@@ -250,6 +250,30 @@ try {
   await page.locator("#rubric-checker").waitFor({ state: "visible" });
   assert.equal(new URL(page.url()).pathname, "/workspace");
   assert.equal(new URL(page.url()).searchParams.get("from"), "blog-discussion-response");
+  const counterargumentArticle = "/blog/counterargument-paragraph-example";
+  const counterargumentTitle = "Counterargument Paragraph Example: Answer an Objection Fairly";
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(base + "/blog");
+    await page.getByRole("link", { name: counterargumentTitle, exact: true }).click();
+    await page.getByRole("heading", { name: counterargumentTitle, exact: true }).waitFor();
+    await page.waitForFunction(expected => document.querySelector('link[rel="canonical"]')?.getAttribute("href") === expected, "https://rubricheck.com" + counterargumentArticle);
+    assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), "https://rubricheck.com" + counterargumentArticle);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Counterargument guide fits viewport");
+    assert.equal(await page.locator('link[rel="alternate"][hreflang]').count(), 0);
+    assert.equal(await page.locator("h1").count(), 1);
+    const structured = await page.locator('script[type="application/ld+json"]').allTextContents();
+    assert.ok(structured.some(value => { const data = JSON.parse(value); return data["@type"] === "BlogPosting" && data.headline === counterargumentTitle && data.datePublished === "2026-11-13"; }));
+    assert.ok((await page.locator("article").innerText()).includes("subject to a staffing and cost review"));
+    const audit = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    assert.deepEqual(audit.violations, [], "Counterargument guide accessibility");
+  }
+  await staticPage.goto(base + counterargumentArticle);
+  assert.equal(await staticPage.locator("h1").innerText(), counterargumentTitle);
+  assert.ok((await staticPage.locator("article").innerText()).includes("Invented practice exercise"));
+  await page.getByRole("link", { name: "Check my essay draft →", exact: true }).click();
+  await page.locator("#rubric-checker").waitFor({ state: "visible" });
+  assert.equal(new URL(page.url()).pathname, "/workspace");
   await noJs.close();
   assert.equal((await fetch(base + "/ko/blog")).status, 404);
   assert.deepEqual(errors, []);

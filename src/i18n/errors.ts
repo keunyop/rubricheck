@@ -1,4 +1,8 @@
 export const errors: Record<string, readonly [string, string]> = {
+  "This DOCX links to images that cannot be read. Save a new copy with images embedded, export it as a PDF, or paste the complete text.": [
+    "이 DOCX는 읽을 수 없는 외부 이미지에 연결되어 있습니다. 이미지가 파일에 포함되도록 새 사본을 저장하거나 PDF로 내보내거나 전체 텍스트를 붙여 넣어 주세요.",
+    "Fail DOCX ini memaut kepada imej yang tidak dapat dibaca. Simpan salinan baharu dengan imej terbenam, eksport sebagai PDF, atau tampal teks penuh.",
+  ],
   'No grading criteria were found in the rubric input. Check whether your rubric and assignment are swapped. Use the assessment instructions as your rubric, or choose "{noRubric}".': [
     '루브릭 입력에서 채점 기준을 찾지 못했습니다. 루브릭과 과제가 서로 바뀌었는지 확인해 주세요. 과제 작성 지침을 루브릭으로 사용하거나 "{noRubric}"을 선택해 주세요.',
     'Tiada kriteria pemarkahan ditemui dalam input rubrik. Semak sama ada rubrik dan tugasan anda tertukar. Gunakan arahan penilaian sebagai rubrik, atau pilih "{noRubric}".',

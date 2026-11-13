@@ -439,7 +439,16 @@ async function parseDocx(buffer: Buffer, fileName: string, field: ParsedField, o
     if (signal.aborted) visionUnavailable(field, "timeout");
     let content: string;
     try { content = await part.readAsBase64String(); }
-    catch { throw new FileParseValidationError(`Invalid or unreadable DOCX image: ${fileName}`); }
+    catch (error) {
+      // Mammoth refuses external image links when externalFileAccess is false.
+      // Keep that protection and ask for an export with embedded images; the
+      // linked image may contain grading criteria, so silently skipping it is unsafe.
+      if (error instanceof Error && error.message.startsWith("could not read external image ") &&
+          error.message.endsWith("external file access is disabled")) {
+        throw new Error("EXTERNAL_DOCX_IMAGE");
+      }
+      throw new FileParseValidationError(`Invalid or unreadable DOCX image: ${fileName}`);
+    }
     const key = createHash("sha256").update(content).digest("hex");
     if (!recognized.has(key)) {
       imageBytes += Buffer.byteLength(content, "base64");

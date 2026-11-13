@@ -51,8 +51,9 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 120, "Sitemap includes 16 public pages in seven languages plus eight English blog pages");
+  assert.equal(urls.length, 121, "Sitemap includes 16 public pages in seven languages plus nine English blog pages");
   assert.ok(urls.some(url => url.pathname === "/blog/discussion-board-response-example"), "Discussion response guide is in the sitemap");
+  assert.ok(urls.some(url => url.pathname === "/blog/counterargument-paragraph-example"), "Counterargument guide is in the sitemap");
   assert.equal(new Set(urls.map(String)).size, urls.length, "No duplicate sitemap URLs");
   assert.doesNotMatch(sitemap, /<loc>[^<]*\/(?:api|admin|billing)(?:\/|<)/);
   const titles = new Set();
@@ -115,7 +116,11 @@ try {
       breadcrumb.itemListElement.forEach((item, index) => assert.equal(item.position, index + 1));
       assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + homePath);
       assert.equal(breadcrumb.itemListElement.at(-1).item, url.href);
-      if (barePath === "/blog/discussion-board-response-example") {
+      if (barePath === "/blog/counterargument-paragraph-example") {
+        assert.match(html, /id="counterargument-example"/, "Counterargument guide includes its worked example");
+        assert.match(html, /id="counterargument-checklist"/, "Counterargument guide includes a reusable checklist");
+        assert.match(html, /Invented practice exercise/, "Counterargument guide labels its fictional exercise");
+      } else if (barePath === "/blog/discussion-board-response-example") {
         assert.match(html, /id="discussion-example"/, "Discussion guide includes its worked example");
         assert.match(html, /18 of 30 respondents/, "Discussion guide includes bounded evidence");
         assert.match(html, /id="discussion-checklist"/, "Discussion guide includes a reusable checklist");

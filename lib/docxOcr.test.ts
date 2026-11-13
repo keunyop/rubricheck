@@ -53,7 +53,7 @@ test("embedded image failures cannot silently return just the native cover text"
   let calls = 0;
   await assert.rejects(parseFile(await docxFixture(["Cover", { image: "external", external: true }]), {
     visionOcrClient: { extractText: async () => { calls++; return "must not read"; } },
-  }), FileParseValidationError);
+  }), { message: "EXTERNAL_DOCX_IMAGE" });
   assert.equal(calls, 0);
 });
 

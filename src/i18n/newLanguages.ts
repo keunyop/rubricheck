@@ -1,5 +1,11 @@
 // Localized product UI messages, in Hindi, Urdu, Vietnamese, and Simplified Chinese.
 export const newLanguages: Record<string, readonly [string, string, string, string]> = {
+  "This DOCX links to images that cannot be read. Save a new copy with images embedded, export it as a PDF, or paste the complete text.": [
+    "इस DOCX में ऐसे चित्रों के लिंक हैं जिन्हें पढ़ा नहीं जा सकता। चित्रों को फ़ाइल में शामिल करके नई प्रति सहेजें, PDF के रूप में निर्यात करें, या पूरा पाठ चिपकाएँ।",
+    "اس DOCX میں ایسی تصاویر کے روابط ہیں جنہیں پڑھا نہیں جا سکتا۔ تصاویر کو فائل میں شامل کر کے نئی کاپی محفوظ کریں، اسے PDF کے طور پر برآمد کریں، یا مکمل متن چسپاں کریں۔",
+    "Tệp DOCX này liên kết đến hình ảnh không thể đọc. Hãy lưu bản mới với hình ảnh được nhúng, xuất thành PDF hoặc dán toàn bộ văn bản.",
+    "此 DOCX 链接到无法读取的图片。请将图片嵌入后另存新文件、导出为 PDF，或粘贴完整文本。",
+  ],
   "Rubric point adjustments": ["रूब्रिक अंक समायोजन", "روبرک کے نمبروں میں ردوبدل", "Điều chỉnh điểm theo tiêu chí", "评分规则加减分"],
   "Criterion range totals {low}-{high}, plus rubric adjustments {adjustment}, divided by the base rubric total {total} x 100, give {range} / 100 (bounded to 0-100). Bonus and deduction rules do not increase the base total.": [
     "मानदंडों के सीमा योग {low}-{high} में रूब्रिक समायोजन {adjustment} जोड़कर, मूल कुल {total} से भाग देकर 100 से गुणा करने पर {range} / 100 मिलता है (0-100 तक सीमित)। बोनस और कटौती मूल कुल नहीं बढ़ाते।",

@@ -99,3 +99,16 @@ test("DOCX parsing preserves native and raster text when a Word-only vector imag
   assert.equal(calls, 1);
   assert.match(parsed, /Thesis: 10 points[\s\S]*Evidence: 5 points/);
 });
+
+test("external DOCX images are not fetched or silently omitted from a rubric", async () => {
+  const file = await docxFixture([
+    "Thesis: 10 points. State a clear argument.",
+    { image: "unused external image", external: true },
+  ]);
+  let ocrCalls = 0;
+  await assert.rejects(parseFile(file, {
+    field: "rubric",
+    visionOcrClient: { extractText: async () => { ocrCalls++; return ""; } },
+  }), { message: "EXTERNAL_DOCX_IMAGE" });
+  assert.equal(ocrCalls, 0);
+});

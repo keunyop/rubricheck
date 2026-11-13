@@ -2093,6 +2093,10 @@ export default function Home() {
       return t("This image is too small or blurry for reliable text reading. Upload the original image or a sharper screenshot (ideally 1024x768 or larger), or paste the text directly.");
     }
 
+    if (message === "EXTERNAL_DOCX_IMAGE") {
+      return t("This DOCX links to images that cannot be read. Save a new copy with images embedded, export it as a PDF, or paste the complete text.");
+    }
+
     if (message === "UNSUPPORTED_FILE_TYPE") {
       return t("Unsupported file type. Please upload PDF, DOCX, TXT, PNG, JPG, or JPEG.");
     }
