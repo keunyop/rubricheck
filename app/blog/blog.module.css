@@ -47,3 +47,17 @@
 .practice h3:not(:first-child) { margin-top: 24px; }
 .practice ol { list-style: upper-alpha; padding-left: 24px; line-height: 1.85; margin-top: 12px; }
 .practice summary { cursor: pointer; color: #4338ca; padding: 12px 0; min-height: 44px; font-weight: 600; }
+
+.evidenceFlow { margin: 28px 0 0; padding: 22px; border: 1px solid #c7d2fe; border-radius: 14px; background: #eef2ff; }
+.evidenceFlowList { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; list-style: none; margin: 0; padding: 0; }
+.evidenceFlowList li { position: relative; min-width: 0; padding: 16px 14px; border: 1px solid #c7d2fe; border-radius: 10px; background: #fff; line-height: 1.5; }
+.evidenceFlowList li:not(:last-child)::after { content: "→"; position: absolute; top: 50%; right: -16px; transform: translateY(-50%); color: #4338ca; font-weight: 700; }
+.evidenceFlowList strong, .evidenceFlowList span { display: block; }
+.evidenceFlowList strong { color: #3730a3; font-size: 14px; }
+.evidenceFlowList span { margin-top: 7px; font-size: 13px; }
+.evidenceFlow figcaption { margin-top: 14px; color: #526177; font-size: 13px; line-height: 1.7; }
+@media (max-width: 680px) {
+  .evidenceFlow { padding: 18px; }
+  .evidenceFlowList { grid-template-columns: 1fr; gap: 20px; }
+  .evidenceFlowList li:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -20px; transform: translateX(50%); }
+}

@@ -63,5 +63,12 @@ export const COUNTERARGUMENT_POST = {
   description: "Build a counterargument paragraph with a fair objection, a concession and a reasoned response. Use a worked example and check the revision against your rubric.",
   date: "2026-11-13", modified: "2026-11-13", category: "Argumentative writing", readingMinutes: 6,
 } as const;
-export const BLOG_POSTS = [COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const EXPLAIN_EVIDENCE_POST = {
+  slug: "explain-evidence-in-an-essay",
+  path: "/blog/explain-evidence-in-an-essay",
+  title: "How to Explain Evidence in an Essay Paragraph (With an Example)",
+  description: "Learn how to explain evidence in an essay paragraph with a worked before-and-after example, a source-use checklist and a rubric-based revision step.",
+  date: "2026-11-14", modified: "2026-11-14", category: "Academic writing", readingMinutes: 7,
+} as const;
+export const BLOG_POSTS = [EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];
