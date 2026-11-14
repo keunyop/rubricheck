@@ -78,6 +78,12 @@ test("visitor identity is signed, expires and cannot be forged or used after opt
   } finally {keys.forEach((k,i)=>{if(old[i]===undefined)delete process.env[k];else process.env[k]=old[i];});}
 });
 test("failures are classified without storing server messages",()=>{
-  assert.equal(growthFailureCategory(504),"server");assert.equal(growthFailureCategory(429),"access");assert.equal(growthFailureCategory(400),"validation");
+  assert.equal(growthFailureCategory(504,"RUBRIC_STRUCTURE_FAILED"),"server");
+  assert.equal(growthFailureCategory(429,"TRIAL_LIMIT_REACHED"),"access");
+  assert.equal(growthFailureCategory(400,"FILE_PARSE_FAILED"),"validation_file");
+  assert.equal(growthFailureCategory(400,"RUBRIC_STRUCTURE_FAILED"),"validation_rubric");
+  assert.equal(growthFailureCategory(400,"MISSING_INPUT"),"validation_input");
+  assert.equal(growthFailureCategory(409,"TRIAL_PENDING"),"validation_pending");
+  assert.equal(growthFailureCategory(400,"PRIVATE USER INPUT"),"validation_other");
   const prior=process.env.VERCEL;delete process.env.VERCEL; assert.equal(growthCountry(new Request("http://localhost",{headers:{"x-vercel-ip-country":"MY"}})),"unknown"); if(prior!==undefined)process.env.VERCEL=prior;
 });

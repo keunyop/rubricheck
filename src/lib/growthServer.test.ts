@@ -22,6 +22,14 @@ test("server failures are distinct from abandonment and analytics outages do not
   fail=true;
   try {assert.equal((await instrumentGrade(request(),async()=>Response.json({ok:true}))).status,200);}finally{fail=false;}
 });
+test("validation failure records a fixed reason without copying a private response",async()=>{
+  calls.length=0;
+  const response=await instrumentGrade(request(),async()=>Response.json({code:"FILE_PARSE_FAILED",message:"PRIVATE ASSIGNMENT",field:"assignment"},{status:400}));
+  assert.equal(response.status,400);
+  assert.equal(calls[1].p_failure,"validation_file");
+  assert.ok(!JSON.stringify(calls).includes("PRIVATE ASSIGNMENT"));
+  assert.ok(!JSON.stringify(calls).includes("assignment"));
+});
 test("a guest preview is measured automatically and an explicit refusal produces no events",async()=>{
   calls.length=0;await instrumentGrade(request(),async()=>Response.json({guest_preview:true,summary:"private"}));
   assert.equal(calls[1].p_event_name,"guest_preview_completed");

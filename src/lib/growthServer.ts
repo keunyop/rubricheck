@@ -79,10 +79,11 @@ export async function instrumentGrade(request: Request, run: (request: Request) 
   response.headers.set("x-growth-attempt", attempt);
   await safeGrowth(async () => {
     // Only whitelisted scalar fields leave this scope. Never serialize the result.
-    const data = response.ok ? await response.clone().json().catch(() => ({})) : {};
+    const payload: unknown = await response.clone().json().catch(() => ({}));
+    const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
     const billingProduct = response.headers.get("x-growth-product");
     const product: GrowthProduct = data.guest_preview === true ? "guest" : billingProduct === "pro" || billingProduct === "credits" || billingProduct === "free" ? billingProduct : account ? "unknown" : "guest";
-    await recordGrowthEvent(request, { name: response.ok ? product === "guest" ? "guest_preview_completed" : "evaluation_completed" : "evaluation_failed", key: `outcome:${attempt}`, attempt, product, evaluation: data.evaluation_id, failure: response.ok ? null : growthFailureCategory(response.status) });
+    await recordGrowthEvent(request, { name: response.ok ? product === "guest" ? "guest_preview_completed" : "evaluation_completed" : "evaluation_failed", key: `outcome:${attempt}`, attempt, product, evaluation: typeof data.evaluation_id === "string" ? data.evaluation_id : null, failure: response.ok ? null : growthFailureCategory(response.status, data.code) });
   });
   return response;
 }

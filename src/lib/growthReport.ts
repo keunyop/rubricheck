@@ -75,7 +75,8 @@ export function summarizeGrowth(data: GrowthSnapshot, from: string, to: string) 
     paymentEvents:data.payments.length,firstPurchaseUnknown:payments.filter(p=>p.prior_payer===null || !p.account_key).length,
     subscriptionStarts:payments.filter(p=>p.kind==="subscription_initial").length,
     subscriptionCancellations:data.payments.filter(p=>p.kind==="subscription_canceled").length,
-    failures:Object.fromEntries(["server","validation","access","network"].map(kind=>[kind,events.filter(e=>e.failure===kind).length])),
+    failures:Object.fromEntries(["server","validation","access","network"].map(kind=>[kind,events.filter(e=>kind==="validation" ? e.failure==="validation" || e.failure?.startsWith("validation_") : e.failure===kind).length])),
+    validationReasons:Object.fromEntries(["validation_input","validation_file","validation_rubric","validation_pending","validation_other"].map(kind=>[kind,events.filter(e=>e.failure===kind).length])),
   };
 }
 export type GrowthReport = ReturnType<typeof summarizeGrowth>;

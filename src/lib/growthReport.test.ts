@@ -16,6 +16,12 @@ test("result views match the evaluation attempt, with failures separate from no 
   const row=r.funnel.find(r=>r.step==="Evaluation started → result viewed")!;
   assert.equal(row.converted,0);assert.equal(row.failed,1);assert.equal(r.failures.server,1);
 });
+test("new validation reasons roll up with historical validation events",()=>{
+  const r=report([e("evaluation_failed","a",2,{failure:"validation"}),e("evaluation_failed","b",2,{failure:"validation_file"}),e("evaluation_failed","c",2,{failure:"validation_rubric"})]);
+  assert.equal(r.failures.validation,3);
+  assert.equal(r.validationReasons.validation_file,1);
+  assert.equal(r.validationReasons.validation_rubric,1);
+});
 test("linked guest-to-account identity converts across journey segments and excludes paid evaluations from free cohort",()=>{
   const r=report([e("guest_preview_completed","a",1),e("signup_completed","a",2,{journey:"new_account"}),e("evaluation_completed","a",3,{journey:"new_account",product:"pro"})]);
   assert.equal(r.funnel.find(r=>r.step==="Guest preview → signup")!.converted,1);
