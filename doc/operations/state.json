@@ -1,27 +1,27 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-13-daily-grading",
-  "last_run_record": "doc/operations/runs/2026-11-13-daily-grading.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-13-daily-grading",
-  "mode": "daily+incident+content+skill-maintenance",
+  "last_run": "2026-11-14-po-priority",
+  "last_run_record": "doc/operations/runs/2026-11-14-po-priority.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-14-po-priority",
+  "mode": "auto+daily+metric-review+content-published",
   "status": "verified_production",
   "repository_visibility": "public",
-  "base_commit": "b8b342b39f46ce2d858638dcea1121a0a78d1bbe",
+  "base_commit": "375fcc4a506290e8cd4dbd9464dc7c4b646dc3eb",
   "private_records": ".growth-local/owner/",
   "private_cursors_initialized": false,
   "source_checkpoints": {
     "stripe": {
-      "checked_on": "2026-11-13",
-      "details": "read-only live recurring and recent/prior complete charge windows reconciled by currency; no new failed charge since prior snapshot and no refund in recent complete window; older failures remain in that window; private amounts kept outside public state"
+      "checked_on": "2026-11-14",
+      "details": "read-only live new subscription and positive invoice counts across two complete 28-day Vancouver windows; small sample and no activation denominator; today's failed charges not assessed; private counts and amounts kept outside public state"
     },
     "supabase": {
-      "checked_on": "2026-11-13",
-      "coverage": "bounded seven-day first-party evaluation terminal attempts and validation events; guest/account and terminal deduplication limits noted; no whole-site failure-rate inference; recent billing webhook failure ledger empty"
+      "checked_on": "2026-11-14",
+      "coverage": "read-only first-party mature first-observed start-to-result-view and repeat-view cohorts, with non-ambiguous guest/account stitching; collection begins 2026-10-29; consent/test exclusion incomplete; today's terminal events and billing webhook failure ledger also checked"
     },
     "vercel": {
-      "checked_on": "2026-11-13",
-      "coverage": "grading route runtime error clusters classified; final patched production deployment READY and error/fatal group empty after synthetic expected 400; one prior release logged expected 400 and was corrected"
+      "checked_on": "2026-11-14",
+      "coverage": "new blog production deployment READY and custom domain attached; article/index/sitemap/workspace smoke 200; deployment error/fatal group empty after smoke; evaluation route 24-hour runtime error clusters empty"
     },
     "feedback": {
       "checked_on": "2026-11-13",
@@ -111,7 +111,16 @@
     },
     "GROW-002": {
       "implementation": "planned",
+      "primary_metric": "first-observed evaluation starter with a linked successful result view within seven days; fully observed guest/account actor cohort; incomplete identity and consent coverage",
       "review": "2026-11-17 collection/activation; 2026-12-08 mature cohorts/verified recurring payments"
+    },
+    "CONTENT-DAILY-2026-11-14": {
+      "implementation": "english_evidence_explanation_article_published",
+      "validation": "changed_eslint_pass; production_build_typescript_pass; seo122_pass; local_browser_390_1280_render_diagram_canonical_cta_no_overflow_pass",
+      "publication": "verified_production",
+      "published_on": "2026-11-14",
+      "url": "https://rubricheck.com/blog/explain-evidence-in-an-essay",
+      "review": "2026-11-21 index, links and CTA; 2026-12-12 complete-window search and first viewed result"
     },
     "GRADE-001": {
       "investigation": "linked_external_docx_image_reproduced_from_archived_original; other rubric total mismatches remain unresolved",
@@ -159,27 +168,29 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "7d3780887444d9b6ab7ba9a987ca8d80eeb2a64e",
+    "commit": "86a4b46ab78a637a5a329b6f0c468b2cff6a9ab0",
     "security_audit": {
       "production_total": 0,
       "checked_on": "2026-11-13",
       "development_tooling_follow_up": "2026-11-17"
     },
     "production": {
-      "deployment_id": "dpl_5JMhGqrCxckZBMv1HofvDswiN832",
+      "deployment_id": "dpl_AHE7zT613nT3ovUeDuLmA2nfD8A6",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "patched dependency release: new counterargument article, blog index, sitemap and workspace loaded; canonical, BlogPosting date, fictional example and CTA verified; synthetic linked-image DOCX returned 400 EXTERNAL_DOCX_IMAGE; unresolved inbox records unchanged",
+      "smoke": "new evidence article, blog index, sitemap and workspace returned 200; title, canonical, BlogPosting, in-article diagram and CTA verified; admin grading inbox and feedback not rechecked",
       "runtime_errors": {
-        "scan": "final deployment error/fatal group after synthetic expected 400",
+        "scan": "new blog deployment error/fatal group after public smoke",
         "observed": 0
       },
-      "limits": "no live model grading; original user DOCX still needs embedded-image re-export or complete text; search and evaluation performance need follow-up"
+      "limits": "no live model grading; admin inbox and feedback not rechecked today; prior rubric total mismatch unresolved; search and first-result performance need follow-up"
     }
   },
   "next_actions": [
+    "2026-11-21 review new evidence article indexability, internal links and CTA collection; 2026-12-12 compare complete-window URL/query clicks with first viewed result path",
+    "Next daily recheck authenticated grading inbox, retained rubric total mismatches, feedback and new Stripe failed charges; first-party terminal aggregate, webhook ledger and Vercel runtime were checked 2026-11-14 but do not resolve archived failures",
+    "2026-11-17 validate first-observed starter-to-linked-result-view cohort, guest/account stitching, consent and test exclusion; compare first attempt recovery and later distinct evaluation without treating seven-day repeat as final retention",
     "2026-11-20 review new counterargument article indexability, internal links and CTA collection; 2026-12-11 compare complete-window URL/query clicks with first successful evaluation path",
-    "2026-11-14 grading: recheck authenticated inbox, retained rubric total mismatches and new terminal attempts; deletion of resolved DOCX record does not prove source rubric issues fixed",
     "2026-11-17 triage remaining development-tool npm audit advisories and legacy HomePageClient effect lint warnings without changing grading semantics",
     "2026-11-19 review prior discussion response article indexability, internal links and CTA collection; 2026-12-10 compare complete-window URL/query clicks with first successful evaluation path",
     "2026-11-17 review CONTENT-001 indexability, internal links and click collection; 2026-12-08 compare search, first/second successful evaluations and verified subscriptions",

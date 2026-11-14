@@ -2,6 +2,14 @@
 
 이 일지는 최신 실행부터 읽는 역순 색인이다. 자동 작업 선택의 기계 상태는 [state.json](state.json), 우선순위는 [backlog](backlog.md), 상세 근거는 [runs/](runs/)에 있다. 공개 저장소이므로 고객 식별자나 비공개 사업 집계는 기록하지 않는다.
 
+## 2026-11-14 po-priority
+- 모드: owner auto + PO 지표 우선순위. 1순위 운영 지표를 **첫 평가 시작 후 7일 내 유효한 결과 확인율**로 정했다. 가입 전 게스트 평가가 실제로 관측되므로 가입을 첫 가치 경험의 분모로 삼지 않는다. 방문·로그인 active user, 가입·구독 건수는 단계별 보조 지표로 유지한다.
+- Stripe live의 최근 두 완결 28일 신규 구독과 양수 결제 invoice를 읽기 전용으로 대조했다. 표본이 작고 가입·첫 평가 분모가 없으므로 구독 전환율이나 MRR 변화로 해석하지 않았다. 비공개 수치·통화별 금액은 공개 기록에서 제외했다.
+- Supabase first-party의 관측 완료 코호트에서 게스트·계정 첫 평가 시작, 결과 확인, 별도 후속 평가를 집계했다. 첫 결과를 가입 전에 확인한 사례가 많아 가입 후 완료율만으로는 실제 활성화를 놓친다. 익명 방문자 연결·테스트 제외·수집 시작 전 이력의 한계가 있어 비공개 집계는 로컬 전용으로 보관했다.
+- 오늘 글 [How to Explain Evidence in an Essay Paragraph](https://rubricheck.com/blog/explain-evidence-in-an-essay)의 본문·메타데이터·렌더 경로·모바일 대응 도식을 작성하고 게시했다. 변경 lint·production build·SEO 122경로·로컬 390/1280px 렌더를 통과했다. main `86a4b46`의 Vercel 배포 READY와 도메인 연결, 운영 글·목록·sitemap·workspace·canonical·BlogPosting·도식·CTA를 확인했다. 배포 후 error/fatal 로그는 조회 범위에서 비어 있었다.
+- 오늘 first-party 평가 이벤트에서 서버 실패로 분류된 항목은 관측되지 않았고 결제 웹훅 실패 장부는 비어 있었으며, Vercel 평가 route의 최근 24시간 오류 군집도 없었다. 이 집계는 고유 요청 전체의 성공률이 아니다. 인증된 평가 실패·피드백 보관함은 키를 출력하지 않는 조회 경로가 입력 대기 문제로 실패해 미확인이다. 11/13의 루브릭 총점 불일치는 계속 미해결로 취급한다. Stripe 신규 실패 결제도 별도 확인이 필요하다.
+- 상태: `verified_production`(글) / `measurement_partial`(인증 보관함·신규 실패 결제 미확인). 11/21 색인·CTA, 12/12 완결 검색·첫 결과 확인 경로를 검토한다. 관리자 보관함은 다음 daily에 재조회한다. 상세는 [실행 기록](runs/2026-11-14-po-priority.md).
+
 ## 2026-11-13 daily-grading
 
 - 모드: owner daily + 사용자 요청에 따른 Grading failures 우선 처리. 인증된 보관함·first-party terminal·Vercel 오류를 대조했다.
