@@ -24,7 +24,11 @@
 | 검색 | GSC property/검색 유형/기간/페이지/검색어/국가/기기별 clicks, impressions, CTR=clicks/impressions, position. 익명 검색어 누락과 행 한도를 기록. 개인 결제와 직접 join 금지 |
 | 비용 | AI input/cached/output tokens 및 실제 요율, OCR 페이지·요청, 인프라, Stripe 수수료, 운영 도구·에이전트 비용. 검증된 비용 합계 ÷ 성공 평가 수. 누락은 미확인, 모델 요율로 계산하면 추정 |
 
-완결된 최근 28일과 이전 28일이 기본이다. Vancouver 자정은 DST 때문에 고정 UTC offset이 아니다. GSC 날짜, GA4 property timezone, Stripe timestamp의 기준을 별도로 기록한다. 성과를 인과 효과로 단정하지 않는다.
+완결된 최근 28일과 이전 28일이 기본이다. Vancouver 자정의 UTC offset은 기간에 적용되는 실제 시간 규칙으로 확인한다. GSC 날짜, GA4 property timezone, Stripe timestamp의 기준을 별도로 기록한다. 성과를 인과 효과로 단정하지 않는다.
+
+## Learnings
+
+- 2026-11-14: B.C.는 2026-03-08부터 Pacific Time을 연중 UTC-07:00으로 고정했다([정부 안내](https://news.gov.bc.ca/releases/2026AG0013-000209)). 과거 날짜까지 같은 offset으로 계산하지 말고 각 코호트 경계를 실제 현지 규칙에서 UTC로 변환한다. Supabase Postgres 17.11.0.003 미만의 오래된 tzdata는 2026 Vancouver `AT TIME ZONE`을 잘못 계산할 수 있으므로 버전 확인 후 정확한 UTC 경계를 명시하거나 저트래픽 창에 업그레이드한다([Supabase 공지](https://supabase.com/changelog/tzdata-local-time-vancouver-edmonton-casablanca)).
 
 ## doc/report 업로드 사용
 
