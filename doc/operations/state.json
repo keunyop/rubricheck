@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-14-po-priority",
-  "last_run_record": "doc/operations/runs/2026-11-14-po-priority.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-14-po-priority",
-  "mode": "auto+daily+metric-review+content-published",
+  "last_run": "2026-11-14-activation-plan",
+  "last_run_record": "doc/operations/runs/2026-11-14-activation-plan.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-14-activation-plan",
+  "mode": "experiment+metric-correction+diagnostic-release",
   "status": "verified_production",
   "repository_visibility": "public",
-  "base_commit": "375fcc4a506290e8cd4dbd9464dc7c4b646dc3eb",
+  "base_commit": "1c8bddd36a2bea3ee78a112668b7451e4e9d0d09",
   "private_records": ".growth-local/owner/",
   "private_cursors_initialized": false,
   "source_checkpoints": {
@@ -17,11 +17,11 @@
     },
     "supabase": {
       "checked_on": "2026-11-14",
-      "coverage": "read-only first-party mature first-observed start-to-result-view and repeat-view cohorts, with non-ambiguous guest/account stitching; collection begins 2026-10-29; consent/test exclusion incomplete; today's terminal events and billing webhook failure ledger also checked"
+      "coverage": "first-observed mature cohort recalculated with explicit UTC-07:00 bounds because project Postgres 17.6 has outdated 2026 Vancouver tzdata; first guest validation loss diagnosed; fixed-category reason constraint applied and verified; identity/consent/test coverage incomplete"
     },
     "vercel": {
       "checked_on": "2026-11-14",
-      "coverage": "new blog production deployment READY and custom domain attached; article/index/sitemap/workspace smoke 200; deployment error/fatal group empty after smoke; evaluation route 24-hour runtime error clusters empty"
+      "coverage": "activation diagnostic deployment READY and custom domain attached; workspace and existing blog smoke 200; deployment error/fatal group empty after smoke"
     },
     "feedback": {
       "checked_on": "2026-11-13",
@@ -94,7 +94,7 @@
     "DATA-001": {
       "investigation": "ga4_form_event_definition_break_identified",
       "validation": "event_dates_and_code_history",
-      "first_party_reconciliation": "bounded_aggregate_complete; collection_begins_2026-10-29; unresolved_feedback_unavailable"
+      "first_party_reconciliation": "mature_cohort_recalculated_explicit_utc_minus_seven; project_postgres_17_6_outdated_vancouver_tzdata; collection_begins_2026-10-29; consent_identity_test_coverage_incomplete"
     },
     "SEO-001": {
       "investigation": "new_query_page_export_supports_existing_english_tool_intent",
@@ -110,9 +110,10 @@
       "validation": "full320; focused browser14 groups; changed lint; production build passed"
     },
     "GROW-002": {
-      "implementation": "planned",
+      "implementation": "fixed_validation_reason_instrumentation_verified_production; intervention_pending_new_reason_data",
       "primary_metric": "first-observed evaluation starter with a linked successful result view within seven days; fully observed guest/account actor cohort; incomplete identity and consent coverage",
-      "review": "2026-11-17 collection/activation; 2026-12-08 mature cohorts/verified recurring payments"
+      "target": "requested doubling of rate exceeds 100 percent; proposed halve non-view rate pending user interpretation",
+      "review": "2026-11-17 new failure reason/identity coverage; 2026-11-21 select and release one recovery fix; mature seven-day cohort thereafter"
     },
     "CONTENT-DAILY-2026-11-14": {
       "implementation": "english_evidence_explanation_article_published",
@@ -168,25 +169,28 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "86a4b46ab78a637a5a329b6f0c468b2cff6a9ab0",
+    "commit": "c5f1a711af77a5d722887935eeda7d104f709e1f",
     "security_audit": {
       "production_total": 0,
       "checked_on": "2026-11-13",
       "development_tooling_follow_up": "2026-11-17"
     },
     "production": {
-      "deployment_id": "dpl_AHE7zT613nT3ovUeDuLmA2nfD8A6",
+      "deployment_id": "dpl_5NEvqXkxpVEBQZsKxoHzz3LviRaW",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "new evidence article, blog index, sitemap and workspace returned 200; title, canonical, BlogPosting, in-article diagram and CTA verified; admin grading inbox and feedback not rechecked",
+      "smoke": "fixed-category validation reason deployment READY; rubricheck.com alias attached; workspace and prior evidence article returned 200; authenticated admin inbox and feedback not rechecked",
       "runtime_errors": {
-        "scan": "new blog deployment error/fatal group after public smoke",
+        "scan": "activation diagnostic deployment error/fatal group after public smoke",
         "observed": 0
       },
-      "limits": "no live model grading; admin inbox and feedback not rechecked today; prior rubric total mismatch unresolved; search and first-result performance need follow-up"
+      "limits": "no live model grading; new failure reasons need observation; admin inbox and feedback not rechecked today; prior rubric total mismatch unresolved"
     }
   },
   "next_actions": [
+    "2026-11-17 inspect new first-attempt validation reason categories, seven-day recovery and consent/identity/test coverage using corrected explicit UTC cohort bounds; choose one smallest customer recovery fix",
+    "2026-11-21 review whether the leading validation recovery fix is ready to ship; predeclare mature-cohort comparison and quality/billing guardrails; target interpretation awaits user response",
+    "Plan a low-traffic Supabase Postgres upgrade to a version with corrected 2026 Vancouver tzdata; until then avoid database AT TIME ZONE for Vancouver cohort boundaries",
     "2026-11-21 review new evidence article indexability, internal links and CTA collection; 2026-12-12 compare complete-window URL/query clicks with first viewed result path",
     "Next daily recheck authenticated grading inbox, retained rubric total mismatches, feedback and new Stripe failed charges; first-party terminal aggregate, webhook ledger and Vercel runtime were checked 2026-11-14 but do not resolve archived failures",
     "2026-11-17 validate first-observed starter-to-linked-result-view cohort, guest/account stitching, consent and test exclusion; compare first attempt recovery and later distinct evaluation without treating seven-day repeat as final retention",
