@@ -70,5 +70,12 @@ export const EXPLAIN_EVIDENCE_POST = {
   description: "Learn how to explain evidence in an essay paragraph with a worked before-and-after example, a source-use checklist and a rubric-based revision step.",
   date: "2026-11-14", modified: "2026-11-14", category: "Academic writing", readingMinutes: 7,
 } as const;
-export const BLOG_POSTS = [EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const NO_RUBRIC_ESSAY_POST = {
+  slug: "check-essay-without-rubric",
+  path: "/blog/check-essay-without-rubric",
+  title: "How to Check an Essay Without a Rubric",
+  description: "No grading rubric? Use your assignment prompt and general writing criteria to check an essay draft, with a worked example and an honest first-review checklist.",
+  date: "2026-11-15", modified: "2026-11-15", category: "Essay revision", readingMinutes: 7,
+} as const;
+export const BLOG_POSTS = [NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];

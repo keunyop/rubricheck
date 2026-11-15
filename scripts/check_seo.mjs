@@ -51,10 +51,11 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 122, "Sitemap includes 16 public pages in seven languages plus ten English blog pages");
+  assert.equal(urls.length, 123, "Sitemap includes 16 public pages in seven languages plus eleven English blog pages");
   assert.ok(urls.some(url => url.pathname === "/blog/discussion-board-response-example"), "Discussion response guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/counterargument-paragraph-example"), "Counterargument guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/explain-evidence-in-an-essay"), "Evidence explanation guide is in the sitemap");
+  assert.ok(urls.some(url => url.pathname === "/blog/check-essay-without-rubric"), "No-rubric essay guide is in the sitemap");
   assert.equal(new Set(urls.map(String)).size, urls.length, "No duplicate sitemap URLs");
   assert.doesNotMatch(sitemap, /<loc>[^<]*\/(?:api|admin|billing)(?:\/|<)/);
   const titles = new Set();
@@ -117,7 +118,16 @@ try {
       breadcrumb.itemListElement.forEach((item, index) => assert.equal(item.position, index + 1));
       assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + homePath);
       assert.equal(breadcrumb.itemListElement.at(-1).item, url.href);
-      if (barePath === "/blog/explain-evidence-in-an-essay") {
+      if (barePath === "/blog/check-essay-without-rubric") {
+        const posting = schemas.find((schema) => schema["@type"] === "BlogPosting");
+        assert.equal(posting?.datePublished, "2026-11-15", "No-rubric guide has its editorial publication date");
+        assert.equal(posting?.url, url.href, "No-rubric BlogPosting points to its canonical URL");
+        assert.match(html, /id="no-rubric-example"/, "No-rubric guide includes its worked example");
+        assert.match(html, /<figure\b/, "No-rubric guide includes its review diagram");
+        assert.match(html, /<figcaption\b/, "No-rubric diagram has a text explanation");
+        assert.match(html, /Invented practice exercise/, "No-rubric guide labels its fictional exercise");
+        assert.match(html, /from=blog-no-rubric-essay/, "No-rubric guide links to the general-criteria entry");
+      } else if (barePath === "/blog/explain-evidence-in-an-essay") {
         assert.match(html, /<figure\b/, "Evidence guide includes its explanatory diagram");
         assert.match(html, /<figcaption\b/, "Evidence diagram has a text explanation");
         assert.match(html, /id="evidence-example"/, "Evidence guide includes its worked example");
