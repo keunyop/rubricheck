@@ -1,35 +1,35 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-14-dual-activation-goal",
-  "last_run_record": "doc/operations/runs/2026-11-14-dual-activation-goal.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-14-dual-activation-goal",
-  "mode": "experiment+dual-target-confirmation",
-  "status": "baseline_and_plan_verified",
+  "last_run": "2026-11-15-daily",
+  "last_run_record": "doc/operations/runs/2026-11-15-daily.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-15-daily",
+  "mode": "daily+dual-target-monitoring",
+  "status": "verified_production; measurement_observational",
   "repository_visibility": "public",
-  "base_commit": "1c8bddd36a2bea3ee78a112668b7451e4e9d0d09",
+  "base_commit": "c01f83c1396961f29f820e906a139c290e11fa28",
   "private_records": ".growth-local/owner/",
   "private_cursors_initialized": false,
   "source_checkpoints": {
     "stripe": {
-      "checked_on": "2026-11-14",
-      "details": "read-only live new subscription and positive invoice counts across two complete 28-day Vancouver windows; small sample and no activation denominator; today's failed charges not assessed; private counts and amounts kept outside public state"
+      "checked_on": "2026-11-15",
+      "details": "live failed charges checked across all pages since 2026-11-12 07:00Z; no new failure observed; private counts and amounts excluded from public state"
     },
     "supabase": {
-      "checked_on": "2026-11-14",
-      "coverage": "first-observed mature cohort recalculated with explicit UTC-07:00 bounds because project Postgres 17.6 has outdated 2026 Vancouver tzdata; first guest validation loss diagnosed; fixed-category reason constraint applied and verified; identity/consent/test coverage incomplete"
+      "checked_on": "2026-11-15",
+      "coverage": "first-observed mature cohort recalculated with explicit UTC-07:00 bounds; six of seven days overlap baseline, so no intervention effect; new fixed-category reasons collected for short post-release window; billing webhook failure ledger checked; identity/consent/test coverage incomplete"
     },
     "vercel": {
-      "checked_on": "2026-11-14",
-      "coverage": "activation diagnostic deployment READY and custom domain attached; workspace and existing blog smoke 200; deployment error/fatal group empty after smoke"
+      "checked_on": "2026-11-15",
+      "coverage": "new article deployment READY and custom domain attached; article, blog index, sitemap and workspace smoke 200; post-deployment runtime error group empty; recent raw evaluation retry warning recovered in same request"
     },
     "feedback": {
-      "checked_on": "2026-11-13",
+      "checked_on": "2026-11-15",
       "coverage": "authenticated production admin read; no new feedback item; private details excluded"
     },
     "grading_inbox": {
-      "checked_on": "2026-11-13",
-      "coverage": "authenticated production list; actual linked-image DOCX reproduced and fixed; only resolved parse record deleted by ID and absent on recheck; unresolved rubric total mismatches retained"
+      "checked_on": "2026-11-15",
+      "coverage": "authenticated production full list; no new archived failure; existing rubric structure/total mismatches retained and unresolved"
     },
     "gsc": {
       "checked_on": "2026-11-13",
@@ -116,6 +116,14 @@
       "acquisition": "same-cohort first-starter volume is a leading measure; search and homepage are leading observed paths; choose one existing landing/content improvement after same-window GSC review; private weekly numeric target stays outside the repository",
       "review": "2026-11-17 new failure reason/identity coverage and search evidence; 2026-11-21 recovery release decision; 2026-12-10 first mature post-change cohort if released by 2026-11-24; 2027-01-30 dual-goal decision"
     },
+    "CONTENT-DAILY-2026-11-15": {
+      "implementation": "english_no_rubric_essay_guide_published",
+      "validation": "changed_eslint_pass; production_build_pass; seo123_pass; local_browser_390_1280_diagram_cta_no_overflow; general_criteria_entry_selected",
+      "publication": "verified_production",
+      "published_on": "2026-11-15",
+      "url": "https://rubricheck.com/blog/check-essay-without-rubric",
+      "review": "2026-11-22 index, links and CTA; 2026-12-13 complete-window search and first linked valid result"
+    },
     "CONTENT-DAILY-2026-11-14": {
       "implementation": "english_evidence_explanation_article_published",
       "validation": "changed_eslint_pass; production_build_typescript_pass; seo122_pass; local_browser_390_1280_render_diagram_canonical_cta_no_overflow_pass",
@@ -130,7 +138,7 @@
       "validation": "full323_initial_322_pass_one_stale_expectation; corrected_focused44_and_log_regression30_pass; changed_lint; final_production_build; synthetic_production_400",
       "deployment": "verified_production",
       "archive_cleanup": "resolved_parse_record_deleted_by_id_and_absent_on_recheck; unresolved_rubric_structure_records_retained; local_original_copies_deleted",
-      "review": "2026-11-14 unresolved rubric total mismatches and any new grading failures"
+      "review": "next daily unresolved rubric total mismatches and any new grading failures"
     },
     "SEC-009": {
       "investigation": "production Next.js critical and grading parser transitive dependency advisories found during local dependency restore",
@@ -170,22 +178,22 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "c5f1a711af77a5d722887935eeda7d104f709e1f",
+    "commit": "81497b68ddcaa54ffb6c2319656d46785c59c6fe",
     "security_audit": {
       "production_total": 0,
-      "checked_on": "2026-11-13",
+      "checked_on": "2026-11-15",
       "development_tooling_follow_up": "2026-11-17"
     },
     "production": {
-      "deployment_id": "dpl_5NEvqXkxpVEBQZsKxoHzz3LviRaW",
+      "deployment_id": "dpl_5StDzvHW3PPS5kSJPGXJ3ptmJdMQ",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "fixed-category validation reason deployment READY; rubricheck.com alias attached; workspace and prior evidence article returned 200; authenticated admin inbox and feedback not rechecked",
+      "smoke": "new no-rubric guide deployment READY; rubricheck.com alias attached; new article, blog index, sitemap and workspace returned 200; local CTA selects general criteria; authenticated admin inbox and feedback rechecked",
       "runtime_errors": {
-        "scan": "activation diagnostic deployment error/fatal group after public smoke",
+        "scan": "new article deployment recent runtime error group after public smoke",
         "observed": 0
       },
-      "limits": "no live model grading; new failure reasons need observation; admin inbox and feedback not rechecked today; prior rubric total mismatch unresolved"
+      "limits": "no live model grading; new failure reasons need full observation; prior rubric total mismatch unresolved"
     }
   },
   "next_actions": [
@@ -195,7 +203,8 @@
     "2026-12-10 read first fully mature seven-day post-change cohort if release occurs by 2026-11-24; shift review if release is later; 2027-01-30 judge two consecutive mature cohorts against both targets",
     "Plan a low-traffic Supabase Postgres upgrade to a version with corrected 2026 Vancouver tzdata; until then avoid database AT TIME ZONE for Vancouver cohort boundaries",
     "2026-11-21 review new evidence article indexability, internal links and CTA collection; 2026-12-12 compare complete-window URL/query clicks with first viewed result path",
-    "Next daily recheck authenticated grading inbox, retained rubric total mismatches, feedback and new Stripe failed charges; first-party terminal aggregate, webhook ledger and Vercel runtime were checked 2026-11-14 but do not resolve archived failures",
+    "2026-11-22 review no-rubric essay article indexability, internal links and CTA collection; 2026-12-13 compare complete-window URL/query clicks with first linked valid result",
+    "Next daily recheck retained rubric total mismatches and any new grading failures, feedback and failed charges; authenticated admin, first-party terminal, webhook ledger, Stripe and Vercel were checked 2026-11-15 but do not resolve archived failures",
     "2026-11-17 validate first-observed starter-to-linked-result-view cohort, guest/account stitching, consent and test exclusion; compare first attempt recovery and later distinct evaluation without treating seven-day repeat as final retention",
     "2026-11-20 review new counterargument article indexability, internal links and CTA collection; 2026-12-11 compare complete-window URL/query clicks with first successful evaluation path",
     "2026-11-17 triage remaining development-tool npm audit advisories and legacy HomePageClient effect lint warnings without changing grading semantics",
@@ -204,12 +213,11 @@
     "2026-11-17 review quiz exposure/selection/sample/create-click collection and authenticated admin generation/outcome aggregate; current nonzero sample is too small to identify the main adoption bottleneck",
     "2026-11-17 review English rubric-checker indexability, US/AU/CA/MY search cohorts and first/second successful evaluation paths",
     "2026-12-08 assess full 28-day growth and mature repeat-use cohorts against verified recurring payments",
-    "Next daily reconcile feedback and new evaluation/payment failures through authenticated admin reads; use Vercel + first-party fallback if authentication fails",
-    "Keep next report manifest timezone, latest complete date, filters and key event definitions; add same-window daily/country/landing breakdowns when available"
+    "2026-11-16 check newly uploaded report manifest timezone, latest complete date, filters and key event definitions; add same-window daily/country/landing breakdowns when available"
   ],
   "review_dates": {
-    "next_daily": "2026-11-14",
-    "last_daily": "2026-11-13",
+    "next_daily": "2026-11-16",
+    "last_daily": "2026-11-15",
     "next_weekly": "2026-11-17",
     "next_report_upload": "2026-11-16",
     "next_monthly": "2026-12-01",
