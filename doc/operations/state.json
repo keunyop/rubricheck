@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-16-daily",
-  "last_run_record": "doc/operations/runs/2026-11-16-daily.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-16-daily",
-  "mode": "daily+dual-target-monitoring",
-  "status": "content_verified_production; evaluation_failure_unresolved; billing_retry_pending; baseline_timezone_corrected",
+  "last_run": "2026-11-16-grading-incident",
+  "last_run_record": "doc/operations/runs/2026-11-16-grading-incident.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-16-grading-incident",
+  "mode": "incident-grading-failures",
+  "status": "grading_output_guard_verified_production; four_archived_failures_unresolved; billing_retry_pending; baseline_timezone_corrected",
   "repository_visibility": "public",
   "base_commit": "c01f83c1396961f29f820e906a139c290e11fa28",
   "private_records": ".growth-local/owner/",
@@ -21,7 +21,7 @@
     },
     "vercel": {
       "checked_on": "2026-11-16",
-      "coverage": "production evaluation attempt 1 and 2 invalid_json, terminal failure and reservation released; later separate request success; 2026-11-16 article deployment READY and public article/index/sitemap/workspace smoke passed"
+      "coverage": "production evaluation attempt 1 and 2 invalid_json, terminal failure and reservation released; later separate request success; grading output guard deployment READY and custom domain alias attached; public workspace smoke passed; post-deployment runtime log scan unavailable due tool clock lag"
     },
     "feedback": {
       "checked_on": "2026-11-16",
@@ -29,7 +29,7 @@
     },
     "grading_inbox": {
       "checked_on": "2026-11-16",
-      "coverage": "authenticated production full list; new ai_evaluation invalid_json terminal failure and prior rubric structure mismatches retained unresolved"
+      "coverage": "authenticated production full list 2026-11-16 19:53Z: four retained records, three rubric_structuring and one ai_evaluation; no record meets same-flow recovery/deletion criteria"
     },
     "gsc": {
       "checked_on": "2026-11-16",
@@ -142,12 +142,12 @@
       "review": "2026-11-21 index, links and CTA; 2026-12-12 complete-window search and first viewed result"
     },
     "GRADE-001": {
-      "investigation": "linked_external_docx_image_reproduced_from_archived_original; other rubric total mismatches remain unresolved",
-      "implementation": "external_docx_image_400_localized_guidance_no_billing_no_archive_no_error_log; prior malformed form and rubric point guidance retained",
-      "validation": "full323_initial_322_pass_one_stale_expectation; corrected_focused44_and_log_regression30_pass; changed_lint; final_production_build; synthetic_production_400",
+      "investigation": "2026-11-16 four archives: one ai_evaluation invalid_json twice, three rubric_structuring; two rubric cases same actor repeated without later success; third linkage unknown; separate later ai success does not recover failed attempt",
+      "implementation": "prior external_docx_image_400 guidance retained; evaluation JSON output mode, incomplete/refusal/failed response guard and bounded non-content diagnostics deployed; rubric weights/totals not silently repaired",
+      "validation": "synthetic regression pre-fix 9_of_10_fail; focused34; rubric_grade57; full335; typescript; changed_lint; production_build; production_workspace_and_authenticated_archive_get",
       "deployment": "verified_production",
-      "archive_cleanup": "resolved_parse_record_deleted_by_id_and_absent_on_recheck; unresolved_rubric_structure_records_retained; local_original_copies_deleted",
-      "review": "2026-11-16 new ai_evaluation invalid_json twice unresolved despite later separate request success; no archive deletion; next daily review prior rubric mismatch and output failure reason telemetry"
+      "archive_cleanup": "prior resolved parse record deleted; 2026-11-16 four current records retained because no same-flow recovery or proven fix for their exact causes; no deletion this incident",
+      "review": "2026-11-17 inspect new bounded model output reasons, reservation release and same-attempt recovery; privately inspect original overall totals, row maxima and subtotal/performance structure for three rubric cases; no live-model result improvement claimed"
     },
     "SEC-009": {
       "investigation": "production Next.js critical and grading parser transitive dependency advisories found during local dependency restore",
@@ -187,22 +187,22 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "49bb7056e15516f822e77ac21d93a570852110d6",
+    "commit": "f920343458d2b58890ed71a4d4570ef19cb568c5",
     "security_audit": {
       "production_total": 0,
       "checked_on": "2026-11-15",
       "development_tooling_follow_up": "2026-11-17"
     },
     "production": {
-      "deployment_id": "dpl_551w5j1jnyt1y1Wk5u8YTnkbtQv5",
+      "deployment_id": "dpl_Evs6K8fQp5ir7bLr3Wwa8sCxtwfF",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "2026-11-16 rubric feedback guide deployment READY; public article, blog index, sitemap and workspace returned 200; canonical, BlogPosting publication date, figure and CTA verified; admin inbox and feedback checked earlier in owner run",
+      "smoke": "2026-11-16 grading output guard deployment READY with rubricheck.com alias; public workspace opened and authenticated grading-failures GET returned 200 with four retained records; no paid live-model evaluation",
       "runtime_errors": {
         "scan": "runtime log API clock lagged public browser and deployment timestamps; no reliable post-deployment scan yet",
         "observed": null
       },
-      "limits": "no live model grading; new failure reasons need full observation; prior rubric total mismatch unresolved"
+      "limits": "no live model grading; exact provider reason for archived ai failure unavailable; new failure reasons and rate need observation; prior rubric total mismatch unresolved"
     }
   },
   "next_actions": [
@@ -216,7 +216,8 @@
     "2026-11-22 review no-rubric essay article indexability, internal links and CTA collection; 2026-12-13 compare complete-window URL/query clicks with first linked valid result",
     "2026-11-17 17:40 PST onward verify Stripe automatic retry, open invoice and past_due subscription; no manual retry or customer contact without explicit authorization",
     "Next daily recheck retained rubric total mismatches and new ai_evaluation invalid_json failure, feedback and billing; authenticated admin, first-party terminal, webhook ledger, Stripe and Vercel were checked 2026-11-16 but do not resolve archived failures",
-    "2026-11-17 prioritize privacy-limited model response status/incomplete/refusal/text-presence diagnostics if AI output failure repeats; no extra model retries before root cause",
+    "2026-11-17 inspect new privacy-limited model output status/incomplete/refusal/text-presence diagnostics and reservation release; compare only new attempts, with no extra model retries before root cause",
+    "2026-11-17 privately inspect overall raw-points total, base row maxima and subtotal/performance-level structure in three retained rubric failures; establish safe recovery or targeted input guidance before any record cleanup",
     "2026-11-17 validate first-observed starter-to-linked-result-view cohort, guest/account stitching, consent and test exclusion; compare first attempt recovery and later distinct evaluation without treating seven-day repeat as final retention",
     "2026-11-20 review new counterargument article indexability, internal links and CTA collection; 2026-12-11 compare complete-window URL/query clicks with first successful evaluation path",
     "2026-11-17 triage remaining development-tool npm audit advisories and legacy HomePageClient effect lint warnings without changing grading semantics",
