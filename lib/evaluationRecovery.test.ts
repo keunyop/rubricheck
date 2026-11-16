@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { mock, test } from "node:test";
 import type { GradingMode } from "./schema.ts";
+import { ModelOutputError } from "./modelOutput.ts";
 
 const rubric = { criteria: [{ name: "Evidence", max_score: 10, description: "Use sources; deduct 5 for missing citations." }] };
 const valid = {
@@ -65,5 +66,24 @@ test("evaluation recovers invalid model output without inventing scores or unbou
       assert.equal(prompts.length, 1);
     }
     assert.doesNotMatch(JSON.stringify(logs), /private-provider-body|secret-key|Synthetic assignment/);
+  });
+  await t.test("output diagnostics survive both attempts without changing retry bounds or accepting invalid output", async () => {
+    const diagnostics = {
+      reason: "incomplete" as const, responseStatus: "incomplete" as const,
+      incompleteReason: "max_output_tokens" as const, hasText: true, hasRefusal: false,
+    };
+    logs.length = 0; prompts.length = 0;
+    responses = [new ModelOutputError(diagnostics), new ModelOutputError(diagnostics)];
+    await assert.rejects(evaluateAssignment(rubric, "Synthetic assignment", "standard", { requestId: "synthetic-request" }), /EVALUATION_FAILED/);
+    assert.equal(prompts.length, 2);
+    assert.equal(logs.length, 2);
+    assert.deepEqual(logs.map(log => log[0]), ["EVALUATION_OUTPUT_RETRY", "EVALUATION_SCHEMA_VALIDATION_FAILED"]);
+    for (const log of logs) {
+      assert.deepEqual((log[1] as { modelOutput: unknown }).modelOutput, diagnostics);
+      assert.deepEqual((log[1] as { issues: unknown }).issues, [{ code: "invalid_json", path: "" }]);
+    }
+    responses = [new ModelOutputError(diagnostics), valid]; prompts.length = 0;
+    assert.deepEqual(await evaluateAssignment(rubric, "Synthetic assignment"), valid);
+    assert.equal(prompts.length, 2);
   });
 });

@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { ModelOutputError, type ModelOutputDiagnostics } from "./modelOutput.ts";
 
 const apiKey = process.env.OPENAI_API_KEY;
 
@@ -121,6 +122,25 @@ function buildJsonParseAttempts(text: string): string[] {
 
 function parseModelJsonFromResponse(response: unknown): unknown {
   const candidates = collectResponseTextCandidates(response);
+  const record = asRecord(response);
+  const status = record?.status;
+  const responseStatus: ModelOutputDiagnostics["responseStatus"] =
+    status === "completed" || status === "incomplete" || status === "failed" || status === "cancelled" || status === "queued" || status === "in_progress"
+      ? status : "unknown";
+  const reason = asRecord(record?.incomplete_details)?.reason;
+  const incompleteReason: ModelOutputDiagnostics["incompleteReason"] =
+    reason === "max_output_tokens" || reason === "content_filter" ? reason : reason == null ? "none" : "other";
+  const hasRefusal = (Array.isArray(record?.output) ? record.output : []).some(output => {
+    const content = asRecord(output)?.content;
+    return Array.isArray(content) && content.some(item => asRecord(item)?.type === "refusal");
+  });
+  const diagnostics = { responseStatus, incompleteReason, hasText: candidates.some(text => text.trim().length > 0), hasRefusal };
+  // A parseable fragment does not make an incomplete/refused response a grade.
+  if (hasRefusal) throw new ModelOutputError({ ...diagnostics, reason: "refusal" });
+  if (responseStatus === "incomplete") throw new ModelOutputError({ ...diagnostics, reason: "incomplete" });
+  if (responseStatus !== "completed" && responseStatus !== "unknown") {
+    throw new ModelOutputError({ ...diagnostics, reason: "response_failed" });
+  }
 
   for (const text of candidates) {
     const attempts = buildJsonParseAttempts(text);
@@ -134,7 +154,7 @@ function parseModelJsonFromResponse(response: unknown): unknown {
     }
   }
 
-  throw new Error("MODEL_JSON_PARSE_FAILED");
+  throw new ModelOutputError({ ...diagnostics, reason: diagnostics.hasText ? "invalid_json" : "empty_output" });
 }
 
 type JsonModelOptions = {
@@ -184,6 +204,7 @@ async function callJsonModel(
     response = await client.responses.create({
       model,
       reasoning: { effort: reasoningEffort },
+      ...(modelEnvKey === "EVALUATION_MODEL" ? { text: { format: { type: "json_object" as const } } } : {}),
       input: [
         {
           role: "system",

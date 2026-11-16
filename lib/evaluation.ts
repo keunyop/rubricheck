@@ -1,4 +1,5 @@
 import { callEvaluationModel } from "./openai";
+import { ModelOutputError } from "./modelOutput.ts";
 import type { Locale } from "../src/i18n/config";
 import {
   buildEvaluationPrompt,
@@ -68,7 +69,10 @@ export async function evaluateAssignment(
       const invalidJson = error instanceof Error && error.message === "MODEL_JSON_PARSE_FAILED";
       const issues = error instanceof EvaluationValidationError ? error.issues : invalidJson ? [{ code: "invalid_json", path: "" }] : null;
       if (issues) {
-        const log = { requestId: options?.requestId, mode, attempt: attempt + 1, issues };
+        const log = {
+          requestId: options?.requestId, mode, attempt: attempt + 1, issues,
+          ...(error instanceof ModelOutputError ? { modelOutput: error.diagnostics } : {}),
+        };
         if (attempt === 0) {
           console.warn("EVALUATION_OUTPUT_RETRY", log);
           retryInstruction = [
