@@ -77,5 +77,12 @@ export const NO_RUBRIC_ESSAY_POST = {
   description: "No grading rubric? Use your assignment prompt and general writing criteria to check an essay draft, with a worked example and an honest first-review checklist.",
   date: "2026-11-15", modified: "2026-11-15", category: "Essay revision", readingMinutes: 7,
 } as const;
-export const BLOG_POSTS = [NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const RUBRIC_FEEDBACK_REVISION_POST = {
+  slug: "turn-rubric-feedback-into-revisions",
+  path: "/blog/turn-rubric-feedback-into-revisions",
+  title: "How to Turn Rubric Feedback into a Revision Plan",
+  description: "Turn a vague rubric comment into a specific edit. Use a worked comparison paragraph, a four-step revision map, and a check before you resubmit.",
+  date: "2026-11-16", modified: "2026-11-16", category: "Assignment revision", readingMinutes: 7,
+} as const;
+export const BLOG_POSTS = [RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];
