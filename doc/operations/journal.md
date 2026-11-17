@@ -2,6 +2,10 @@
 
 이 일지는 최신 실행부터 읽는 역순 색인이다. 자동 작업 선택의 기계 상태는 [state.json](state.json), 우선순위는 [backlog](backlog.md), 상세 근거는 [runs/](runs/)에 있다. 공개 저장소이므로 고객 식별자나 비공개 사업 집계는 기록하지 않는다.
 
+## 2026-11-17 daily
+- 최근 first-party 평가 실패의 최대 관측 범주는 `validation_input`이지만 여러 입력 오류가 합쳐져 있어 특정 원인은 미확정이다. 인증된 평가 실패 보관함에는 루브릭 구조화 항목이 남아 있고, 전일 항목 수 감소는 보관 만료 때문에 복구 증거가 아니다. 결제 자동 재시도는 현지 17:40 이후 예정이며, 새 GSC/GA4 완결 보고서는 없다. 7일 첫 결과 확인율과 검색 효과는 판정하지 않았다.
+- 새 글 [How to Check Rubric Points and Weights Before Reviewing a Draft](https://rubricheck.com/blog/check-rubric-points-and-weights)를 게시했다. TypeScript·lint·build·SEO 125경로·390px 본문 도식 검증을 통과했고, 콘텐츠 커밋 `7b45bd5`의 Vercel production 배포가 READY였다. 공개 글·목록·사이트맵·workspace와 canonical·BlogPosting·도식·CTA를 확인했다. 11/24 색인·CTA, 12/15 완결 검색·첫 결과 경로를 검토한다. [실행 기록](runs/2026-11-17-daily.md).
+
 ## 2026-11-16 grading incident
 - 사용자의 누적 실패 처리 요청에 따라 인증된 보관함 4건을 건별 대조했다. 루브릭 구조화 3건 중 2건은 같은 actor의 별도 시도에서 반복됐고 후속 성공이 관측되지 않았다. 나머지 1건은 결과 연결 근거가 부족하다. AI 평가 실패 1건의 뒤이은 별도 성공은 실패한 시도의 복구가 아니다. 원인·복구 증거가 없어 4건 모두 삭제하지 않았다.
 - 평가 모델의 JSON 출력 형식과 `incomplete`·refusal·failed 응답 선검사를 보강하고, 개인정보 없는 제한된 진단만 남겼다. 전체 테스트 335/335, TypeScript·lint·build 통과. main `f920343` 배포는 Vercel READY·도메인 연결·공개 workspace·인증 보관함 GET을 확인했다. 새 실패율 개선은 미측정이며 배포 직후 runtime 로그 조회는 도구 시계 불일치로 미확인이다. 11/17 신규 실패 범주와 루브릭 원본 배점 구조를 재점검한다. [실행 기록](runs/2026-11-16-grading-incident.md).
