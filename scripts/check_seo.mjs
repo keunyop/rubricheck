@@ -51,7 +51,8 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 124, "Sitemap includes 16 public pages in seven languages plus twelve English blog pages");
+  assert.equal(urls.length, 125, "Sitemap includes 16 public pages in seven languages plus thirteen English blog pages");
+  assert.ok(urls.some(url => url.pathname === "/blog/check-rubric-points-and-weights"), "Rubric points guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/turn-rubric-feedback-into-revisions"), "Rubric feedback revision guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/discussion-board-response-example"), "Discussion response guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/counterargument-paragraph-example"), "Counterargument guide is in the sitemap");
@@ -119,7 +120,16 @@ try {
       breadcrumb.itemListElement.forEach((item, index) => assert.equal(item.position, index + 1));
       assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + homePath);
       assert.equal(breadcrumb.itemListElement.at(-1).item, url.href);
-      if (barePath === "/blog/turn-rubric-feedback-into-revisions") {
+      if (barePath === "/blog/check-rubric-points-and-weights") {
+        const posting = schemas.find((schema) => schema["@type"] === "BlogPosting");
+        assert.equal(posting?.datePublished, "2026-11-17", "Rubric points guide has its editorial publication date");
+        assert.equal(posting?.url, url.href, "Rubric points BlogPosting points to its canonical URL");
+        assert.match(html, /id="points-example"/, "Rubric points guide includes its worked example");
+        assert.match(html, /<figure\b/, "Rubric points guide includes its points diagram");
+        assert.match(html, /<figcaption\b/, "Rubric points diagram has a text explanation");
+        assert.match(html, /fictional short report/, "Rubric points guide labels its invented exercise");
+        assert.match(html, /from=blog-rubric-points/, "Rubric points guide links to the product entry");
+      } else if (barePath === "/blog/turn-rubric-feedback-into-revisions") {
         const posting = schemas.find((schema) => schema["@type"] === "BlogPosting");
         assert.equal(posting?.datePublished, "2026-11-16", "Feedback revision guide has its editorial publication date");
         assert.equal(posting?.url, url.href, "Feedback revision BlogPosting points to its canonical URL");
