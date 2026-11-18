@@ -2,6 +2,11 @@
 
 이 일지는 최신 실행부터 읽는 역순 색인이다. 자동 작업 선택의 기계 상태는 [state.json](state.json), 우선순위는 [backlog](backlog.md), 상세 근거는 [runs/](runs/)에 있다. 공개 저장소이므로 고객 식별자나 비공개 사업 집계는 기록하지 않는다.
 
+## 2026-11-18 daily
+
+- 첫 평가 입력 실패의 여섯 고정 코드를 개인정보 없이 구분하는 진단과 [역개요 글](https://rubricheck.com/blog/reverse-outline-example)을 게시했다. 전체 339건·TypeScript·lint·build·SEO 126경로·320/390/1280px·키보드 스크롤·CTA 검증 통과. 사용자의 main 반영·운영 배포 명시 승인 후 소스 `8822c26`의 Vercel READY·도메인·글·목록·sitemap·workspace·메타데이터·본문 도식·CTA·malformed JSON 400과 조회 범위 내 error/fatal 없음 확인. 상태 `verified_production`; 실제 진단 수집·개선 효과는 별도 관측한다. 앞으로 검증된 통상 변경의 지속 배포 위임도 운영 기준에 재확인했다.
+- 인증된 관리자 읽기에서 새 루브릭 구조화 실패를 확인해 미해결로 유지했다. Stripe 앱 재인증이 필요해 자동 재시도 결과는 미확인이다. 새 분석 보고서는 없고 과거 시간대 기준선 모순도 재대조가 필요하다. 운영 의존성 감사는 0건, 개발 도구 경고는 별도 후속으로 분류했다. [실행 기록](runs/2026-11-18-daily.md).
+
 ## 2026-11-17 daily
 - 최근 first-party 평가 실패의 최대 관측 범주는 `validation_input`이지만 여러 입력 오류가 합쳐져 있어 특정 원인은 미확정이다. 인증된 평가 실패 보관함에는 루브릭 구조화 항목이 남아 있고, 전일 항목 수 감소는 보관 만료 때문에 복구 증거가 아니다. 결제 자동 재시도는 현지 17:40 이후 예정이며, 새 GSC/GA4 완결 보고서는 없다. 7일 첫 결과 확인율과 검색 효과는 판정하지 않았다.
 - 새 글 [How to Check Rubric Points and Weights Before Reviewing a Draft](https://rubricheck.com/blog/check-rubric-points-and-weights)를 게시했다. TypeScript·lint·build·SEO 125경로·390px 본문 도식 검증을 통과했고, 콘텐츠 커밋 `7b45bd5`의 Vercel production 배포가 READY였다. 공개 글·목록·사이트맵·workspace와 canonical·BlogPosting·도식·CTA를 확인했다. 11/24 색인·CTA, 12/15 완결 검색·첫 결과 경로를 검토한다. [실행 기록](runs/2026-11-17-daily.md).
