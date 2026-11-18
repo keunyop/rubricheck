@@ -51,7 +51,8 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 125, "Sitemap includes 16 public pages in seven languages plus thirteen English blog pages");
+  assert.equal(urls.length, 126, "Sitemap includes 16 public pages in seven languages plus fourteen English blog pages");
+  assert.ok(urls.some(url => url.pathname === "/blog/reverse-outline-example"), "Reverse outline guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/check-rubric-points-and-weights"), "Rubric points guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/turn-rubric-feedback-into-revisions"), "Rubric feedback revision guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/discussion-board-response-example"), "Discussion response guide is in the sitemap");

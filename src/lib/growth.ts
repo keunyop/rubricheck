@@ -36,6 +36,10 @@ export function acquisitionTouch(url: string, referrer: string): GrowthTouch {
 export function validGrowthId(value: unknown): value is string { return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
 // Only fixed, server-owned categories enter first-party analytics. Error messages,
 // uploaded names/text and unrecognized response codes are never stored.
+const INPUT_FAILURE_CODES = ["INVALID_JSON", "INVALID_INPUT", "INVALID_MODE", "INVALID_FORM_DATA", "MISSING_INPUT", "TRIAL_INPUT_TOO_LONG"];
+export function growthInputFailureCode(status: number, code: unknown): string | null {
+  return status >= 400 && status < 500 && ![401, 403, 429].includes(status) && typeof code === "string" && INPUT_FAILURE_CODES.includes(code) ? code : null;
+}
 export function growthFailureCategory(status: number, code?: unknown): string {
   if (status >= 500) return "server";
   if (status === 401 || status === 403 || status === 429) return "access";
@@ -43,7 +47,7 @@ export function growthFailureCategory(status: number, code?: unknown): string {
   if (safeCode === "TRIAL_PENDING" || safeCode === "EVALUATION_PENDING" || safeCode === "EVALUATION_ALREADY_COMPLETED") return "validation_pending";
   if (["FILE_TOO_LARGE", "FILE_TOTAL_TOO_LARGE", "MULTI_FILE_IMAGES_ONLY", "UNSUPPORTED_FILE_TYPE", "FILE_PARSE_FAILED", "TEXT_EXTRACTION_FAILED", "PROTECTED_FILE", "IMAGE_TOO_SMALL", "EXTERNAL_DOCX_IMAGE"].includes(safeCode)) return "validation_file";
   if (safeCode === "RUBRIC_CRITERIA_NOT_FOUND" || safeCode === "RUBRIC_STRUCTURE_FAILED") return "validation_rubric";
-  if (["INVALID_JSON", "INVALID_INPUT", "INVALID_MODE", "INVALID_FORM_DATA", "MISSING_INPUT", "TRIAL_INPUT_TOO_LONG"].includes(safeCode)) return "validation_input";
+  if (INPUT_FAILURE_CODES.includes(safeCode)) return "validation_input";
   return "validation_other";
 }
 export function sameGrowthOrigin(request: Request): boolean {

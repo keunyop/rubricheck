@@ -91,5 +91,12 @@ export const RUBRIC_POINTS_POST = {
   description: "Check whether rubric row points add to the stated total, distinguish points from weights, and spot missing scoring details with a worked example.",
   date: "2026-11-17", modified: "2026-11-17", category: "Using a rubric", readingMinutes: 6,
 } as const;
-export const BLOG_POSTS = [RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const REVERSE_OUTLINE_POST = {
+  slug: "reverse-outline-example",
+  path: "/blog/reverse-outline-example",
+  title: "Reverse Outline Example: Find Gaps in an Essay Draft",
+  description: "Use a reverse outline example to check paragraph purpose, spot missing reasoning, and revise an essay's organization before reviewing it with your rubric.",
+  date: "2026-11-18", modified: "2026-11-18", category: "Essay organization", readingMinutes: 7,
+} as const;
+export const BLOG_POSTS = [REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];

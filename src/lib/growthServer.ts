@@ -2,7 +2,7 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getCreditEmailFromCookie } from "./creditSession";
 import { callSupabaseRpc, hasSupabaseConfig, type JsonRecord } from "./supabaseRest";
-import { growthFailureCategory, sanitizeTouch, validGrowthId, type GrowthProduct, type GrowthTouch } from "./growth";
+import { growthFailureCategory, growthInputFailureCode, sanitizeTouch, validGrowthId, type GrowthProduct, type GrowthTouch } from "./growth";
 
 export const GROWTH_COOKIE = "rubricheck_growth";
 export const CONSENT_COOKIE = "rubricheck_analytics";
@@ -83,6 +83,14 @@ export async function instrumentGrade(request: Request, run: (request: Request) 
     const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
     const billingProduct = response.headers.get("x-growth-product");
     const product: GrowthProduct = data.guest_preview === true ? "guest" : billingProduct === "pro" || billingProduct === "credits" || billingProduct === "free" ? billingProduct : account ? "unknown" : "guest";
+    const inputCode = growthInputFailureCode(response.status, data.code);
+    if (inputCode && growthVisitor(request)) {
+      // Fixed values only; no payload, identity, attempt IDs or input metadata.
+      // Runtime logs are limited by the hosting plan's retention, not a durable
+      // cohort metric: these records cannot link attempts or deduplicate retries.
+      // Log before the terminal RPC so a store outage does not hide the reason.
+      try { console.info("GROWTH_VALIDATION_INPUT", { code: inputCode, product: account ? "account" : "guest" }); } catch {}
+    }
     await recordGrowthEvent(request, { name: response.ok ? product === "guest" ? "guest_preview_completed" : "evaluation_completed" : "evaluation_failed", key: `outcome:${attempt}`, attempt, product, evaluation: typeof data.evaluation_id === "string" ? data.evaluation_id : null, failure: response.ok ? null : growthFailureCategory(response.status, data.code) });
   });
   return response;
