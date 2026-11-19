@@ -5,7 +5,7 @@
   "last_run_record": "doc/operations/runs/2026-11-19-daily.md",
   "last_journal_entry": "doc/operations/journal.md#2026-11-19-daily",
   "mode": "daily",
-  "status": "rubric_recovery_verified_local_release_pending; article_verified_local_publication_pending; stripe_reauthentication_required; timezone_baseline_reaudit_required",
+  "status": "grading_recovery_verified_production_all_verified_archives_deleted; daily_article_verified_production; stripe_reauthentication_required; timezone_baseline_reaudit_required",
   "repository_visibility": "public",
   "base_commit": "62a27a5",
   "private_records": ".growth-local/owner/",
@@ -22,7 +22,7 @@
     },
     "vercel": {
       "checked_on": "2026-11-19",
-      "coverage": "source8822c26 production READY with custom domain alias; public article/index/sitemap/workspace HTTP200, canonical/BlogPosting/figure/CTA/scrollTable and malformedJSON400 verified; deployment recent error/fatal grouped query empty; actual input diagnostics collection pending; retention and source-clock limitations retained"
+      "coverage": "sourcec941158 exact SHA production READY with custom domain alias; article/index/sitemap/workspace and due discussion article HTTP200; canonical BlogPosting figure CTA; synthetic incomplete/conflict400 rubric-field guidance with guest preview released; malformedJSON400; recent15m error/fatal query empty; no original assignment evaluation or impact claim"
     },
     "feedback": {
       "checked_on": "2026-11-19",
@@ -30,7 +30,7 @@
     },
     "grading_inbox": {
       "checked_on": "2026-11-19",
-      "coverage": "all retained records and details read; each rubric verified offline with zero provider calls as faithful parse or source-proven input guidance; release and ID-scoped cleanup pending"
+      "coverage": "all retained records diagnosed and source handling verified offline with zero provider calls; authenticated DELETE per verified ID returned200/ok; complete-list reread empty and nextOffset null; source snapshot locally removed; receipt private"
     },
     "gsc": {
       "checked_on": "2026-11-16",
@@ -153,9 +153,9 @@
     },
     "GRADE-001": {
       "implementation": "conservative source-layout audit; faithful LMS_Pts and weighted_rows; shared holistic scale; incomplete and conflicting source points guidance; cache_version4; unknown layouts defer; one numeric-diagnostic retry",
-      "validation": "full355; final affected62 after independent review; retained-original offline parse_or_guidance with zero provider calls; browser7_languages input_retention explicit_corrected_retry and new_key; TypeScript; changed_lint; home_legacy_effect_warnings7; final build and SEO before release",
-      "deployment": "verified_local",
-      "cleanup": "pending verified production then authenticated administrator DELETE per verified record ID and complete-list reread",
+      "validation": "full355; final affected62 after independent review; retained-original offline parse_or_guidance with zero provider calls; browser7_languages input_retention explicit_corrected_retry and new_key; TypeScript; changed_lint; home_legacy_effect_warnings7; final build and SEO before release; release_build_pass; seo127_pass; production_exact_SHA_READY_alias; synthetic_guidance400_and_preview_release; runtime_errors_empty_with_retention_limits",
+      "deployment": "verified_production",
+      "cleanup": "all verified retained IDs deleted200/ok after production verification; full-list reread empty/nextOffset null; originals local snapshot removed; private receipt preserved",
       "limits": "No original assignment result restoration or downstream user correction claimed; original source model baseline unavailable due local401; no credential workaround; new failure-rate impact unmeasured",
       "review": "2026-11-20 observe new patterns and guidance recovery; 2026-11-26 quality follow-up; no fabricated weights or relaxed score invariants"
     },
@@ -196,11 +196,11 @@
     },
     "CONTENT-DAILY-2026-11-19": {
       "implementation": "english synthesis paragraph example with fictional two-source comparison and accessible figure",
-      "validation": "source bodies HTTP200; TypeScript changed_lint; browser320_390_1280 figure_no_overflow canonical_BlogPosting_date_no_false_hreflang index_sitemap CTA_to_checker; production build and SEO before release",
-      "publication": "verified_local",
-      "published_on": null,
-      "url": null,
-      "review": "if published11-19:11-26 index links CTA;12-17 complete-window search and linked first result; effects unmeasured"
+      "validation": "source bodies HTTP200; TypeScript changed_lint; browser320_390_1280 figure_no_overflow canonical_BlogPosting_date_no_false_hreflang index_sitemap CTA_to_checker; production build and SEO before release; production_article_index_sitemap_workspace_HTTP200_canonical_BlogPosting_figure_CTA",
+      "publication": "verified_production",
+      "published_on": "2026-11-19",
+      "url": "https://rubricheck.com/blog/synthesis-paragraph-example",
+      "review": "2026-11-26 index links CTA;2026-12-17 complete-window URL/query and linked first result; effects unmeasured"
     }
   },
   "release": {
@@ -213,7 +213,7 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "8822c262e60b0d68bad4c34d811a1a6a311ec7e4",
+    "commit": "c941158e66664c2641a86403d248755165adcc77",
     "security_audit": {
       "production_total": 0,
       "development_total": 13,
@@ -224,25 +224,26 @@
       "development_checked_on": "2026-11-18"
     },
     "production": {
-      "deployment_id": "dpl_7PeSrWcQ7Lfp8DKV1aoKdUzM3B3X",
+      "deployment_id": "dpl_H2Uc7dKgLauZ1hvd3BnvPxaPesDs",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "2026-11-18 matching source SHA and domain alias; article/index/sitemap/workspace HTTP200; canonical BlogPosting date figure scrollTable CTA; malformed JSON400 before model with no visitor cookie",
+      "smoke": "2026-11-19 exact source SHA and domain alias; article/index/sitemap/workspace/dueDiscussion200; canonical BlogPosting date figure CTA; synthetic incomplete/conflict400 rubric field; unused/not-pending guest preview after each; malformedJSON400 before model",
       "runtime_errors": {
-        "scan": "2026-11-18 this deployment recent15m error/fatal grouped by requestPath",
+        "scan": "2026-11-19 source deployment recent15m error/fatal grouped by requestPath",
         "observed": 0
       },
-      "limits": "No paid live evaluation; actual diagnostic collection pending organic consenting signed visitor traffic; no recovery/conversion effect claim; existing rubric failure and timezone baseline still unresolved; log retention/group and clock limitations"
+      "limits": "No original assignment regrading or restored result; all retained source handling verified offline. Actual guidance-to-user-success and failure-rate effect await new traffic; log retention/group and source clock caveats remain. Stripe and timezone baseline still need follow-up."
     },
     "user_reconfirmed_on": "2026-11-18",
     "authorization": "User explicitly approved prepared main push and production deployment and instructed future verified routine changes to deploy without repeat permission; ledger doc/operations/operating-model.md; existing high-risk exclusions unchanged"
   },
   "next_actions": [
+    "2026-11-26 review generic rubric-layout recovery quality; original source snapshots removed after verified ID-scoped cleanup; do not infer user recovery from archive deletion",
     "2026-11-26 review synthesis paragraph indexability internal links CTA;2026-12-17 complete-window URL/query and linked result path after actual publication",
-    "2026-11-20 check new grading patterns and source-input guidance recovery; processed archive cleanup requires production verification and ID-scoped deletion receipt",
+    "2026-11-20 check new grading patterns and source-input guidance recovery; all verified archives deleted with private receipt; preserve score invariants and distinguish input correction from restored assignment results",
     "2026-11-25 review reverse outline article indexability internal links and CTA collection; 2026-12-16 compare complete-window URL/query traffic and first linked valid result",
     "Reconnect Stripe app to verify due automatic retry, invoice and subscription; original app read returned requires reauthentication; ledger silence is not payment success",
-    "2026-11-19 after release observe GROWTH_VALIDATION_INPUT fixed codes within hosting retention; no IDs means no unique-attempt recovery or conversion rate; 2026-11-21 select one recovery change from new evidence",
+    "2026-11-20 observe GROWTH_VALIDATION_INPUT fixed codes within hosting retention; no IDs means no unique-attempt recovery or conversion rate; 2026-11-21 select one recovery change from new evidence",
     "2026-11-23 reconcile Vancouver timezone baseline and private absolute 2x target: prior 11/16 offset correction conflicts with current fixed UTC-07 rule; preserve host/source clock caveat",
     "2026-11-23 triage bounded patches for development-only audit13 and legacy home effect warnings7; production audit remains zero",
     "2026-11-24 review rubric points guide indexability, internal links and CTA collection; 2026-12-15 compare complete-window URL/query traffic and first linked result path",
