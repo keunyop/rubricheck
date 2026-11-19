@@ -35,3 +35,9 @@ PO 통합 검증: 전체 339건·TypeScript·수정 lint·production build·SEO 
 | 작업 | 독자·검색 의도·선택 근거 | 내용·CTA·검증 | 게시·검토 |
 | --- | --- | --- | --- |
 | CONTENT-DAILY 2026-11-18 | 영어권 대학 과제 초안 독자, 미국 우선·AU/CA 보조는 과거 영어 도구 의도에 따른 편집 가설. 주 검색어 `reverse outline example`, 질문은 문단 순서와 빠진 논리를 찾는 방법. GSC 완결 2026-11-08, GA4 보고 2026-11-09까지의 과거 자료이며 해당 검색어 수요·국가별 전환은 미측정. 기존 문단 설명·루브릭 수정 글과 달리 초안 전체의 문단 역할·배열을 다룸 | 가상 자전거 수리대 에세이의 5문단 역개요, 4개 수정 결정 본문 도식·동등 설명, 내부 관련 글과 `/workspace?from=blog-reverse-outline#rubric-checker` CTA. Purdue OWL·WSU 원문 2026-11-18 HTTP 200·본문 확인. rubric/No rubric 입력·평가 점수 추정·AI/개인정보 문구를 현재 코드와 대조. 로컬 TypeScript·수정 파일 ESLint 통과, git diff --check 통과. 통합 build·SEO 126경로·320/390/1280px·표 키보드 스크롤·운영 공개 경로 검증 통과 | 게시일 2026-11-18, [운영 URL](https://rubricheck.com/blog/reverse-outline-example), 상태 verified_production. 11/25 색인·내부 링크·CTA 수집, 12/16 완결 URL/검색어 유입과 첫 연결 유효 결과 경로 검토. 게시가 늦어지면 7/28일도 이동. 검색·전환 효과 미측정 |
+
+## 2026-11-19 콘텐츠 준비
+
+| 작업 | 독자·검색 의도·선택 근거 | 내용·CTA·검증 | 게시·검토 |
+| --- | --- | --- | --- |
+| CONTENT-DAILY 2026-11-19 | 영어권 대학 과제 초안 독자, 미국 우선·AU/CA 보조는 과거 영어 도구 의도에 따른 편집 가설. 주 검색어 `synthesis paragraph example`, 질문은 두 출처를 한 주장에 연결하는 방법. GSC 완결 2026-11-08·GA4 보고 2026-11-09까지의 자료는 stale이며 최신 국가×검색어 수요·전환은 미측정. 기존 단일 근거 설명·반론·역개요 글과 달리 두 출처의 관계와 작성자의 추론을 구분함 | 제목 `Synthesis Paragraph Example: Connect Two Sources in One Argument`, 경로 `/blog/synthesis-paragraph-example`. 가상 도서관 자료 2개와 전후 문단, 본문 4단계 도식·동등 설명, 관련 글 3개와 `/workspace?from=blog-synthesis-paragraph#rubric-checker` CTA. Purdue OWL·UNC 원문 2026-11-19 HTTP 200·본문 확인. rubric/No rubric·AI 추정치·출처 직접 확인 안내를 현재 제품 문구와 대조. TypeScript·수정 TS/TSX ESLint·git diff --check 통과, React 검토(정적 서버 컴포넌트·의미 있는 제목/목록/그림 설명) 완료. 통합 build·SEO·브라우저 검증 대기 | 게시 승인 범위는 운영 위임, 실제 게시일 null, 운영 URL null, 상태 implemented. 2026-11-19 게시 시 11/26 색인·링크·CTA, 12/17 완결 URL/검색어 유입과 첫 연결 유효 결과 경로 검토. 실제 게시일 확정 후 7/28일 창 조정. 검색·전환 효과 null |

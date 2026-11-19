@@ -54,6 +54,7 @@ mock.module("../../../lib/rubricStructuring.ts", { namedExports: {
   structureRubric: async () => {
     if (failure === "rubric") throw Error("RUBRIC_STRUCTURE_FAILED");
     if (failure === "missingCriteria") throw Error("RUBRIC_CRITERIA_NOT_FOUND");
+    if (failure === "RUBRIC_INCOMPLETE" || failure === "RUBRIC_POINTS_CONFLICT") throw Error(failure);
     return rubric;
   },
 } });
@@ -89,6 +90,21 @@ test("guest previews enforce access, one use, retries and account ownership with
   globalThis.fetch = async () => { throw Error("Unexpected external network or billing call"); };
   const reset = () => { values.clear(); ttls.clear(); modelCalls = 0; archived = 0; failure = ""; gate = null; dropReserve = false; dropComplete = false; storageDown = false; };
   try {
+    await t.test("incomplete and conflicting rubric guidance preserves the guest preview for a corrected retry", async () => {
+      for (const code of ["RUBRIC_INCOMPLETE", "RUBRIC_POINTS_CONFLICT"]) {
+        reset(); failure = code;
+        const response = await grade(request());
+        assert.equal(response.status, 400);
+        const body = await response.json();
+        assert.equal(body.code, code);
+        assert.equal(body.details.field, "rubric");
+        assert.equal(modelCalls, 0);
+        assert.equal(values.size, 0);
+        failure = "";
+        assert.equal((await grade(request())).status, 200);
+        assert.equal(modelCalls, 1);
+      }
+    });
     await t.test("no criteria releases the guest preview for a corrected retry", async () => {
       reset(); failure = "missingCriteria";
       const response = await grade(request());

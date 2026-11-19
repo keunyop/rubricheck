@@ -46,7 +46,7 @@ export function growthFailureCategory(status: number, code?: unknown): string {
   const safeCode = typeof code === "string" ? code : "";
   if (safeCode === "TRIAL_PENDING" || safeCode === "EVALUATION_PENDING" || safeCode === "EVALUATION_ALREADY_COMPLETED") return "validation_pending";
   if (["FILE_TOO_LARGE", "FILE_TOTAL_TOO_LARGE", "MULTI_FILE_IMAGES_ONLY", "UNSUPPORTED_FILE_TYPE", "FILE_PARSE_FAILED", "TEXT_EXTRACTION_FAILED", "PROTECTED_FILE", "IMAGE_TOO_SMALL", "EXTERNAL_DOCX_IMAGE"].includes(safeCode)) return "validation_file";
-  if (safeCode === "RUBRIC_CRITERIA_NOT_FOUND" || safeCode === "RUBRIC_STRUCTURE_FAILED") return "validation_rubric";
+  if (["RUBRIC_CRITERIA_NOT_FOUND", "RUBRIC_STRUCTURE_FAILED", "RUBRIC_INCOMPLETE", "RUBRIC_POINTS_CONFLICT"].includes(safeCode)) return "validation_rubric";
   if (INPUT_FAILURE_CODES.includes(safeCode)) return "validation_input";
   return "validation_other";
 }

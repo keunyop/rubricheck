@@ -153,7 +153,7 @@ test("email hashing uses normalized email and key never stores raw email", async
 
 test("ttl and cache version constants match policy", () => {
   assert.equal(RUBRIC_CACHE_TTL_SECONDS, 604800);
-  assert.equal(RUBRIC_CACHE_VERSION, "v3");
+  assert.equal(RUBRIC_CACHE_VERSION, "v4");
 });
 
 const holisticRubric = {
@@ -231,6 +231,7 @@ test("inconsistent rubric totals are re-extracted once from the source and only 
   assert.ok(prompts.every(prompt => prompt.includes(source)));
   assert.match(prompts[0], /Performance-level columns/);
   assert.match(prompts[1], /total_score/);
+  assert.match(prompts[1], /"total":100,"rowMaxima":\[60,40,100\],"sum":200/);
   assert.match(prompts[1], /Do not invent criteria or weights/);
   assert.match(prompts[1], /Do not include total\/subtotal rows/);
   assert.equal(redis.setCalls.length, 1);

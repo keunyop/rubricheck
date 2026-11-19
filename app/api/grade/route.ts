@@ -537,6 +537,14 @@ async function runGrade(request: Request) {
       diagnosticCode = gradingFailureCode(error, "RUBRIC_STRUCTURE_FAILED");
       await releaseReservation();
 
+      if (error instanceof Error && (error.message === "RUBRIC_INCOMPLETE" || error.message === "RUBRIC_POINTS_CONFLICT")) {
+        diagnosticCode = undefined;
+        const message = error.message === "RUBRIC_INCOMPLETE"
+          ? "Part of the scoring table is missing. Upload all rubric pages or paste the complete table, including every criterion and its points."
+          : "The rubric gives conflicting point totals. Ask your instructor which total and criterion points to use, then provide the corrected rubric.";
+        return errorResponse(context, 400, error.message, message, { field: "rubric" }, usageHeaders);
+      }
+
       if (error instanceof Error && error.message === "RUBRIC_CRITERIA_NOT_FOUND") {
         // This is input validation, not a failed grading job. Do not archive student
         // originals again or evaluate against invented criteria.

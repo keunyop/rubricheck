@@ -98,5 +98,12 @@ export const REVERSE_OUTLINE_POST = {
   description: "Use a reverse outline example to check paragraph purpose, spot missing reasoning, and revise an essay's organization before reviewing it with your rubric.",
   date: "2026-11-18", modified: "2026-11-18", category: "Essay organization", readingMinutes: 7,
 } as const;
-export const BLOG_POSTS = [REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const SYNTHESIS_PARAGRAPH_POST = {
+  slug: "synthesis-paragraph-example",
+  path: "/blog/synthesis-paragraph-example",
+  title: "Synthesis Paragraph Example: Connect Two Sources in One Argument",
+  description: "Write a synthesis paragraph that connects two sources around one claim. Compare a worked before-and-after example, explain the relationship, and check your draft.",
+  date: "2026-11-19", modified: "2026-11-19", category: "Academic writing", readingMinutes: 7,
+} as const;
+export const BLOG_POSTS = [SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];

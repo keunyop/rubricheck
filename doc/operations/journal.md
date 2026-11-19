@@ -2,6 +2,11 @@
 
 이 일지는 최신 실행부터 읽는 역순 색인이다. 자동 작업 선택의 기계 상태는 [state.json](state.json), 우선순위는 [backlog](backlog.md), 상세 근거는 [runs/](runs/)에 있다. 공개 저장소이므로 고객 식별자나 비공개 사업 집계는 기록하지 않는다.
 
+## 2026-11-19 daily
+
+- 누적 평가 실패를 원본 점수 구조별로 진단하고, 명확한 표의 모델 없는 판독과 누락·합계 모순의 구체적 수정 안내를 구현했다. 숫자 임의 보정 없이 사용량을 반환하며 독립 검토에서 발견한 부분합·환산·공통 등급표·감점 등 경계 사례를 회귀로 보강했다. 현재 `verified_local`, production 확인과 검증된 보관 항목의 ID별 삭제·재조회는 대기 중이다.
+- 오늘 [두 출처를 연결하는 문단 예시](https://rubricheck.com/blog/synthesis-paragraph-example)를 작성하고 본문 도식·출처·모바일·CTA를 검증했다. 신규 보고서는 없으며 Stripe 재인증과 과거 시간대 기준선 재대조가 남아 있다. [실행 기록](runs/2026-11-19-daily.md).
+
 ## 2026-11-18 daily
 
 - 첫 평가 입력 실패의 여섯 고정 코드를 개인정보 없이 구분하는 진단과 [역개요 글](https://rubricheck.com/blog/reverse-outline-example)을 게시했다. 전체 339건·TypeScript·lint·build·SEO 126경로·320/390/1280px·키보드 스크롤·CTA 검증 통과. 사용자의 main 반영·운영 배포 명시 승인 후 소스 `8822c26`의 Vercel READY·도메인·글·목록·sitemap·workspace·메타데이터·본문 도식·CTA·malformed JSON 400과 조회 범위 내 error/fatal 없음 확인. 상태 `verified_production`; 실제 진단 수집·개선 효과는 별도 관측한다. 앞으로 검증된 통상 변경의 지속 배포 위임도 운영 기준에 재확인했다.

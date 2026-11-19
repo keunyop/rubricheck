@@ -86,11 +86,11 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
     else throw new Error("Unexpected fetch: " + url);
     return Response.json(result);
   };
-  function request(mode = "standard", key = "retry-key") {
+  function request(mode = "standard", key = "retry-key", rubricText = "Thesis 10 points") {
     return new Request("https://example.com/api/grade", { method: "POST", headers: {
       "content-type": "application/json", "idempotency-key": key,
       cookie: CREDIT_SESSION_COOKIE_NAME + "=" + createCreditSessionToken({ email: "user@example.com" }),
-    }, body: JSON.stringify({ mode, rubricText: "Thesis 10 points", assignmentText: "A clear argument with support." }) });
+    }, body: JSON.stringify({ mode, rubricText, assignmentText: "A clear argument with support." }) });
   }
   const settlements = () => calls.filter(c => c.name === "rubricheck_settle_free_evaluate");
   try {
@@ -143,6 +143,37 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(payload.criteria.length, 1);
       assert.equal(capturedFailures.length, 0);
       assert.equal(payload.score_calculation.mode_adjustment, 0);
+    });
+    await t.test("source-proven missing rows and contradictory totals release free/paid usage without model calls or archiving", async () => {
+      const sources = [
+        ["RUBRIC_INCOMPLETE", "Criterion\nScore\nEvidence\n/2\nOrganization\n/3\nOverall Score\n/20"],
+        ["RUBRIC_POINTS_CONFLICT", "Total points for this paper is 12 points\nMaximum points\n1\nEvidence\n4\n2\nOrganization\n4\nTotal\n8"],
+      ];
+      for (const paid of [false, true]) for (const [code, source] of sources) {
+        calls.length = 0; capturedFailures.length = 0; failure = null;
+        reserveStatus = paid ? "exhausted" : "reserved"; credits = paid ? 5 : 0;
+        const beforeStructures = structureCalls, beforeEvaluations = evaluationCalls;
+        const response = await POST(request("standard", "source-error", source));
+        assert.equal(response.status, 400);
+        const payload = await response.json();
+        assert.equal(payload.code, code);
+        assert.equal(payload.details.field, "rubric");
+        assert.equal(structureCalls, beforeStructures);
+        assert.equal(evaluationCalls, beforeEvaluations);
+        assert.equal(capturedFailures.length, 0);
+        if (paid) {
+          assert.equal(response.headers.get("x-credits-balance"), "5");
+          assert.equal(calls.filter(c => c.name === "rubricheck_refund_credit_reservation").length, 1);
+        } else {
+          assert.equal(response.headers.get("x-ratelimit-remaining"), "3");
+          assert.equal(settlements().length, 1);
+          assert.equal(settlements()[0].body.p_succeeded, false);
+        }
+        const corrected = await POST(request("standard", "source-corrected"));
+        assert.equal(corrected.status, 200);
+        assert.equal(evaluationCalls, beforeEvaluations + 1);
+      }
+      reserveStatus = "reserved"; credits = 0;
     });
     await t.test("rubric output recovery shares one free or paid reservation and never archives a recovered attempt", async () => {
       for (const paid of [false, true]) {

@@ -1,5 +1,17 @@
 // Localized product UI messages, in Hindi, Urdu, Vietnamese, and Simplified Chinese.
 export const newLanguages: Record<string, readonly [string, string, string, string]> = {
+  "Part of the scoring table is missing. Upload all rubric pages or paste the complete table, including every criterion and its points.": [
+    "अंक तालिका का कुछ भाग गायब है। रूब्रिक के सभी पृष्ठ अपलोड करें या हर मानदंड और उसके अंकों सहित पूरी तालिका चिपकाएँ।",
+    "نمبروں کی جدول کا کچھ حصہ موجود نہیں ہے۔ روبرک کے تمام صفحات اپ لوڈ کریں یا ہر معیار اور اس کے نمبروں سمیت مکمل جدول چسپاں کریں۔",
+    "Bảng điểm bị thiếu một phần. Hãy tải lên tất cả các trang tiêu chí hoặc dán toàn bộ bảng, bao gồm từng tiêu chí và số điểm.",
+    "评分表有部分缺失。请上传评分标准的所有页面，或粘贴包含每项标准及其分值的完整表格。",
+  ],
+  "The rubric gives conflicting point totals. Ask your instructor which total and criterion points to use, then provide the corrected rubric.": [
+    "रूब्रिक में कुल अंक परस्पर विरोधी हैं। शिक्षक से पूछें कि कौन से कुल और मानदंडों के अंक उपयोग करने हैं, फिर सही रूब्रिक दें।",
+    "روبرک میں کل نمبروں میں تضاد ہے۔ استاد سے تصدیق کریں کہ کون سا کل اور معیار کے نمبر استعمال کرنے ہیں، پھر درست روبرک فراہم کریں۔",
+    "Tiêu chí đưa ra các tổng điểm mâu thuẫn. Hãy hỏi giảng viên tổng điểm và điểm từng tiêu chí cần dùng, sau đó cung cấp tiêu chí đã sửa.",
+    "评分标准中的总分相互矛盾。请向教师确认应使用的总分及各项分值，然后提供修正后的评分标准。",
+  ],
   "This DOCX links to images that cannot be read. Save a new copy with images embedded, export it as a PDF, or paste the complete text.": [
     "इस DOCX में ऐसे चित्रों के लिंक हैं जिन्हें पढ़ा नहीं जा सकता। चित्रों को फ़ाइल में शामिल करके नई प्रति सहेजें, PDF के रूप में निर्यात करें, या पूरा पाठ चिपकाएँ।",
     "اس DOCX میں ایسی تصاویر کے روابط ہیں جنہیں پڑھا نہیں جا سکتا۔ تصاویر کو فائل میں شامل کر کے نئی کاپی محفوظ کریں، اسے PDF کے طور پر برآمد کریں، یا مکمل متن چسپاں کریں۔",

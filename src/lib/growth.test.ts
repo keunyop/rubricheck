@@ -82,6 +82,8 @@ test("failures are classified without storing server messages",()=>{
   assert.equal(growthFailureCategory(429,"TRIAL_LIMIT_REACHED"),"access");
   assert.equal(growthFailureCategory(400,"FILE_PARSE_FAILED"),"validation_file");
   assert.equal(growthFailureCategory(400,"RUBRIC_STRUCTURE_FAILED"),"validation_rubric");
+  assert.equal(growthFailureCategory(400,"RUBRIC_INCOMPLETE"),"validation_rubric");
+  assert.equal(growthFailureCategory(400,"RUBRIC_POINTS_CONFLICT"),"validation_rubric");
   assert.equal(growthFailureCategory(400,"MISSING_INPUT"),"validation_input");
   assert.equal(growthFailureCategory(409,"TRIAL_PENDING"),"validation_pending");
   assert.equal(growthFailureCategory(400,"PRIVATE USER INPUT"),"validation_other");

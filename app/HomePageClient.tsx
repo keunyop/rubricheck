@@ -2068,6 +2068,14 @@ export default function Home() {
       return t('No grading criteria were found in the rubric input. Check whether your rubric and assignment are swapped. Use the assessment instructions as your rubric, or choose "{noRubric}".', { noRubric: t("No rubric") });
     }
 
+    if (message === "RUBRIC_INCOMPLETE") {
+      return t("Part of the scoring table is missing. Upload all rubric pages or paste the complete table, including every criterion and its points.");
+    }
+
+    if (message === "RUBRIC_POINTS_CONFLICT") {
+      return t("The rubric gives conflicting point totals. Ask your instructor which total and criterion points to use, then provide the corrected rubric.");
+    }
+
     if (message === "EVALUATION_FAILED") {
       return t("We could not finish grading this assignment. Please try again in a moment.");
     }

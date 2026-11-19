@@ -5,6 +5,7 @@ import { Redis } from "@upstash/redis";
 import { callStructureModel } from "./openai";
 import { RubricSchema, type Rubric } from "./schema";
 import { RUBRIC_CACHE_VERSION } from "./rubricVersion";
+import { auditRubricSource } from "./rubricSource";
 
 export { RUBRIC_CACHE_VERSION } from "./rubricVersion";
 export const RUBRIC_CACHE_TTL_SECONDS = 604800;
@@ -86,6 +87,10 @@ export function hashNormalizedEmail(email: string): string {
 }
 
 export async function structureRubric(rubricText: string, options: StructureRubricOptions = {}): Promise<Rubric> {
+  const sourceAudit = auditRubricSource(rubricText);
+  if (sourceAudit.kind === "incomplete" || sourceAudit.kind === "points_conflict") {
+    throw new Error(sourceAudit.kind === "incomplete" ? "RUBRIC_INCOMPLETE" : "RUBRIC_POINTS_CONFLICT");
+  }
   const cacheRedis = options.cacheRedisOverride === undefined ? getOptionalCacheRedisClient() : options.cacheRedisOverride;
   const { cacheIdentity = null, requestId } = options;
 
@@ -134,7 +139,11 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     "Return JSON only, matching this schema exactly:",
     '{ "total_score": number, "criteria": [{ "name": "string", "max_score": number, "description": "string" }], "adjustments": [{ "name": "string", "kind": "deduction" | "bonus", "max_points": number, "description": "string" }] }',
     "Rules:",
-    "- Include all identifiable criteria.",
+    "- Include all identifiable scoring criteria. Numeric scoring structure determines whether a row is scored; its title alone does not.",
+    "- In LMS tables, use the actual Points/Pts column for each criterion. A terminal '--', em dash, N/A or unscored Points cell means an outcome is non-scoring, even when its performance ratings or mastery threshold contain numbers. Keep those outcome requirements as supporting description text. Never turn their rating scale into base points.",
+    "- A scored row remains a base criterion when its numeric Pts cell is included in the stated total, even if its prose casually says EXTRA CREDIT. Only separate a bonus when the scoring structure explicitly excludes it from the base total; do not use labels alone to override numeric cells.",
+    "- A holistic grade-band rubric gives ONE overall grade across several unweighted dimensions. Extract one aggregate criterion with the shared maximum, retaining the dimensions and grade-band thresholds in its description. Never assign arbitrary equal weights to its dimensions or sum grade bands. Do not mistake a complete holistic scale for missing points.",
+    "- General descriptions, completion checklists, yes/no declarations and assignment instructions have no extra points when a scored rubric is present. Fold their requirements into the scored descriptions without inventing weights.",
     "- A document may contain several independent scoring tables (for example Report, Presentation, and Q&A). Include their criteria once each, qualifying names by section when needed to keep names unique. A section subtotal or a course contribution percentage is not an overall raw-points total.",
     "- If explicit points tables are present, criteria must contain only their base scoring categories with their exact point weights. Their sum must equal the applicable overall raw-points total, if one is stated. Incorporate supporting assignment requirements into those descriptions, not extra point-bearing categories.",
     "- Total and subtotal rows summarize existing categories; never count them again as criteria. Performance-level columns describe alternative scores for the same criterion, not additional criteria or point weights.",
@@ -147,6 +156,7 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     "- Do not invent criteria from an essay's topic, headings, claims, or citations.",
     "- Each criterion must include name, max_score, description.",
     "- max_score must be numeric. If missing, infer from rubric scale; if unclear, use 1.",
+    "- If the source itself is incomplete or contradictory, preserve its actual visible base weights and applicable stated total. Do not invent missing rows or modify numeric values to pass validation. Do not mistake a section subtotal for the overall total.",
     "- description must be short and faithful.",
     "- No markdown. No extra keys. No extra text.",
     "",
@@ -155,20 +165,23 @@ export async function structureRubric(rubricText: string, options: StructureRubr
   ].join("\n");
 
   const startedAt = Date.now();
-  let rubric: Rubric | undefined;
+  let rubric: Rubric | undefined = sourceAudit.rubric;
   let retryInstruction = "";
-  const prepareRetry = (issues: { code: string; path: string }[]): string => {
+  const prepareRetry = (issues: { code: string; path: string }[], result?: unknown): string => {
     console.warn("RUBRIC_OUTPUT_RETRY", { requestId, attempt: 1, issues });
     return [
       "", "", "Re-extract the complete rubric from the original text: the previous response failed validation.",
       `Invalid fields: ${JSON.stringify(issues)}.`,
+      ...(result && typeof result === "object" && "criteria" in result && Array.isArray(result.criteria) ? [
+        `Numeric diagnostics: ${JSON.stringify({ total: "total_score" in result && typeof result.total_score === "number" ? result.total_score : null, rowMaxima: result.criteria.map(row => row && typeof row === "object" && typeof row.max_score === "number" ? row.max_score : null), sum: result.criteria.reduce((sum: number, row: unknown) => sum + (row && typeof row === "object" && "max_score" in row && typeof row.max_score === "number" && Number.isFinite(row.max_score) ? row.max_score : 0), 0) })}.`,
+      ] : []),
       "Return valid JSON with numeric point values, preserving the original base categories, explicit weights, stated total, and adjustment conditions.",
       "Check that base criterion weights sum to the stated total. Do not include total/subtotal rows or alternative performance levels as extra criteria. Keep deductions and bonuses separate.",
       "For multiple independent scoring tables, distinguish their section subtotals and course percentages from an overall raw-points total. If no overall raw-points total is stated for all extracted criteria, sum their actual row maxima, not the section-header denominators. Never change explicit row weights to fit an inconsistent section heading.",
       "Do not invent criteria or weights, rescale explicit weights, or replace a stated total to make validation pass. Re-read the original source and return the complete corrected extraction.",
     ].join("\n");
   };
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; !rubric && attempt < 2; attempt++) {
     let modelResult: unknown;
     try {
       modelResult = await (options.modelCaller ?? callStructureModel)(prompt + retryInstruction, { startedAt });
@@ -190,6 +203,16 @@ export async function structureRubric(rubricText: string, options: StructureRubr
       });
       throw new Error("RUBRIC_MODEL_UNAVAILABLE");
     }
+    if (modelResult && typeof modelResult === "object" && "source_validation" in modelResult) {
+      // Model assertions (even with genuine quotes) cannot prove that a section
+      // subtotal and an overall total share scope. Only the offline source audit
+      // can classify an input problem; unsupported source claims stay technical.
+      if (attempt === 0 && modelResult.source_validation) {
+        retryInstruction = prepareRetry([{ code: "unsupported_source_signal", path: "source_validation" }], modelResult);
+        continue;
+      }
+      if (modelResult.source_validation) throw new Error("RUBRIC_STRUCTURE_FAILED");
+    }
     // Empty criteria is the model's explicit no-assessment signal. It may also
     // return total_score: 0/null; those fields must not turn guidance into a 500-like failure.
     if (modelResult && typeof modelResult === "object" && "criteria" in modelResult &&
@@ -204,7 +227,7 @@ export async function structureRubric(rubricText: string, options: StructureRubr
     }
     const issues = parsed.error.issues.map(issue => ({ code: issue.code, path: issue.path.join(".") }));
     if (attempt === 0) {
-      retryInstruction = prepareRetry(issues);
+      retryInstruction = prepareRetry(issues, modelResult);
       continue;
     }
     console.error("RUBRIC_SCHEMA_VALIDATION_FAILED", { requestId, issues });

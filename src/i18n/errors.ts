@@ -1,4 +1,12 @@
 export const errors: Record<string, readonly [string, string]> = {
+  "Part of the scoring table is missing. Upload all rubric pages or paste the complete table, including every criterion and its points.": [
+    "배점표의 일부가 누락되어 있습니다. 루브릭의 모든 페이지를 올리거나 항목별 배점을 포함한 전체 표를 붙여 넣어 주세요.",
+    "Sebahagian jadual pemarkahan tiada. Muat naik semua halaman rubrik atau tampal jadual lengkap, termasuk setiap kriteria dan markahnya.",
+  ],
+  "The rubric gives conflicting point totals. Ask your instructor which total and criterion points to use, then provide the corrected rubric.": [
+    "루브릭에 서로 맞지 않는 총점이 있습니다. 담당 교사에게 사용할 총점과 항목별 배점을 확인한 뒤 수정된 루브릭을 입력해 주세요.",
+    "Rubrik memberikan jumlah markah yang bercanggah. Tanya pengajar jumlah dan markah kriteria yang perlu digunakan, kemudian berikan rubrik yang dibetulkan.",
+  ],
   "This DOCX links to images that cannot be read. Save a new copy with images embedded, export it as a PDF, or paste the complete text.": [
     "이 DOCX는 읽을 수 없는 외부 이미지에 연결되어 있습니다. 이미지가 파일에 포함되도록 새 사본을 저장하거나 PDF로 내보내거나 전체 텍스트를 붙여 넣어 주세요.",
     "Fail DOCX ini memaut kepada imej yang tidak dapat dibaca. Simpan salinan baharu dengan imej terbenam, eksport sebagai PDF, atau tampal teks penuh.",
