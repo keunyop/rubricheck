@@ -1,36 +1,36 @@
 {
   "schema_version": 1,
   "timezone": "America/Vancouver",
-  "last_run": "2026-11-19-daily",
-  "last_run_record": "doc/operations/runs/2026-11-19-daily.md",
-  "last_journal_entry": "doc/operations/journal.md#2026-11-19-daily",
+  "last_run": "2026-11-20-daily",
+  "last_run_record": "doc/operations/runs/2026-11-20-daily.md",
+  "last_journal_entry": "doc/operations/journal.md#2026-11-20-daily",
   "mode": "daily",
-  "status": "grading_recovery_verified_production_all_verified_archives_deleted; daily_article_verified_production; stripe_reauthentication_required; timezone_baseline_reaudit_required",
+  "status": "daily_observation_complete; source_evaluation_article_and_counterargument_entry_verified_production; stripe_reauthentication_required; stale_reports_and_timezone_baseline_reaudit_pending",
   "repository_visibility": "public",
-  "base_commit": "62a27a5",
+  "base_commit": "64d3d4b",
   "private_records": ".growth-local/owner/",
   "private_cursors_initialized": false,
   "source_checkpoints": {
     "stripe": {
-      "checked_on": "2026-11-19",
+      "checked_on": "2026-11-20",
       "last_successful_on": "2026-11-16",
-      "details": "connected app UNAUTHORIZED requires reauthentication; scheduled automatic retry UTC time passed, current invoice/subscription/retry outcome unknown; no credential workaround or billing write"
+      "details": "Connected app read once UNAUTHORIZED; reauthentication required; current automatic retry invoice/subscription result unknown; no credential workaround or billing write"
     },
     "supabase": {
-      "checked_on": "2026-11-19",
-      "coverage": "fixed source-clock rolling72h UTC aggregate; guest/account terminal outcomes reconciled; input/rubric/access/file separated; consent/identity and network-attempt gaps, source-host clock discrepancy preserved; no mature cohort rate"
+      "checked_on": "2026-11-20",
+      "coverage": "source-clock UTC fixed rolling72h 2026-11-17T18:50Z inclusive to11-20T18:50Z exclusive; guest/account starts and terminals reconciled; input/rubric/file/access separated; client network no attempt linkage; guidance exposure unavailable; separate later success is not same-attempt recovery; host/source clock discrepancy retained; read cursor only, handled/resolved null"
     },
     "vercel": {
-      "checked_on": "2026-11-19",
-      "coverage": "sourcec941158 exact SHA production READY with custom domain alias; article/index/sitemap/workspace and due discussion article HTTP200; canonical BlogPosting figure CTA; synthetic incomplete/conflict400 rubric-field guidance with guest preview released; malformedJSON400; recent15m error/fatal query empty; no original assignment evaluation or impact claim"
+      "checked_on": "2026-11-20",
+      "coverage": "dedfe8e exact SHA production READY with custom domain aliases; article due-counterargument index sitemap workspace HTTP200; canonical BlogPosting dates figure; actual production No rubric CTA selects general; deployment recent15m error/fatal groups empty, retention and top25 limits"
     },
     "feedback": {
-      "checked_on": "2026-11-19",
-      "coverage": "authenticated production GET succeeded; complete endpoint list; no new feedback observed today"
+      "checked_on": "2026-11-20",
+      "coverage": "authenticated complete-list GET200 nextOffset null; no new feedback; existing item has reply; no external message"
     },
     "grading_inbox": {
-      "checked_on": "2026-11-19",
-      "coverage": "all retained records diagnosed and source handling verified offline with zero provider calls; authenticated DELETE per verified ID returned200/ok; complete-list reread empty and nextOffset null; source snapshot locally removed; receipt private"
+      "checked_on": "2026-11-20",
+      "coverage": "authenticated complete-list GET200 items empty nextOffset null after prior verified cleanup; no new archive or deletion today; empty inbox is not proof of failure-rate improvement"
     },
     "gsc": {
       "checked_on": "2026-11-16",
@@ -43,9 +43,9 @@
       "coverage": "aggregate landing and acquisition 2026-08-12 through 11-09; no daily split; key event configuration/timezone/threshold/complete-date manifest unknown"
     },
     "report_upload": {
-      "checked_on": "2026-11-19",
+      "checked_on": "2026-11-20",
       "latest_reported_date": "2026-11-09",
-      "status": "no_new_upload; source file dates unchanged GSC through11-08, GA4 landing/acquisition08-12 through11-09; stale and metadata_missing; raw_files_gitignored"
+      "status": "no_new_upload; GSC chart through11-08 and GA4 landing/acquisition through11-09 stale; metadata_missing including manifest timezone and key events; originals gitignored"
     },
     "quiz_admin": {
       "checked_on": "2026-11-10",
@@ -89,7 +89,7 @@
     },
     "BILL-001": {
       "investigation": "current_source_unavailable_stripe_app_reauthentication_required",
-      "validation": "bounded first-party payment and processing-failure ledgers read; not authoritative current Stripe invoice/subscription/retry outcome; app UNAUTHORIZED requires reauthentication",
+      "validation": "2026-11-20 connected app read once UNAUTHORIZED; current Stripe invoice/subscription/retry outcome unavailable; no alternate credential use or payment change",
       "review": "Reconnect Stripe app then read automatic retry, invoice and subscription status; no manual charge or customer contact",
       "deployment": "not_applicable"
     },
@@ -116,7 +116,7 @@
       "primary_metric": "first-observed evaluation starter with a linked successful result view within seven days; fully observed guest/account actor cohort; incomplete identity and consent coverage",
       "target": "mature seven-day first-observed starter cohort: linked valid result view rate at least 90 percent AND unique linked result viewers at least twice baseline; two consecutive cohorts by 2027-01-30",
       "acquisition": "same-cohort first-starter volume is a leading measure; search and homepage are leading observed paths; choose one existing landing/content improvement after same-window GSC review; private weekly numeric target stays outside the repository",
-      "review": "recent1h runtime input-code group empty; not collection since deployment; rubric recovery released after validation; retain11-21 observation decision and timezone baseline reaudit before mature-cohort comparison",
+      "review": "2026-11-20 input-code recent1h runtime groups empty within retention; source72h input/rubric/file/access rejection reconciled; no same-attempt guidance recovery or mature cohort rate; retain11-21 next evidence decision and11-23 timezone baseline reaudit",
       "deployment": "verified_production"
     },
     "CONTENT-DAILY-2026-11-17": {
@@ -157,7 +157,7 @@
       "deployment": "verified_production",
       "cleanup": "all verified retained IDs deleted200/ok after production verification; full-list reread empty/nextOffset null; originals local snapshot removed; private receipt preserved",
       "limits": "No original assignment result restoration or downstream user correction claimed; original source model baseline unavailable due local401; no credential workaround; new failure-rate impact unmeasured",
-      "review": "2026-11-20 observe new patterns and guidance recovery; 2026-11-26 quality follow-up; no fabricated weights or relaxed score invariants"
+      "review": "2026-11-20 authenticated inbox empty; partial first-party rubric rejection followed by separate success cannot establish guidance exposure or restored original result;2026-11-21 new-pattern review and11-26 quality follow-up"
     },
     "SEC-009": {
       "investigation": "production Next.js critical and grading parser transitive dependency advisories found during local dependency restore",
@@ -179,7 +179,7 @@
       "publication": "verified_production",
       "published_on": "2026-11-13",
       "url": "https://rubricheck.com/blog/counterargument-paragraph-example",
-      "review": "2026-11-20 index, links and CTA; 2026-12-11 complete-window search and first successful evaluation"
+      "review": "2026-11-20 counterargument indexability metadata internal links verified; added actual general-mode link and source tag, modified date11-20 keeps publication11-13; local modes and production HTML verified;2026-12-11 complete-window URL/query and first linked valid result; actual index/effects unmeasured"
     },
     "ADMIN-001": {
       "implementation": "existing_production_admin_secret_route_reused_without_otp_or_new_bypass",
@@ -201,6 +201,14 @@
       "published_on": "2026-11-19",
       "url": "https://rubricheck.com/blog/synthesis-paragraph-example",
       "review": "2026-11-26 index links CTA;2026-12-17 complete-window URL/query and linked first result; effects unmeasured"
+    },
+    "CONTENT-DAILY-2026-11-20": {
+      "implementation": "English source evaluation worked example, original claim-tracing figure and research-note aid; source bodies checked; privacy and source-verification limits explicit",
+      "validation": "changed ESLint TypeScript production build pass; SEO128; browser320_390_1280 metadata figure no-overflow WCAG and both CTAs; no-JS figure; production exact_SHA_READY_alias HTTP200 article/index/sitemap/workspace; production general-mode entry selected",
+      "publication": "verified_production",
+      "published_on": "2026-11-20",
+      "url": "https://rubricheck.com/blog/source-evaluation-example",
+      "review": "2026-11-27 indexability internal links CTA collection;2026-12-18 complete-window URL/query and first linked valid result; current search demand and effects unmeasured"
     }
   },
   "release": {
@@ -213,7 +221,7 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "c941158e66664c2641a86403d248755165adcc77",
+    "commit": "dedfe8e7db4296a27d9dbfb5bca8c8ad38dcefd4",
     "security_audit": {
       "production_total": 0,
       "development_total": 13,
@@ -224,26 +232,26 @@
       "development_checked_on": "2026-11-18"
     },
     "production": {
-      "deployment_id": "dpl_H2Uc7dKgLauZ1hvd3BnvPxaPesDs",
+      "deployment_id": "dpl_9TuQTkiKFAgJQVcLPUu5UyhM3gbd",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "2026-11-19 exact source SHA and domain alias; article/index/sitemap/workspace/dueDiscussion200; canonical BlogPosting date figure CTA; synthetic incomplete/conflict400 rubric field; unused/not-pending guest preview after each; malformedJSON400 before model",
+      "smoke": "2026-11-20 exact source SHA and domain aliases; new source-evaluation article and due counterargument200; index/sitemap/workspace200; canonical BlogPosting dates figure CTA; actual production No rubric entry selected",
       "runtime_errors": {
-        "scan": "2026-11-19 source deployment recent15m error/fatal grouped by requestPath",
+        "scan": "2026-11-20 source deployment recent15m error/fatal grouped by requestPath top25 retention-limited",
         "observed": 0
       },
-      "limits": "No original assignment regrading or restored result; all retained source handling verified offline. Actual guidance-to-user-success and failure-rate effect await new traffic; log retention/group and source clock caveats remain. Stripe and timezone baseline still need follow-up."
+      "limits": "Content and CTA change only. Search index and conversion effects unmeasured. Empty archive/log groups do not prove no grading failures or user recovery. Stripe and timezone baseline follow-ups remain."
     },
     "user_reconfirmed_on": "2026-11-18",
     "authorization": "User explicitly approved prepared main push and production deployment and instructed future verified routine changes to deploy without repeat permission; ledger doc/operations/operating-model.md; existing high-risk exclusions unchanged"
   },
   "next_actions": [
+    "2026-11-27 review source-evaluation indexability internal links CTA collection;2026-12-18 complete-window URL/query and linked valid result",
+    "2026-11-21 check new grading patterns and guidance exposure evidence; no new archive today; do not treat separate successful attempt as recovered original result",
     "2026-11-26 review generic rubric-layout recovery quality; original source snapshots removed after verified ID-scoped cleanup; do not infer user recovery from archive deletion",
     "2026-11-26 review synthesis paragraph indexability internal links CTA;2026-12-17 complete-window URL/query and linked result path after actual publication",
-    "2026-11-20 check new grading patterns and source-input guidance recovery; all verified archives deleted with private receipt; preserve score invariants and distinguish input correction from restored assignment results",
     "2026-11-25 review reverse outline article indexability internal links and CTA collection; 2026-12-16 compare complete-window URL/query traffic and first linked valid result",
     "Reconnect Stripe app to verify due automatic retry, invoice and subscription; original app read returned requires reauthentication; ledger silence is not payment success",
-    "2026-11-20 observe GROWTH_VALIDATION_INPUT fixed codes within hosting retention; no IDs means no unique-attempt recovery or conversion rate; 2026-11-21 select one recovery change from new evidence",
     "2026-11-23 reconcile Vancouver timezone baseline and private absolute 2x target: prior 11/16 offset correction conflicts with current fixed UTC-07 rule; preserve host/source clock caveat",
     "2026-11-23 triage bounded patches for development-only audit13 and legacy home effect warnings7; production audit remains zero",
     "2026-11-24 review rubric points guide indexability, internal links and CTA collection; 2026-12-15 compare complete-window URL/query traffic and first linked result path",
@@ -255,17 +263,17 @@
     "2026-11-21 review new evidence article indexability, internal links and CTA collection; 2026-12-12 compare complete-window URL/query clicks with first viewed result path",
     "2026-11-22 review no-rubric essay article indexability, internal links and CTA collection; 2026-12-13 compare complete-window URL/query clicks with first linked valid result",
     "Next mature-cohort review validate first-observed starter-to-linked-result-view cohort, guest/account stitching, consent and test exclusion; compare first attempt recovery and later distinct evaluation without treating seven-day repeat as final retention",
-    "2026-11-20 review new counterargument article indexability, internal links and CTA collection; 2026-12-11 compare complete-window URL/query clicks with first successful evaluation path",
-    "2026-11-19 review prior discussion response article indexability, internal links and CTA collection; 2026-12-10 compare complete-window URL/query clicks with first successful evaluation path",
     "2026-11-23 review CONTENT-001 indexability, internal links and click collection when new complete GSC data is available; 2026-12-08 compare search, first/second successful evaluations and verified subscriptions",
     "2026-11-23 review quiz exposure/selection/sample/create-click collection and authenticated admin generation/outcome aggregate; current nonzero sample is too small to identify the main adoption bottleneck",
     "2026-11-23 review English rubric-checker indexability, US/AU/CA/MY search cohorts and first/second successful evaluation paths after report refresh",
     "2026-12-08 assess full 28-day growth and mature repeat-use cohorts against verified recurring payments",
-    "2026-11-23 recheck weekly GSC and GA4 upload for manifest timezone, latest complete date, filters, key event definitions and same-window daily/country/landing breakdowns; 2026-11-17 upload check found no new report"
+    "2026-11-23 recheck weekly GSC and GA4 upload for manifest timezone, latest complete date, filters, key event definitions and same-window daily/country/landing breakdowns; 2026-11-17 upload check found no new report",
+    "2026-12-11 assess counterargument article complete-window URL/query and first linked valid result;2026-11-20 indexability and direct general entry checked; current actual indexing unmeasured",
+    "2026-12-10 assess discussion response article complete-window URL/query and first linked valid result;11-19 route/CTA review already complete"
   ],
   "review_dates": {
-    "next_daily": "2026-11-20",
-    "last_daily": "2026-11-19",
+    "next_daily": "2026-11-21",
+    "last_daily": "2026-11-20",
     "next_weekly": "2026-11-23",
     "next_report_upload": "2026-11-23",
     "next_monthly": "2026-12-01",
