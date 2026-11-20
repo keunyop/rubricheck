@@ -61,7 +61,7 @@ export const COUNTERARGUMENT_POST = {
   path: "/blog/counterargument-paragraph-example",
   title: "Counterargument Paragraph Example: Answer an Objection Fairly",
   description: "Build a counterargument paragraph with a fair objection, a concession and a reasoned response. Use a worked example and check the revision against your rubric.",
-  date: "2026-11-13", modified: "2026-11-13", category: "Argumentative writing", readingMinutes: 6,
+  date: "2026-11-13", modified: "2026-11-20", category: "Argumentative writing", readingMinutes: 6,
 } as const;
 export const EXPLAIN_EVIDENCE_POST = {
   slug: "explain-evidence-in-an-essay",
@@ -105,5 +105,12 @@ export const SYNTHESIS_PARAGRAPH_POST = {
   description: "Write a synthesis paragraph that connects two sources around one claim. Compare a worked before-and-after example, explain the relationship, and check your draft.",
   date: "2026-11-19", modified: "2026-11-19", category: "Academic writing", readingMinutes: 7,
 } as const;
-export const BLOG_POSTS = [SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const SOURCE_EVALUATION_POST = {
+  slug: "source-evaluation-example",
+  path: "/blog/source-evaluation-example",
+  title: "Source Evaluation Example: Decide What Your Evidence Can Support",
+  description: "Evaluate a source with a worked example: trace a claim to its original evidence, check credibility and relevance, and decide what you can use in an essay.",
+  date: "2026-11-20", modified: "2026-11-20", category: "Academic research", readingMinutes: 8,
+} as const;
+export const BLOG_POSTS = [SOURCE_EVALUATION_POST, SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];

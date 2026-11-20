@@ -73,7 +73,8 @@ export function CounterargumentArticle() {
       <h2 id="counterargument-cta">Check your draft against your course criteria</h2>
       <p>Add your own essay draft and a rubric you are permitted to share to RubriCheck. Use the feedback to identify passages to review, then compare each suggestion with your argument, assignment instructions, and original sources.</p>
       <p>Without a rubric, general writing criteria can support a review, but they do not reproduce your instructor&apos;s grading scheme. AI feedback can miss context or misread evidence. Verify quotations and citations yourself, remove personal information you do not need to share, and follow your course&apos;s AI rules. Estimated scores cannot guarantee a grade.</p>
-      <Link href="/workspace#rubric-checker" className={styles.button}>Check my essay draft →</Link>
+      <Link href="/workspace?from=blog-counterargument#rubric-checker" className={styles.button}>Check my essay draft →</Link>
+      <p>No rubric? <Link href="/workspace?start=general&amp;from=blog-counterargument#rubric-checker">Review with general writing criteria</Link>.</p>
     </aside>
 
     <section className={styles.sources} aria-labelledby="counterargument-sources">
