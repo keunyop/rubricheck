@@ -51,7 +51,8 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 128, "Sitemap includes 16 public pages in seven languages plus sixteen English blog routes");
+  assert.equal(urls.length, 129, "Sitemap includes 16 public pages in seven languages plus seventeen English blog routes");
+  assert.ok(urls.some(url => url.pathname === "/blog/topic-sentence-examples"), "Topic sentence guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/source-evaluation-example"), "Source evaluation guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/synthesis-paragraph-example"), "Synthesis paragraph guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/reverse-outline-example"), "Reverse outline guide is in the sitemap");
@@ -123,7 +124,15 @@ try {
       breadcrumb.itemListElement.forEach((item, index) => assert.equal(item.position, index + 1));
       assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + homePath);
       assert.equal(breadcrumb.itemListElement.at(-1).item, url.href);
-      if (barePath === "/blog/source-evaluation-example") {
+      if (barePath === "/blog/topic-sentence-examples") {
+        const posting = schemas.find((schema) => schema["@type"] === "BlogPosting");
+        assert.equal(posting?.datePublished, "2026-11-21");
+        assert.equal(posting?.dateModified, "2026-11-21");
+        assert.equal(posting?.url, url.href);
+        assert.match(html, /<figure\b/);
+        assert.match(html, /<figcaption\b/);
+        assert.match(html, /from=blog-topic-sentence/);
+      } else if (barePath === "/blog/source-evaluation-example") {
         const posting = schemas.find((schema) => schema["@type"] === "BlogPosting");
         assert.equal(posting?.datePublished, "2026-11-20");
         assert.equal(posting?.dateModified, "2026-11-20");

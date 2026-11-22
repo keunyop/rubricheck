@@ -79,7 +79,8 @@ export function ExplainEvidenceArticle() {
       <h2 id="evidence-cta">Find the evidence your rubric asks for</h2>
       <p>Bring your own draft and a course rubric you are permitted to share to RubriCheck. Check whether the feedback points to a specific claim, source, or missing explanation, then verify it against your text and original sources.</p>
       <p>Without your rubric, general writing criteria can support a broad review but cannot reproduce your instructor&apos;s grading scheme. AI feedback may miss context or misread evidence; follow your course&apos;s AI policy, remove unnecessary personal information, and check citations yourself. An estimated score cannot guarantee a grade.</p>
-      <Link href="/workspace#rubric-checker" className={styles.button}>Check my essay draft →</Link>
+      <Link href="/workspace?from=blog-explain-evidence#rubric-checker" className={styles.button}>Check my essay draft →</Link>
+      <p>No rubric? <Link href="/workspace?start=general&amp;from=blog-explain-evidence#rubric-checker">Review with general writing criteria</Link>.</p>
     </aside>
 
     <section className={styles.sources} aria-labelledby="evidence-sources">

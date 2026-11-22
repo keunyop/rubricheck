@@ -68,7 +68,7 @@ export const EXPLAIN_EVIDENCE_POST = {
   path: "/blog/explain-evidence-in-an-essay",
   title: "How to Explain Evidence in an Essay Paragraph (With an Example)",
   description: "Learn how to explain evidence in an essay paragraph with a worked before-and-after example, a source-use checklist and a rubric-based revision step.",
-  date: "2026-11-14", modified: "2026-11-14", category: "Academic writing", readingMinutes: 7,
+  date: "2026-11-14", modified: "2026-11-21", category: "Academic writing", readingMinutes: 7,
 } as const;
 export const NO_RUBRIC_ESSAY_POST = {
   slug: "check-essay-without-rubric",
@@ -112,5 +112,12 @@ export const SOURCE_EVALUATION_POST = {
   description: "Evaluate a source with a worked example: trace a claim to its original evidence, check credibility and relevance, and decide what you can use in an essay.",
   date: "2026-11-20", modified: "2026-11-20", category: "Academic research", readingMinutes: 8,
 } as const;
-export const BLOG_POSTS = [SOURCE_EVALUATION_POST, SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const TOPIC_SENTENCE_POST = {
+  slug: "topic-sentence-examples",
+  path: "/blog/topic-sentence-examples",
+  title: "Topic Sentence Examples: Turn a Subject into a Clear Paragraph Point",
+  description: "Revise a vague topic sentence with four worked examples, a complete comparison paragraph, and a checklist for matching your main point to its evidence.",
+  date: "2026-11-21", modified: "2026-11-21", category: "Paragraph writing", readingMinutes: 7,
+} as const;
+export const BLOG_POSTS = [TOPIC_SENTENCE_POST, SOURCE_EVALUATION_POST, SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];
