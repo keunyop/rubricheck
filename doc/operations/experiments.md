@@ -48,3 +48,12 @@ PO 통합 검증: 전체 339건·TypeScript·수정 lint·production build·SEO 
 | --- | --- | --- | --- |
 | CONTENT-DAILY 2026-11-20 | 영어 대학 과제 독자의 `source evaluation example`: 특정 주장을 출처가 어디까지 뒷받침하는가. US/CA 편집 가설이며 현재 국가별 수요 미측정. 기존 근거 설명/종합과 달리 원문 추적·방법·적합성·사용 범위를 다룸. 최신 GSC11/08·GA4 11/09는 stale | 제목 Source Evaluation Example: Decide What Your Evidence Can Support. 가상 강의녹화 설문·vendor 주장·평가 전후, 본문 4단계 도식·동등 설명·연구 메모·내부 링크. Purdue OWL2개·UW-Green Bay 원문11/20 확인. source/인용 검증·성적 보장 주장 없음. TypeScript·lint·build·SEO128·320/390/1280px·WCAG·No rubric 선택·운영 metadata/figure/CTA 확인 | 운영 위임으로11/20 게시, [운영 URL](https://rubricheck.com/blog/source-evaluation-example), `dedfe8e`, verified_production.11/27 색인 가능 경로·링크·CTA 수집,12/18 완결 URL/query와 첫 연결 유효 결과. 효과 null |
 | CONTENT-DAILY 2026-11-13 후속 |11/20 기한인 반론 글의 색인 가능 경로·내부 링크·CTA 점검. 실제 검색 보고서가 게시 전 자료라 성과 판정 보류 | 기존 CTA 출처 태그와 직접 No rubric 선택 링크 추가. 원발행11/13 유지·수정일11/20. 로컬3개 화면·접근성·모드 선택 및 운영 HTML/날짜 확인 |11/20 수정 production 반영.12/11 완결 URL/query·첫 결과 경로 확인 유지. 실제 색인·효과 null |
+
+## 2026-11-21 복구 판단·콘텐츠 게시
+
+- GROW-002의11/21 출시 검토는 완료했다. 이미 검증된11/19 rubric recovery는 유지한다. 추가 원인별 구현은 code/안내노출·성숙후속 근거 부족으로 판정 불가이며,11/23 새 근거와 시간대 기준선을 점검한 뒤12/10 첫 성숙 비교를 진행한다. 목표·품질/과금 보호기준은 변경하지 않는다.
+
+| 작업 | 질문·근거·차이 | 내용·검증 | 게시·후속 |
+| --- | --- | --- | --- |
+| CONTENT-DAILY 2026-11-21 | 영어 과제 독자 keyword `topic sentence examples`: 주제 이름에서 구체적 문단 요점으로 어떻게 고칠까? 국가별 수요·효과 미측정의 편집 가설. 기존 근거 해석·역개요 배열과 구분 | 가상 handover note2개·주제문4개·완성문단·본문4단계 도식/동등설명·체크리스트·내부링크. Harvard/Purdue 원문 현지11/21 확인. 실제 rubric/No rubric CTA와 제품·AI한계. TypeScript lint isolated build SEO129 320/390/1280px WCAG 도식 dates CTA 일반선택 통과; production 확인 | 지속위임으로11/21 게시, [운영글](https://rubricheck.com/blog/topic-sentence-examples), source `6677e6e`, verified_production.11/28 indexability·링크·CTA 수집,12/19 완결 URL/query·첫 연결 유효 결과. 효과 null |
+| CONTENT-DAILY 2026-11-14 후속 |11/21 공개경로·도식·내부링크·CTA 검토. 게시 전 자료만 있어 실제 색인/효과 판정 보류 | 출처 태그·직접 일반 기준 선택 링크 보완, 원발행11/14 유지·수정11/21. 로컬3폭·접근성·선택상태와 production HTML/metadata 검증 |11/21 production 수정반영,12/12 완결 검색·첫 결과 확인 유지. 효과 null |
