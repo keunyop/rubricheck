@@ -5,7 +5,7 @@
   "last_run_record": "doc/operations/runs/2026-11-23-weekly.md",
   "last_journal_entry": "doc/operations/journal.md#2026-11-23-weekly",
   "mode": "weekly",
-  "status": "weekly_review_complete_baseline_corrected_no_growth_claim; same_rubric_archive_retained_unresolved; stripe_read_restored_current_renewal_past_due_auto_retry_pending; dev_security_audit_zero_verified_local; transition_article_verified_local_release_pending; stale_reports",
+  "status": "weekly_review_complete_baseline_corrected_no_growth_claim; same_rubric_archive_retained_unresolved; stripe_read_restored_current_renewal_past_due_auto_retry_pending; dev_security_audit_zero_verified_production; transition_article_verified_production; stale_reports",
   "repository_visibility": "public",
   "base_commit": "32ae534",
   "private_records": ".growth-local/owner/",
@@ -22,7 +22,7 @@
     },
     "vercel": {
       "checked_on": "2026-11-23",
-      "coverage": "Existing32ae534 production READY at start; recent1h top25 grouped error/fatal empty with retention limits; new release pending integrated build and browser verification"
+      "coverage": "c31c1f1 exactSHA production READY custom aliases;7 public paths200 new and due articles index sitemap workspace rubric-checker; canonical dates figure caption sourceCTA; local9 cases3widths WCAG new actual general mode; recent15m error/fatal top25 grouped requestPath empty with retention limits"
     },
     "feedback": {
       "checked_on": "2026-11-23",
@@ -142,7 +142,7 @@
       "publication": "verified_production",
       "published_on": "2026-11-16",
       "url": "https://rubricheck.com/blog/turn-rubric-feedback-into-revisions",
-      "review": "2026-11-23 due route/metadata/figure/internal CTA review; existing rubric CTA retained without content edit;12-14 complete-window search/linked result; effect unmeasured"
+      "review": "2026-11-23 production route metadata figure caption and existing rubric CTA verified; original/modified11-16 retained;12-14 complete search linked result; indexing/effect unmeasured"
     },
     "CONTENT-DAILY-2026-11-15": {
       "implementation": "english_no_rubric_essay_guide_published",
@@ -180,15 +180,16 @@
       "investigation": "production Next.js critical and grading parser transitive dependency advisories found during local dependency restore",
       "implementation": "prior Next16.4.6/Zod4.6.7 production patch retained; compatible dev-only24 lock entries patched including coherent typescript-eslint8.74 within parent ranges; no direct or production graph change",
       "validation": "2026-11-23 full audit0 and omit-dev0; production102 lock entries equal; actual24 installed versions/integrity and48 parent semver pass; legacy Home lint0errors7warnings exactly unchanged; production build including TypeScript, scoped ESLint, SEO131 and9 browser cases passed",
-      "deployment": "verified_local_pending_release",
-      "review": "2026-11-30 routine audit recheck; legacy Home effect warnings require separately scoped account/draft/result restoration review, no suppression or current source changes"
+      "deployment": "verified_production",
+      "review": "2026-11-30 routine audit recheck; legacy Home effect warnings require separately scoped account/draft/result restoration review, no suppression or current source changes",
+      "production_verified": true
     },
     "CONTENT-001": {
       "implementation": "english_article_published",
       "validation": "sources_product_links_mobile_browser_seo119_build_and_production_smoke",
       "publication": "verified_production",
       "published_on": "2026-11-10",
-      "review": "2026-11-23 due indexable route and product CTA review; add existing source tag to compare-drafts primary CTA while keeping original11-10 publication;12-08 complete search linked first/second result and verified billing outcomes; actual index/effect unmeasured"
+      "review": "2026-11-23 production route metadata and attributed CTA verified; original11-10 retained, modified11-23;12-08 complete search first/second result and billing outcomes; actual indexing and event collection unmeasured"
     },
     "CONTENT-DAILY": {
       "implementation": "english_counterargument_example_article_published; daily_owner_guidance_retained",
@@ -246,12 +247,11 @@
     },
     "CONTENT-DAILY-2026-11-23": {
       "implementation": "english_paragraph_transition_worked_example_with_four_step_figure",
-      "validation": "isolated production build including TypeScript; scoped ESLint; SEO131; browser9 cases320/390/1280 WCAG metadata dates canonical nooverflow CTA attribution; new actual general-mode selection; noJS figure internal links sitemap; no page errors or unexpected APIs; screenshots reviewed",
-      "publication": "verified_local_pending_release",
-      "published_on": null,
-      "url": null,
-      "planned_url": "https://rubricheck.com/blog/paragraph-transition-examples",
-      "review": "If11-23 publication11-30 indexability links CTA;12-21 complete-window URL/query and linked first valid result; move with actual publication",
+      "validation": "isolated production build including TypeScript; scoped ESLint; SEO131; browser9 cases320/390/1280 WCAG metadata dates canonical nooverflow CTA attribution; new actual general-mode selection; noJS figure internal links sitemap; no page errors or unexpected APIs; screenshots reviewed; exactSHA production READY aliases;7 public paths200 canonical BlogPosting dates figure caption sourceCTA index sitemap; recent15m error/fatal grouped paths empty within top25 retention limits",
+      "publication": "verified_production",
+      "published_on": "2026-11-23",
+      "url": "https://rubricheck.com/blog/paragraph-transition-examples",
+      "review": "2026-11-30 indexability internal links CTA collection;2026-12-21 complete-window URL/query and linked first valid result; actual indexing/conversion unmeasured",
       "local_status": "verified_local"
     }
   },
@@ -265,7 +265,7 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "1b45b783d9299b0f812e3ef68f1e51642c5f0a2b",
+    "commit": "c31c1f1a1ccc9cdf884db2ea7a96ab7b22c862d3",
     "security_audit": {
       "production_total": 0,
       "development_total": 0,
@@ -282,21 +282,21 @@
       }
     },
     "production": {
-      "deployment_id": "dpl_4gHCrC8EAkWgKXksr8oXiGCGXsbG",
+      "deployment_id": "dpl_4SJy2NBKJjNWRizzcQ5STsrTcv57",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "2026-11-22 local (UTC11-23) exact source SHA READY aliases; article due-no-rubric index sitemap workspace200 canonical BlogPosting dates figure caption generalCTA verified",
+      "smoke": "2026-11-23 exactSHA READY custom domains;7 public paths200 canonical dates figure caption sourceCTA index sitemap; local9cases3widths WCAG general mode",
       "runtime_errors": {
         "scan": "source deployment recent15m error/fatal grouped requestPath; top25 retention limited",
         "observed": 0
       },
-      "limits": "Content-only release. Mobile WCAG and actual general mode verified locally with anonymous fixtures; production public HTML smoke verified. Search indexing/conversion and existing rubric failure recovery remain unmeasured. No evaluation or payment action."
+      "limits": "Production public GET smoke; local anonymous fixtures cover actual mode and mobile flow. No paid evaluation/payment. Search indexing, event collection, conversion and unrelated archive recovery unmeasured."
     },
     "user_reconfirmed_on": "2026-11-22",
     "authorization": "2026-11-22 explicit current-conversation authorization to deploy prepared changes and automatically deploy future verified routine changes; no repeat permission; existing high-risk exclusions and release verification retained"
   },
   "next_actions": [
-    "Automatically release verified transition article, compare-drafts CTA source and dev security patch via main; verify exactSHA READY public smoke and runtime logs",
+    "2026-11-30 review paragraph transition article indexability internal links CTA collection;2026-12-21 complete-window URL/query and first linked valid result",
     "2026-11-24 after08:40:14Z read Stripe automatic retry invoice/subscription result; current renewal past_due despite older invoice paid; no manual billing action",
     "2026-11-24 inspect new/retained archive and unlinked network diagnostics with concrete validation or request evidence; no speculative scoring patch",
     "2026-11-30 weekly refresh complete reports/manifest, canonical civilUTC07 mature cohorts, quiz discovery and retained metrics, routine dependency audit and separately scoped legacy Home effects",
@@ -314,7 +314,8 @@
     "2026-12-08 assess full 28-day growth and mature repeat-use cohorts against verified recurring payments",
     "2026-12-11 assess counterargument article complete-window URL/query and first linked valid result;2026-11-20 indexability and direct general entry checked; current actual indexing unmeasured",
     "2026-12-10 assess discussion response article complete-window URL/query and first linked valid result;11-19 route/CTA review already complete",
-    "2026-12-12 evidence article complete-window URL/query and linked valid result;11-21 route metadata figure and direct general entry checked; actual index unknown"
+    "2026-12-12 evidence article complete-window URL/query and linked valid result;11-21 route metadata figure and direct general entry checked; actual index unknown",
+    "2026-11-30 review English rubric-checker search-to-tool paths when fresh complete query/page and country reports arrive; current stale reports cannot support acquisition effect"
   ],
   "review_dates": {
     "next_daily": "2026-11-24",
@@ -335,7 +336,7 @@
   },
   "last_release": {
     "run_id": "2026-11-23-weekly",
-    "status": "verified_local_pending_release",
+    "status": "verified_production",
     "base_commit": "32ae534af1dfaec83fd7b0809a7ed50a67675c5d",
     "files": [
       "package-lock.json",
@@ -346,12 +347,12 @@
       "src/config/blog.ts",
       "scripts/check_seo.mjs"
     ],
-    "validation": "isolated production build including TypeScript; scoped ESLint; SEO131; browser9 cases320/390/1280 WCAG metadata dates canonical nooverflow CTA attribution; new actual general-mode selection; noJS figure internal links sitemap; no page errors or unexpected APIs; screenshots reviewed",
-    "commit": null,
-    "production": null,
+    "validation": "isolated production build including TypeScript; scoped ESLint; SEO131; browser9 cases320/390/1280 WCAG metadata dates canonical nooverflow CTA attribution; new actual general-mode selection; noJS figure internal links sitemap; no page errors or unexpected APIs; screenshots reviewed; exactSHA production READY aliases;7 public paths200 canonical BlogPosting dates figure caption sourceCTA index sitemap; recent15m error/fatal grouped paths empty within top25 retention limits",
+    "commit": "c31c1f1a1ccc9cdf884db2ea7a96ab7b22c862d3",
+    "production": "dpl_4SJy2NBKJjNWRizzcQ5STsrTcv57",
     "approval_required": null,
-    "resume": "git push origin main then exact SHA READY and production smoke",
+    "resume": null,
     "authorization": "2026-11-22 explicit current-conversation authorization to deploy prepared changes and automatically deploy future verified routine changes; no repeat permission; existing high-risk exclusions and release verification retained",
-    "published_on": null
+    "published_on": "2026-11-23"
   }
 }

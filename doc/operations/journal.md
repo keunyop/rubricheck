@@ -5,7 +5,7 @@
 ## 2026-11-23 weekly
 
 - 주간 기준선·일일 품질·결제·퀴즈 점검 완료. 최초 UTC−07 기준선을 재현해11/16 UTC−08 후속 정정을 바로잡았다. 성장 성과는 미확인이며 기존 실패 항목은 미해결 보존한다. Stripe 원천 읽기는 복구됐으나 현재 갱신은 past_due라11/24 자동 재시도 후 확인한다.
-- 개발 전용 보안 패치로 전체 audit13→0·production0, 운영 그래프·직접 버전 보존. 문단 전환 예시 글·초안 비교 CTA 출처 보완과 기존 루브릭 피드백 후속을 build·TypeScript·lint·SEO131·모바일3폭9사례 WCAG·CTA·noJS로 검증했다. 사용자 지속 자동 배포 위임에 따라 main 출시와 운영 확인을 진행한다. 기존 사용자 지침 수정은 제외한다.
+- 개발 전용 보안 패치로 전체 audit13→0·production0, 운영 그래프·직접 버전 보존. 문단 전환 예시 글·초안 비교 CTA 출처 보완과 기존 루브릭 피드백 후속을 build·TypeScript·lint·SEO131·모바일3폭9사례 WCAG·CTA·noJS로 검증했다. 사용자 지속 자동 배포 위임으로 소스 `c31c1f1` main push·production READY·정확한 SHA·도메인·7개 공개 경로200·메타데이터·도식·CTA·제한 범위 오류 집계 없음 확인. [문단 전환 예시 글](https://rubricheck.com/blog/paragraph-transition-examples)11/23 게시,11/30·12/21 후속. 기존 사용자 지침 수정은 제외했다. [실행 기록](runs/2026-11-23-weekly.md).
 
 ## 2026-11-22 daily
 

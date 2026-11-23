@@ -7,7 +7,7 @@
 - DATA-001/GROW-002: 공식 UTC−07로 최초 기준선을 재현했다.11/16 오래된 runtime UTC−08 후속 정정은 경계를 한 시간 잘못 더했으므로 원본 snapshot을 보존하며 교정했다. 비공개 절대2배 목표를 복원하고90% 확인율과 계획 완충치를 구분했다. 최근 완결 코호트의 목표 달성·안내 효과는 확인되지 않았다.11/30 동일 정의 완결 코호트·식별/동의·보고서를 재검토하며12/10·2027/01/30 목표 일정은 유지한다.
 - BILL-001: Stripe 원천 읽기가 복구됐다. 과거 대상 invoice paid와 같은 구독의 현재 갱신 open/past_due를 구분한다. 자동 next_payment_attempt11/24 08:40:14Z 이후 원천 결과 확인. 수동 청구·환불·고객 연락은 하지 않는다.
 - GRADE-001/QUIZ-001: archive는 어제와 동일한 ID이며 불명확한 OCR 원인·원 모델 검증 필드는 미확인이라 보존한다. 새로운 입력·rubric·파일 범주와 attempt 없는 네트워크 신호는 원인/고유 실패율로 단정하지 않는다. 퀴즈 현재 보관 집계는 인증·완전 읽기를 확인했으나 표본·기간·방문 연결이 작아 채택 병목은 판정 불가다.
-- SEC-009/CONTENT-DAILY: 운영 그래프를 보존하는 개발 도구 호환 패치로 전체 audit13→0·production0. 문단 전환 예시 글·초안 비교 CTA 출처 보완을 build·TypeScript·lint·SEO131·모바일3폭9사례로 검증했다. 사용자 지속 위임으로 자동 배포·운영 확인을 진행한다. rubric-feedback/compare-drafts의 원발행일과12/14·12/08 성과 확인일은 유지한다.
+- SEC-009/CONTENT-DAILY: 운영 그래프를 보존하는 개발 도구 호환 패치로 전체 audit13→0·production0. 문단 전환 예시 글·초안 비교 CTA 출처 보완을 build·TypeScript·lint·SEO131·모바일3폭9사례로 검증했다. 사용자 지속 위임으로 소스 `c31c1f1` main push·production READY·도메인·7개 공개 경로200·도식·CTA 확인, `verified_production`. [문단 전환 예시](https://rubricheck.com/blog/paragraph-transition-examples)11/23 게시,11/30·12/21 후속. rubric-feedback/compare-drafts의 원발행일과12/14·12/08 성과 확인일은 유지한다.
 
 ## 2026-11-22 인수인계
 

@@ -5,8 +5,9 @@
 | 작업 | 관측·선택 | 검증·한계 | 다음 확인 |
 | --- | --- | --- | --- |
 | DATA-001/GROW-002 | 공식 civil UTC−07로 최초 기준선 재현;11/16 UTC−08 경계 정정 폐기, 비공개2배 목표 복원·계획 최소/완충 구분 | 동일 first-observed actor·연결 결과 열람168h 정의의 완결 코호트 비교. 시간대 교정은 성장 효과가 아니며 최근 코호트는 변경 노출·추적 창과 달라 인과 판정 불가. 완결28일/이전28일 이력·동의/식별·새 보고서 공백 유지 | 11/30 같은 정의의 완결 코호트·보고서;12/10 post-release 비교와2027/01/30 두 연속 코호트 목표 유지 |
+| SEC-009 | 개발 전용24개 lock 항목 호환 패치로 전체 audit13→0·production0 | 운영102항목·직접 버전 동일, 실제 설치/integrity·부모48범위 확인. 통합build·SEO131·9브라우저 사례와 production smoke 통과. 기존 Home lint7은 동일하며 별도 검토 | 11/30 routine audit와 별도 Home 복원 동작 범위 검토 |
 | QUIZ-001 | 인증된 관리자 현재 보관 generation/attempt 집계 complete 재확인 | 기간별 cohort와 동일 방문 퍼널이 아니고 표본이 작아 주요 채택 병목 판정 불가. 유료 모델 실행 없음 | 11/30 공개 발견 경로와 보관 집계 검토 |
-| CONTENT-DAILY 2026-11-23 | 주 검색어 `paragraph transition examples`, 영어 대학 과제 독자에게 연결어보다 문단 관계를 먼저 정하는 가상 worked example·본문4단계 도식·제품 일반 기준 진입. 최신 검색량/국가 수요는 미측정 가설 | source·작성자lint/typecheck·PO본문 검토·registry/route 교차 검토 완료. 격리production build·TypeScript·lint·SEO131·3개 글×3폭9사례 WCAG·CTA·날짜·noJS·도식 캡처 검증 통과, 운영 확인 대기 | 실제 게시일 null·운영 URL null. 계획 경로 `/blog/paragraph-transition-examples`.11/23 게시 시11/30 색인 가능 경로·CTA,12/21 완결 검색/연결 결과. 지연 시 이동 |
+| CONTENT-DAILY 2026-11-23 | 주 검색어 `paragraph transition examples`, 영어 대학 과제 독자에게 연결어보다 문단 관계를 먼저 정하는 가상 worked example·본문4단계 도식·제품 일반 기준 진입. 최신 검색량/국가 수요는 미측정 가설 | source·작성자lint/typecheck·PO본문 검토·registry/route 교차 검토 완료. 격리production build·TypeScript·lint·SEO131·3개 글×3폭9사례 WCAG·CTA·날짜·noJS·도식 캡처 검증 통과, 정확한 소스 SHA production READY·도메인·7개 공개 경로200·메타데이터·도식·CTA 운영 확인 | 2026-11-23 [운영 게시](https://rubricheck.com/blog/paragraph-transition-examples), `verified_production`.11/30 색인 가능 경로·CTA,12/21 완결 검색/연결 결과. 현재 색인·검색·전환 효과 미측정 |
 
 11/23 rubric-feedback 글은 기존 rubric 진입과 출처 태그를 유지한다. compare-drafts 글은 원발행11/10을 유지하고 CTA 출처 태그만 보완해 수정일11/23으로 기록한다. 실제 이벤트 수집·검색 색인은 미확인이며 기존12/14·12/08 성과 확인일은 유지한다.
 
