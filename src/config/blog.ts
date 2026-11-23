@@ -119,5 +119,12 @@ export const TOPIC_SENTENCE_POST = {
   description: "Revise a vague topic sentence with four worked examples, a complete comparison paragraph, and a checklist for matching your main point to its evidence.",
   date: "2026-11-21", modified: "2026-11-21", category: "Paragraph writing", readingMinutes: 7,
 } as const;
-export const BLOG_POSTS = [TOPIC_SENTENCE_POST, SOURCE_EVALUATION_POST, SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const ESSAY_CONCLUSION_POST = {
+  slug: "essay-conclusion-example",
+  path: "/blog/essay-conclusion-example",
+  title: "Essay Conclusion Example: End with a Supported Answer",
+  description: "Revise an essay conclusion with a worked before-and-after example. Connect your answer to the body, keep claims within the evidence, and check the final implication.",
+  date: "2026-11-22", modified: "2026-11-22", category: "Essay revision", readingMinutes: 7,
+} as const;
+export const BLOG_POSTS = [ESSAY_CONCLUSION_POST, TOPIC_SENTENCE_POST, SOURCE_EVALUATION_POST, SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];

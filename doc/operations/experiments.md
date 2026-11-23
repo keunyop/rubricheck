@@ -1,5 +1,15 @@
 # 실험과 콘텐츠 성과
 
+## 2026-11-22 검증 완료·게시 보류
+
+| 작업 | 독자·질문·근거 | 검증 | 게시·후속 |
+| --- | --- | --- | --- |
+| CONTENT-DAILY 2026-11-22 | 영어 대학 과제 독자, 주 검색어 `essay conclusion example`. 본문에서 뒷받침되는 답·이유·한계·시사점으로 결론을 쓰는 가상 예시. 과거 영어 도구 의도와 제품 적합성에 따른 편집 가설이며 stale GSC11/08·GA4 11/09로 현재 국가별 수요·검색량을 추정하지 않음 | Harvard/Purdue 본문 확인, 본문 4단계 도식·동등 설명·실제 일반 기준 CTA, 작성자/PO 교차 검토, 격리 production build·TypeScript·lint·SEO130·320/390/1280px WCAG·날짜·가로 넘침 없음·No rubric 선택·noJS·내부 링크 통과 | `verified_local / awaiting_approval`. 실제 게시일 null, 운영 URL null, 계획 경로 `/blog/essay-conclusion-example`. 자동 승인 검토가 main push의 현재 명시 승인을 요구하며 실행 전 거부. 승인·운영 확인 후 실제 게시일+7일/+28일 검토;11/22 게시 시11/29·12/20, 지연 시 이동. 성과 null |
+
+기존 no-rubric 글은 11/22 운영 본문·본문 도식·직접 일반 기준 CTA와 실제 No rubric 선택을 확인했다. 수정이 필요하지 않아 원발행·수정일11/15를 유지한다. 실제 색인과 검색/연결 결과 성과는 미측정이며12/13 완결 검토를 유지한다.
+
+## 기존 실험
+
 | 작업 | 가설 / 근거 | 변경 / 게시일 | 평가 기준 / 확인일 | 결과 |
 | --- | --- | --- | --- | --- |
 | QUAL-001 | 배점 초과 출력을 차단하면 평가 표시 신뢰성이 개선됨; 합성 재현 | 로컬 수정 2026-11-09 / 미배포 | 두 모드 score cap 회귀 통과; 배포 직후 합성 smoke, 7일 오류 검토 | 로컬318 pass; 운영 효과 미측정 |
@@ -57,3 +67,8 @@ PO 통합 검증: 전체 339건·TypeScript·수정 lint·production build·SEO 
 | --- | --- | --- | --- |
 | CONTENT-DAILY 2026-11-21 | 영어 과제 독자 keyword `topic sentence examples`: 주제 이름에서 구체적 문단 요점으로 어떻게 고칠까? 국가별 수요·효과 미측정의 편집 가설. 기존 근거 해석·역개요 배열과 구분 | 가상 handover note2개·주제문4개·완성문단·본문4단계 도식/동등설명·체크리스트·내부링크. Harvard/Purdue 원문 현지11/21 확인. 실제 rubric/No rubric CTA와 제품·AI한계. TypeScript lint isolated build SEO129 320/390/1280px WCAG 도식 dates CTA 일반선택 통과; production 확인 | 지속위임으로11/21 게시, [운영글](https://rubricheck.com/blog/topic-sentence-examples), source `6677e6e`, verified_production.11/28 indexability·링크·CTA 수집,12/19 완결 URL/query·첫 연결 유효 결과. 효과 null |
 | CONTENT-DAILY 2026-11-14 후속 |11/21 공개경로·도식·내부링크·CTA 검토. 게시 전 자료만 있어 실제 색인/효과 판정 보류 | 출처 태그·직접 일반 기준 선택 링크 보완, 원발행11/14 유지·수정11/21. 로컬3폭·접근성·선택상태와 production HTML/metadata 검증 |11/21 production 수정반영,12/12 완결 검색·첫 결과 확인 유지. 효과 null |
+
+
+## 2026-11-22 게시 재개 승인
+
+사용자가 현재 대화에서 “운영 배포 해주세요. 앞으로는 자동 배포해주세요”라고 명시 승인했다. 앞선 자동 검토 차단을 이 승인으로 재개한다. 검증된 소스와 원격 main의 일치를 다시 확인했고, main 커밋·push·Git 연동 운영 게시를 진행한다. 현재 상태는 authorized_release_in_progress이며 실제 게시일·완료는 운영 확인 후 확정한다. 향후 검증된 통상 변경도 별도 재승인 없이 배포하며 예약 실행은 생성하지 않는다.
