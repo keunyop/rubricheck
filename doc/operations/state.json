@@ -5,7 +5,7 @@
   "last_run_record": "doc/operations/runs/2026-11-22-daily.md",
   "last_journal_entry": "doc/operations/journal.md#2026-11-22-daily",
   "mode": "daily",
-  "status": "daily_review_complete; new_ambiguous_OCR_rubric_failure_unresolved_actual_model_output_missing; essay_conclusion_verified_local_user_authorized_release_in_progress; no_rubric_existing_production_entry_verified; stripe_reauthentication_required; stale_reports_timezone_baseline_pending",
+  "status": "daily_review_complete; new_ambiguous_OCR_rubric_failure_unresolved_actual_model_output_missing; essay_conclusion_verified_production_standing_automatic_deployment_reconfirmed; no_rubric_existing_production_entry_verified; stripe_reauthentication_required; stale_reports_timezone_baseline_pending",
   "repository_visibility": "public",
   "base_commit": "49bb764",
   "private_records": ".growth-local/owner/",
@@ -22,7 +22,7 @@
     },
     "vercel": {
       "checked_on": "2026-11-22",
-      "coverage": "current production unchanged; recent1h error/fatal top25 grouped requestPath empty retention limited; due no-rubric production page render and actual general CTA selection verified; new article build/browser/SEO130 verified locally; commit/push rejected before execution by automatic approval review"
+      "coverage": "1b45b78 exact SHA production READY custom aliases; new conclusion article due-no-rubric index sitemap workspaceHTTP200; canonical BlogPosting dates figure caption generalCTA; local320_390_1280 WCAG actual No rubric selection; recent15m source-deployment error/fatal groups empty with retention/top25 limits"
     },
     "feedback": {
       "checked_on": "2026-11-22",
@@ -236,14 +236,12 @@
     },
     "CONTENT-DAILY-2026-11-22": {
       "implementation": "english_essay_conclusion_example_with_original_exercise_and_four_step_figure",
-      "validation": "source bodies; author lint/typecheck; independent editorial and route product review; isolated production build; final lint/typecheck; SEO130;320_390_1280 WCAG metadata dates nooverflow actual general CTA;noJS;internal links",
-      "publication": "authorized_release_in_progress",
+      "validation": "source bodies; author lint/typecheck; independent editorial and route product review; isolated production build; final lint/typecheck; SEO130;320_390_1280 WCAG metadata dates nooverflow actual general CTA;noJS;internal links;production exactSHA READY aliases article due index sitemap workspace200 canonical BlogPosting dates figure caption generalCTA recent15m error/fatal groups empty",
+      "publication": "verified_production",
       "local_status": "verified_local",
-      "published_on": null,
-      "url": null,
-      "planned_url": "https://rubricheck.com/blog/essay-conclusion-example",
-      "blocked_by": null,
-      "review": "After actual publication +7 days indexability internal links CTA; +28 days complete URL/query and linked result; if11-22 publication,11-29/12-20; dates move if later"
+      "published_on": "2026-11-22",
+      "url": "https://rubricheck.com/blog/essay-conclusion-example",
+      "review": "2026-11-29 indexability internal links CTA collection;2026-12-20 complete-window URL/query and linked first valid result; search/conversion effect unmeasured"
     }
   },
   "release": {
@@ -256,7 +254,7 @@
       "evidence": "https://vercel.com/kb/bulletin/node-js-security-advisory",
       "checked_on": "2026-11-10"
     },
-    "commit": "6677e6e0afc9295795b992449c9cae868ece8fb6",
+    "commit": "1b45b783d9299b0f812e3ef68f1e51642c5f0a2b",
     "security_audit": {
       "production_total": 0,
       "development_total": 13,
@@ -267,21 +265,21 @@
       "development_checked_on": "2026-11-18"
     },
     "production": {
-      "deployment_id": "dpl_7HNx6MrnCvtKUFFxUzgdxQHaNft5",
+      "deployment_id": "dpl_4gHCrC8EAkWgKXksr8oXiGCGXsbG",
       "url": "https://rubricheck.com",
       "status": "READY",
-      "smoke": "2026-11-21 local (UTC11-22) exact source SHA alias; topic article due-evidence index sitemap workspace200; canonical BlogPosting dates figure and direct general link verified",
+      "smoke": "2026-11-22 local (UTC11-23) exact source SHA READY aliases; article due-no-rubric index sitemap workspace200 canonical BlogPosting dates figure caption generalCTA verified",
       "runtime_errors": {
         "scan": "source deployment recent15m error/fatal grouped requestPath; top25 retention limited",
         "observed": 0
       },
-      "limits": "Content and small CTA changes only. Search indexing/conversion and guidance recovery effects unknown. No original assignment evaluation. Source/host clock discrepancy, stale reports and Stripe reauthentication persist."
+      "limits": "Content-only release. Mobile WCAG and actual general mode verified locally with anonymous fixtures; production public HTML smoke verified. Search indexing/conversion and existing rubric failure recovery remain unmeasured. No evaluation or payment action."
     },
     "user_reconfirmed_on": "2026-11-22",
     "authorization": "2026-11-22 explicit current-conversation authorization to deploy prepared changes and automatically deploy future verified routine changes; no repeat permission; existing high-risk exclusions and release verification retained"
   },
   "next_actions": [
-    "Complete explicitly authorized essay-conclusion main push and production verification; source matches verified snapshot, actual publication dates set after READY/public smoke",
+    "2026-11-29 review essay conclusion article indexability internal links CTA;2026-12-20 complete-window URL/query and first linked valid result",
     "2026-11-23 review unresolved ambiguous OCR rubric failure with complete labelled scoring evidence or bounded model validation issues; preserve archive and avoid unsupported score adjustment",
     "2026-11-23 inspect unlinked client network signals only with bounded request/attempt evidence; counts do not establish unique server failures",
     "2026-11-28 review topic sentence article indexability internal links CTA;2026-12-19 complete-window URL/query and first linked valid result",
@@ -324,9 +322,9 @@
     "timezone": "America/Vancouver",
     "reason": "manual validation first; schedule and budget not approved"
   },
-  "pending_release": {
+  "last_release": {
     "run_id": "2026-11-22-daily",
-    "status": "authorized_release_in_progress",
+    "status": "verified_production",
     "base_commit": "49bb7649fba5ae04a543297685e14ba17a8368be",
     "files": [
       "app/blog/EssayConclusionArticle.tsx",
@@ -336,10 +334,11 @@
       "scripts/check_seo.mjs"
     ],
     "validation": "verified_local; production build TypeScript lint SEO130 browser6 cases WCAG passed",
-    "commit": null,
-    "production": null,
+    "commit": "1b45b783d9299b0f812e3ef68f1e51642c5f0a2b",
+    "production": "dpl_4gHCrC8EAkWgKXksr8oXiGCGXsbG",
     "approval_required": null,
-    "resume": "Remote main and verified snapshot hashes rechecked after explicit approval; commit/push then exact SHA READY aliases public smoke and recent logs before verified_production",
-    "authorization": "2026-11-22 current user: 운영 배포 해주세요. 앞으로는 자동 배포해주세요; explicitly approve current main commit/push Git-linked production publication and future verified routine automatic deployments without repeated approval"
+    "resume": null,
+    "authorization": "2026-11-22 current user: 운영 배포 해주세요. 앞으로는 자동 배포해주세요; explicitly approve current main commit/push Git-linked production publication and future verified routine automatic deployments without repeated approval",
+    "published_on": "2026-11-22"
   }
 }

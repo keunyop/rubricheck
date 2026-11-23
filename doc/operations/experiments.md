@@ -1,10 +1,10 @@
 # 실험과 콘텐츠 성과
 
-## 2026-11-22 검증 완료·게시 보류
+## 2026-11-22 콘텐츠 게시
 
 | 작업 | 독자·질문·근거 | 검증 | 게시·후속 |
 | --- | --- | --- | --- |
-| CONTENT-DAILY 2026-11-22 | 영어 대학 과제 독자, 주 검색어 `essay conclusion example`. 본문에서 뒷받침되는 답·이유·한계·시사점으로 결론을 쓰는 가상 예시. 과거 영어 도구 의도와 제품 적합성에 따른 편집 가설이며 stale GSC11/08·GA4 11/09로 현재 국가별 수요·검색량을 추정하지 않음 | Harvard/Purdue 본문 확인, 본문 4단계 도식·동등 설명·실제 일반 기준 CTA, 작성자/PO 교차 검토, 격리 production build·TypeScript·lint·SEO130·320/390/1280px WCAG·날짜·가로 넘침 없음·No rubric 선택·noJS·내부 링크 통과 | `verified_local / awaiting_approval`. 실제 게시일 null, 운영 URL null, 계획 경로 `/blog/essay-conclusion-example`. 자동 승인 검토가 main push의 현재 명시 승인을 요구하며 실행 전 거부. 승인·운영 확인 후 실제 게시일+7일/+28일 검토;11/22 게시 시11/29·12/20, 지연 시 이동. 성과 null |
+| CONTENT-DAILY 2026-11-22 | 영어 대학 과제 독자, 주 검색어 `essay conclusion example`. 본문에서 뒷받침되는 답·이유·한계·시사점으로 결론을 쓰는 가상 예시. 과거 영어 도구 의도와 제품 적합성에 따른 편집 가설이며 stale GSC11/08·GA4 11/09로 현재 국가별 수요·검색량을 추정하지 않음 | Harvard/Purdue 본문 확인, 본문 4단계 도식·동등 설명·실제 일반 기준 CTA, 작성자/PO 교차 검토, 격리 production build·TypeScript·lint·SEO130·320/390/1280px WCAG·날짜·가로 넘침 없음·No rubric 선택·noJS·내부 링크 통과 | 2026-11-22 [운영 게시](https://rubricheck.com/blog/essay-conclusion-example), `verified_production`. 사용자 명시 승인 후 main push; 정확한 SHA READY·도메인·공개 경로·메타데이터·도식·CTA 확인.11/29 색인 가능 경로/내부 링크/수집,12/20 완결 URL/query·첫 연결 결과. 검색·전환 효과 null |
 
 기존 no-rubric 글은 11/22 운영 본문·본문 도식·직접 일반 기준 CTA와 실제 No rubric 선택을 확인했다. 수정이 필요하지 않아 원발행·수정일11/15를 유지한다. 실제 색인과 검색/연결 결과 성과는 미측정이며12/13 완결 검토를 유지한다.
 
@@ -71,4 +71,4 @@ PO 통합 검증: 전체 339건·TypeScript·수정 lint·production build·SEO 
 
 ## 2026-11-22 게시 재개 승인
 
-사용자가 현재 대화에서 “운영 배포 해주세요. 앞으로는 자동 배포해주세요”라고 명시 승인했다. 앞선 자동 검토 차단을 이 승인으로 재개한다. 검증된 소스와 원격 main의 일치를 다시 확인했고, main 커밋·push·Git 연동 운영 게시를 진행한다. 현재 상태는 authorized_release_in_progress이며 실제 게시일·완료는 운영 확인 후 확정한다. 향후 검증된 통상 변경도 별도 재승인 없이 배포하며 예약 실행은 생성하지 않는다.
+사용자 명시 승인으로 앞선 자동 검토 차단을 재개했고 운영 게시와 공개 경로 확인을 완료했다. 향후 검증된 통상 변경도 별도 확인 없이 main 반영·배포·운영 검증까지 수행한다.
