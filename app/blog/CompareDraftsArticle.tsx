@@ -70,7 +70,7 @@ export function CompareDraftsArticle() {
 
     <aside className={styles.cta} aria-labelledby="compare-cta"><p className={styles.eyebrow}>REVIEW YOUR REVISION</p><h2 id="compare-cta">Check what changed under your rubric</h2>
       <p>Bring your revised draft and the same rubric to RubriCheck. Read the feedback beside your own revision log, then decide what to edit next. AI feedback is an estimate; your instructor&apos;s criteria and course rules take priority.</p>
-      <Link href="/workspace#rubric-checker" className={styles.button}>Review my revised draft →</Link>
+      <Link href="/workspace?from=blog-compare-drafts#rubric-checker" className={styles.button}>Review my revised draft →</Link>
     </aside>
 
     <section className={styles.sources} aria-labelledby="compare-sources"><h2 id="compare-sources">Sources and example notes</h2>

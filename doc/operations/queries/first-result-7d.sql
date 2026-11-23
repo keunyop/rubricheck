@@ -2,6 +2,9 @@
 -- Change both UTC bounds to the chosen seven-day Vancouver-local window.
 -- On affected Supabase Postgres versions, do not use AT TIME ZONE 'America/Vancouver'
 -- to calculate 2026+ cohort boundaries. Confirm the applicable civil-time rule first.
+-- Verified 2026-11-23: B.C. stays UTC-07 after 2026-03-08; the November fallback
+-- was abolished. Use official civil-time rules, not stale DB/runtime tzdata.
+-- The 2026-11-16 UTC-08 correction was superseded by this reverified baseline.
 -- Only report a window after cohort_end_utc + seven days has elapsed.
 with bounds as (
   select

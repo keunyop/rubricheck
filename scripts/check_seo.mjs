@@ -51,7 +51,8 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 130, "Sitemap includes 16 public pages in seven languages plus eighteen English blog routes");
+  assert.equal(urls.length, 131, "Sitemap includes 16 public pages in seven languages plus nineteen English blog routes");
+  assert.ok(urls.some(url => url.pathname === "/blog/paragraph-transition-examples"), "Paragraph transition guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/essay-conclusion-example"), "Essay conclusion guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/topic-sentence-examples"), "Topic sentence guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/source-evaluation-example"), "Source evaluation guide is in the sitemap");
@@ -125,7 +126,16 @@ try {
       breadcrumb.itemListElement.forEach((item, index) => assert.equal(item.position, index + 1));
       assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + homePath);
       assert.equal(breadcrumb.itemListElement.at(-1).item, url.href);
-      if (barePath === "/blog/essay-conclusion-example") {
+      if (barePath === "/blog/paragraph-transition-examples") {
+        const posting = schemas.find((schema) => schema["@type"] === "BlogPosting");
+        assert.equal(posting?.datePublished, "2026-11-23");
+        assert.equal(posting?.dateModified, "2026-11-23");
+        assert.equal(posting?.url, url.href);
+        assert.match(html, /id="transition-worked-example"/);
+        assert.match(html, /<figure\b/);
+        assert.match(html, /<figcaption\b/);
+        assert.match(html, /from=blog-paragraph-transition/);
+      } else if (barePath === "/blog/essay-conclusion-example") {
         const posting = schemas.find((schema) => schema["@type"] === "BlogPosting");
         assert.equal(posting?.datePublished, "2026-11-22");
         assert.equal(posting?.dateModified, "2026-11-22");
@@ -201,6 +211,10 @@ try {
         assert.match(html, /18 of 30 respondents/, "Discussion guide includes bounded evidence");
         assert.match(html, /id="discussion-checklist"/, "Discussion guide includes a reusable checklist");
       } else if (barePath === "/blog/compare-essay-drafts-with-rubric") {
+        const posting = schemas.find((schema) => schema["@type"] === "BlogPosting");
+        assert.equal(posting?.datePublished, "2026-11-10");
+        assert.equal(posting?.dateModified, "2026-11-23");
+        assert.match(html, /from=blog-compare-drafts/);
         assert.match(html, /id="compare-example"/, "Draft comparison includes its worked example");
         assert.match(html, /15 of the 24 respondents/, "Draft comparison includes the revised evidence");
         assert.match(html, /id="compare-log"/, "Draft comparison includes a reusable revision log");

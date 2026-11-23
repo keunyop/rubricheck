@@ -47,7 +47,7 @@ export const COMPARE_DRAFTS_POST = {
   path: "/blog/compare-essay-drafts-with-rubric",
   title: "How to Compare Essay Drafts with the Same Rubric",
   description: "Compare two essay drafts with the same rubric. Use a worked revision log to check stronger evidence, interpret AI score ranges and choose your next edit.",
-  date: "2026-11-10", modified: "2026-11-10", category: "Assignment revision", readingMinutes: 7,
+  date: "2026-11-10", modified: "2026-11-23", category: "Assignment revision", readingMinutes: 7,
 } as const;
 export const DISCUSSION_RESPONSE_POST = {
   slug: "discussion-board-response-example",
@@ -126,5 +126,12 @@ export const ESSAY_CONCLUSION_POST = {
   description: "Revise an essay conclusion with a worked before-and-after example. Connect your answer to the body, keep claims within the evidence, and check the final implication.",
   date: "2026-11-22", modified: "2026-11-22", category: "Essay revision", readingMinutes: 7,
 } as const;
-export const BLOG_POSTS = [ESSAY_CONCLUSION_POST, TOPIC_SENTENCE_POST, SOURCE_EVALUATION_POST, SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const PARAGRAPH_TRANSITION_POST = {
+  slug: "paragraph-transition-examples",
+  path: "/blog/paragraph-transition-examples",
+  title: "Paragraph Transition Examples: Connect Ideas with a Clear Relationship",
+  description: "Revise paragraph transitions with a worked example. Connect familiar and new ideas, choose linking words that fit the reasoning, and avoid unsupported causal claims.",
+  date: "2026-11-23", modified: "2026-11-23", category: "Essay organization", readingMinutes: 8,
+} as const;
+export const BLOG_POSTS = [PARAGRAPH_TRANSITION_POST, ESSAY_CONCLUSION_POST, TOPIC_SENTENCE_POST, SOURCE_EVALUATION_POST, SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];
