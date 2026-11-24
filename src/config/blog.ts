@@ -133,5 +133,13 @@ export const PARAGRAPH_TRANSITION_POST = {
   description: "Revise paragraph transitions with a worked example. Connect familiar and new ideas, choose linking words that fit the reasoning, and avoid unsupported causal claims.",
   date: "2026-11-23", modified: "2026-11-23", category: "Essay organization", readingMinutes: 8,
 } as const;
-export const BLOG_POSTS = [PARAGRAPH_TRANSITION_POST, ESSAY_CONCLUSION_POST, TOPIC_SENTENCE_POST, SOURCE_EVALUATION_POST, SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
+export const THESIS_STATEMENT_POST = {
+  slug: "thesis-statement-example",
+  path: "/blog/thesis-statement-example",
+  title: "Thesis Statement Example: Match Your Claim to the Task and Evidence",
+  description: "Build a focused thesis statement with a worked comparison example. Answer the assignment question, keep claims within the evidence, and check the draft that supports it.",
+  date: "2026-11-24", modified: "2026-11-24", category: "Essay planning", readingMinutes: 8,
+} as const;
+
+export const BLOG_POSTS = [THESIS_STATEMENT_POST, PARAGRAPH_TRANSITION_POST, ESSAY_CONCLUSION_POST, TOPIC_SENTENCE_POST, SOURCE_EVALUATION_POST, SYNTHESIS_PARAGRAPH_POST, REVERSE_OUTLINE_POST, RUBRIC_POINTS_POST, RUBRIC_FEEDBACK_REVISION_POST, NO_RUBRIC_ESSAY_POST, EXPLAIN_EVIDENCE_POST, COUNTERARGUMENT_POST, DISCUSSION_RESPONSE_POST, COMPARE_DRAFTS_POST, LAB_DISCUSSION_POST, REFLECTIVE_WRITING_POST, QUIZ_GENERATOR_POST, CRITICAL_ANALYSIS_POST, BLOG_POST];
 export type BlogPost = (typeof BLOG_POSTS)[number];
