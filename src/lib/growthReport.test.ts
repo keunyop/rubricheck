@@ -22,11 +22,30 @@ test("new validation reasons roll up with historical validation events",()=>{
   assert.equal(r.validationReasons.validation_file,1);
   assert.equal(r.validationReasons.validation_rubric,1);
 });
-test("linked guest-to-account identity converts across journey segments and excludes paid evaluations from free cohort",()=>{
+test("linked guest-to-account identity converts across journey segments",()=>{
   const r=report([e("guest_preview_completed","a",1),e("signup_completed","a",2,{journey:"new_account"}),e("evaluation_completed","a",3,{journey:"new_account",product:"pro"})]);
   assert.equal(r.funnel.find(r=>r.step==="Guest preview → signup")!.converted,1);
   assert.equal(r.funnel.find(r=>r.step==="Signup → first meaningful evaluation")!.converted,1);
-  assert.equal(r.funnel.find(r=>r.step==="Free evaluation → checkout")!.eligible,0);
+});
+test("result-to-checkout requires a linked view before checkout and counts each actor once",()=>{
+  const r = report([
+    e("guest_preview_completed","a",2,{attempt_id:"preview"}),
+    e("evaluation_result_viewed","a",4,{attempt_id:"preview"}),
+    e("evaluation_result_viewed","a",5,{attempt_id:"preview"}),
+    e("checkout_started","a",6),
+    e("evaluation_completed","b",2,{evaluation_id:"full"}),
+    e("checkout_started","b",3),
+    e("evaluation_result_viewed","b",4,{evaluation_id:"full"}),
+    e("evaluation_result_viewed","c",4,{evaluation_id:"full"}),
+    e("checkout_started","c",6),
+    e("evaluation_completed","d",2,{attempt_id:"unseen"}),
+    e("checkout_started","d",6),
+    e("evaluation_result_viewed","e",3,{attempt_id:"later"}),
+    e("evaluation_completed","e",4,{attempt_id:"later"}),
+  ]);
+  const row = r.funnel.find(row => row.step === "First valid result viewed → checkout")!;
+  assert.equal(row.eligible,2);
+  assert.equal(row.converted,1);
 });
 test("first purchase excludes renewals and unknown historical payers; currencies and Lifetime remain separate",()=>{
   const r=report([e("checkout_started","a",2),e("checkout_started","b",2),e("checkout_started","c",2)], [p(),p({payment_key:"renewal",account_key:"b",kind:"subscription_renewal",prior_payer:true}),p({payment_key:"unknown",account_key:"c",prior_payer:null}),p({payment_key:"lifetime",account_key:"d",product:"pro_lifetime",kind:"one_time",amount_minor:9999,currency:"usd"}),p({payment_key:"refund",kind:"refund",amount_minor:-100})]);

@@ -19,20 +19,47 @@ const STEPS = [
   ["Evaluation started → result viewed", "evaluation_started", "evaluation_result_viewed"],
   ["Guest preview → signup", "guest_preview_completed", "signup_completed"],
   ["Signup → first meaningful evaluation", "signup_completed", "evaluation_completed"],
-  ["Free evaluation → checkout", "evaluation_completed", "checkout_started"],
+  ["First valid result viewed → checkout", "evaluation_result_viewed", "checkout_started"],
   ["Checkout → first successful purchase", "checkout_started", "purchase_completed"],
 ] as const;
+
+function validResultViews(events: GrowthEventRow[]) {
+  const successTimes = new Map<string, number>();
+  const keys = (event: GrowthEventRow) => [
+    ...(event.attempt_id ? [JSON.stringify([event.actor, "attempt", event.attempt_id])] : []),
+    ...(event.evaluation_id ? [JSON.stringify([event.actor, "evaluation", event.evaluation_id])] : []),
+  ];
+  for (const event of events) {
+    if (!event.actor || !["evaluation_completed", "guest_preview_completed"].includes(event.event_name)) continue;
+    const at = Date.parse(event.occurred_at);
+    for (const key of keys(event)) {
+      if (!successTimes.has(key)) successTimes.set(key, at);
+    }
+  }
+  return new Set(events.filter(event =>
+    event.event_name === "evaluation_result_viewed" &&
+    keys(event).some(key => (successTimes.get(key) ?? Infinity) <= Date.parse(event.occurred_at))
+  ));
+}
+
 export function summarizeGrowth(data: GrowthSnapshot, from: string, to: string) {
   const start = Date.parse(from), end = Date.parse(to), cutoff = end - 7 * DAY;
   const complete = data.events.length <= 50000 && data.payments.length <= 50000;
   const events = [...data.events].sort((a,b) => Date.parse(a.occurred_at)-Date.parse(b.occurred_at));
+  const linkedViews = validResultViews(events);
   const payments = data.payments.filter(p => p.amount_minor > 0 && !["refund", "subscription_canceled"].includes(p.kind));
   const byActor = new Map<string, GrowthEventRow[]>();
   for (const e of events) { if (!e.actor) continue; const list = byActor.get(e.actor) ?? []; list.push(e); byActor.set(e.actor, list); }
   const firstPurchase = (p: GrowthPaymentRow) => p.prior_payer === false && p.first_paid_at !== null && Date.parse(p.first_paid_at) === Date.parse(p.occurred_at);
   const funnel = STEPS.flatMap(([label, entry, destination]) => {
     const cohorts = new Map<string, GrowthEventRow>();
-    for (const e of events) if (e.actor && e.event_name === entry && (label !== "Free evaluation → checkout" || e.product === "free") && Date.parse(e.occurred_at) >= start && Date.parse(e.occurred_at) < end && !cohorts.has(e.actor)) cohorts.set(e.actor,e);
+    for (const e of events) {
+      if (!e.actor || e.event_name !== entry || cohorts.has(e.actor)) continue;
+      const at = Date.parse(e.occurred_at);
+      if (at < start || at >= end) continue;
+      if (entry === "evaluation_result_viewed" && !linkedViews.has(e)) continue;
+      cohorts.set(e.actor, e);
+    }
     const groups = new Map<string, { journey: string; source: string; country: string; eligible: number; converted: number; pending: number; failed: number; excluded: number }>();
     for (const [actor, first] of cohorts) {
       const source = first.first_touch?.source ?? "unknown";

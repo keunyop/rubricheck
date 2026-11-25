@@ -16,7 +16,7 @@ export function GrowthPanel() {
     <button type="button" disabled={busy} onClick={load} className="ml-3 rounded bg-slate-900 px-3 py-2 text-sm text-white">{busy?"Loading…":"Review growth"}</button>
     {message && <p role="status" className="mt-3 text-sm">{message}</p>}
     {report && <div className="mt-4 space-y-4 text-sm">
-      <p>{report.coverage} First-purchase rates exclude known previous payers and accounts with unknown prior payment history.</p>
+      <p>{report.coverage} The result-to-checkout step uses the first observed view per person in this period with a matching successful evaluation or guest preview. First-purchase rates exclude known previous payers and accounts with unknown prior payment history.</p>
       {!report.complete && <p role="alert">Report exceeds 50,000 rows. Narrow the period; rates are withheld.</p>}
       <p>Collection started: {report.collectionStartedAt ?? "No events collected"}. Failures: server {report.failures.server}, validation {report.failures.validation}, access {report.failures.access}, network {report.failures.network}.</p>
       <p>Validation reasons (new events only): input {report.validationReasons.validation_input}, file {report.validationReasons.validation_file}, rubric {report.validationReasons.validation_rubric}, pending retry {report.validationReasons.validation_pending}, other {report.validationReasons.validation_other}. Earlier validation events have no reason detail.</p>
