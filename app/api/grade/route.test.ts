@@ -18,6 +18,7 @@ let rubricFailureCalls = 0;
 let evaluationCalls = 0;
 let negativeCalls = 0;
 let structurePrompt = "";
+let weightedFixture = false;
 const rubric = { criteria: [{ name: "Thesis", max_score: 10, description: "Clarity" }] };
 const evaluation = {
   summary: "Clear argument", top_improvements: ["Add evidence", "Add detail", "Revise conclusion"],
@@ -42,6 +43,10 @@ mock.module("../../../lib/openai.ts", { namedExports: {
   },
   callEvaluationModel: async () => {
     evaluationCalls++;
+    if (weightedFixture) return { ...evaluation, criteria_scores: [
+      { ...evaluation.criteria_scores[0], name: "Measurements", score: 12, estimated_range: [10, 13] },
+      { ...evaluation.criteria_scores[0], name: "Explanation", score: 7, estimated_range: [6, 9] },
+    ] };
     if (failure === "timeout") throw new Error("OPENAI_TIMEOUT");
     if (failure === "evaluation") throw new Error("EVALUATION_FAILED");
     if (failure === "negativeAlways" || (failure === "negativeOnce" && negativeCalls++ === 0)) {
@@ -107,7 +112,7 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(calls.length, 0);
     });
     for (const [kind, status, code] of [
-      ["rubric", 400, "RUBRIC_STRUCTURE_FAILED"],
+      ["rubric", 503, "RUBRIC_STRUCTURE_FAILED"],
       ["rubricProvider", 503, "RUBRIC_MODEL_UNAVAILABLE"],
       ["rubricTimeout", 504, "OPENAI_TIMEOUT"],
       ["evaluation", 500, "EVALUATION_FAILED"],
@@ -143,6 +148,32 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
       assert.equal(payload.criteria.length, 1);
       assert.equal(capturedFailures.length, 0);
       assert.equal(payload.score_calculation.mode_adjustment, 0);
+    });
+    await t.test("explicit weightage reaches grading with exact base maxima", async () => {
+      calls.length = 0; capturedFailures.length = 0; failure = null;
+      const source = [
+        "Criteria and ratings", "(0) Not shown", "(1) Starting", "(2) Developing", "(3) Meets",
+        "(4) Weightage Marks Total Marks",
+        "1. Measurements", "Compare both trials.", "3.5 0",
+        "2. Explanation", "Explain the variation.", "2.5 0",
+        "Total marks (/24 marks) 0",
+      ].join("\n");
+      const beforeStructures = structureCalls, beforeEvaluations = evaluationCalls;
+      weightedFixture = true;
+      try {
+        const response = await POST(request("standard", "weightage-rubric", source));
+        assert.equal(response.status, 200);
+        const result = await response.json();
+        assert.deepEqual(result.criteria.map((row: {max_score:number}) => row.max_score), [14,10]);
+        assert.equal(result.score_calculation.rubric_total, 24);
+        assert.equal(structureCalls, beforeStructures);
+        assert.equal(evaluationCalls, beforeEvaluations + 1);
+        assert.equal(settlements().length, 1);
+        assert.equal(settlements()[0].body.p_succeeded, true);
+        assert.equal(capturedFailures.length, 0);
+      } finally {
+        weightedFixture = false;
+      }
     });
     await t.test("source-proven missing rows and contradictory totals release free/paid usage without model calls or archiving", async () => {
       const sources = [
@@ -184,7 +215,7 @@ test("grade reservations cover failure, retry, paid credits, strict access and s
           const previousEvaluations = evaluationCalls;
           const persistent = kind === "rubricMismatchAlways" || kind === "rubricRetryTimeout";
           const response = await POST(request());
-          assert.equal(response.status, kind === "rubricRetryTimeout" ? 504 : persistent ? 400 : 200);
+          assert.equal(response.status, kind === "rubricRetryTimeout" ? 504 : persistent ? 503 : 200);
           const payload = await response.json();
           if (persistent) assert.equal(payload.code, kind === "rubricRetryTimeout" ? "OPENAI_TIMEOUT" : "RUBRIC_STRUCTURE_FAILED");
           else assert.equal(payload.criteria[0].max_score, 10);

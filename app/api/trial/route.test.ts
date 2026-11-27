@@ -149,7 +149,7 @@ test("guest previews enforce access, one use, retries and account ownership with
     for (const kind of ["rubric", "model", "finalization"]) await t.test(kind + " failure restores the preview", async () => {
       reset(); failure = kind;
       const response = await grade(request());
-      assert.equal(response.status, kind === "rubric" ? 400 : kind === "model" ? 504 : 500);
+      assert.equal(response.status, kind === "rubric" ? 503 : kind === "model" ? 504 : 500);
       assert.equal((await readTrial(trialIdentity(request()))).used, false);
       assert.equal(values.size, 0);
       failure = "";

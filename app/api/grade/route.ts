@@ -567,7 +567,7 @@ async function runGrade(request: Request) {
         return errorResponse(context, 503, "RUBRIC_MODEL_UNAVAILABLE", "The AI rubric reader is temporarily unavailable. Please try again shortly.", undefined, usageHeaders);
       }
       console.error("RUBRIC_STRUCTURE_FAILED", { requestId: context.requestId, error });
-      return errorResponse(context, 400, "RUBRIC_STRUCTURE_FAILED", "We could not read the rubric format. Please revise and retry.", undefined, usageHeaders);
+      return errorResponse(context, 503, "RUBRIC_STRUCTURE_FAILED", "We could not finish reading the rubric. Please retry, or provide a clearer copy of the same rubric.", undefined, usageHeaders);
     }
 
     try {

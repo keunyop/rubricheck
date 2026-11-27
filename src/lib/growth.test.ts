@@ -79,6 +79,7 @@ test("visitor identity is signed, expires and cannot be forged or used after opt
 });
 test("failures are classified without storing server messages",()=>{
   assert.equal(growthFailureCategory(504,"RUBRIC_STRUCTURE_FAILED"),"server");
+  assert.equal(growthFailureCategory(503,"RUBRIC_STRUCTURE_FAILED"),"server");
   assert.equal(growthFailureCategory(429,"TRIAL_LIMIT_REACHED"),"access");
   assert.equal(growthFailureCategory(400,"FILE_PARSE_FAILED"),"validation_file");
   assert.equal(growthFailureCategory(400,"RUBRIC_STRUCTURE_FAILED"),"validation_rubric");

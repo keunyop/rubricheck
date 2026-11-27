@@ -2056,12 +2056,8 @@ export default function Home() {
       return t("We are temporarily verifying limits in safe mode. Please retry shortly.");
     }
 
-    if (message === "SERVICE_UNAVAILABLE" || message === "RUBRIC_MODEL_UNAVAILABLE") {
+    if (message === "SERVICE_UNAVAILABLE" || message === "RUBRIC_MODEL_UNAVAILABLE" || message === "RUBRIC_STRUCTURE_FAILED") {
       return t("Service is temporarily unavailable. Please try again shortly.");
-    }
-
-    if (message === "RUBRIC_STRUCTURE_FAILED") {
-      return t('We could not read the grading criteria. Check that the criterion points add up to the stated total; if no point breakdown is given, ask for one. You can also paste the rubric text or upload a clearer copy.');
     }
 
     if (message === "RUBRIC_CRITERIA_NOT_FOUND") {

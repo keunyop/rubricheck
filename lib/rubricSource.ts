@@ -6,6 +6,7 @@ export type RubricSourceAudit = {
   rubric?: Rubric;
   rowMaxima?: number[];
   statedTotals?: number[];
+  layout?: "weightage";
 };
 
 const numberPattern = String.raw`\d+(?:\.\d+)?`;
@@ -36,6 +37,42 @@ function finish(criteria: SourceCriterion[], totals: number[], extras = ""): Rub
   if (totals.some(total => !approximately(total, sum))) return { kind: "unknown", ...diagnostics };
   if (extras) criteria[criteria.length - 1].description += `\nSupporting requirements (unscored):\n${extras}`;
   return { kind: "scored", ...diagnostics, rubric: { total_score: sum, criteria } };
+}
+
+// Some grade sheets show the 0–4 ratings, an explicit Weightage Marks
+// multiplier and a blank (zero-filled) earned-mark column on every row.
+function auditWeightageTable(text: string, totals: number[]): RubricSourceAudit | undefined {
+  const columns = /^\s*\(4\)[ \t\n]+weightage[ \t\n]+marks[ \t\n]+total[ \t\n]+marks[ \t]*$/im.exec(text);
+  if (!columns) return undefined;
+  const unknown = { kind: "unknown" } as const;
+  const header = text.slice(0, columns.index);
+  const ratings = [...header.matchAll(/^[ \t]*\(([0-4])\)(?=[ \t\n]|$)/gm)].map(match => Number(match[1]));
+  if (!/^\s*criteria\b/im.test(header) || ratings.join(",") !== "0,1,2,3" ||
+      hasPointAdjustments(text) || hasScoreConversion(text)) return unknown;
+
+  const body = text.slice(columns.index + columns[0].length);
+  const footer = /(?:\n|^)[ \t]*total[ \t]+marks[ \t]*\(\s*\/\s*(\d+(?:\.\d+)?)\s+marks\s*\)[ \t\n]+0(?:\.0+)?\s*$/i.exec(body);
+  if (!footer) return unknown;
+  const rowsText = body.slice(0, footer.index);
+  const starts = [...rowsText.matchAll(/^[ \t]*([1-9]\d*)\.[ \t]+(?=\p{L})/gmu)];
+  if (starts.length < 2 || rowsText.slice(0, starts[0].index).trim()) return unknown;
+  const criteria: SourceCriterion[] = [];
+  for (const [index, row] of starts.entries()) {
+    if (Number(row[1]) !== index + 1) return unknown;
+    const block = rowsText.slice(row.index + row[0].length, starts[index + 1]?.index ?? rowsText.length).trim();
+    // An explicit decimal multiplier and separate zero are required. A filled
+    // score or an unlabeled footer is ambiguous and goes to normal extraction.
+    const weight = /(?:\n|^)[ \t]*(\d+\.\d+)[ \t\n]+0(?:\.0+)?[ \t]*$/.exec(block);
+    if (!weight) return unknown;
+    const descriptor = block.slice(0, weight.index).trim();
+    const name = descriptor.split("\n")[0]?.trim();
+    if (!name || name.length > 180) return unknown;
+    criteria.push({name, max_score: Number(weight[1]) * 4, description: descriptor});
+  }
+  if (new Set(criteria.map(row => fold(row.name).replace(/\s+/g, " "))).size !== criteria.length) return unknown;
+  criteria[0].description = `${text.slice(0, columns.index + columns[0].length).trim()}\n${criteria[0].description}`;
+  const result = finish(criteria,[...new Set([...totals, Number(footer[1])])]);
+  return result.rubric ? { ...result, layout: "weightage" } : result;
 }
 
 /** Conservative, offline audit of recognizable scoring layouts. Unknown layouts
@@ -89,6 +126,9 @@ export function auditRubricSource(source: string): RubricSourceAudit {
     }
     return { kind: "unknown" };
   }
+
+  const weightage = auditWeightageTable(text, uniqueTotals);
+  if (weightage) return weightage;
 
   // Percentage headings + matching standalone /max cells encode weighted rows.
   // Grade-band percentages (70-100%) do not match this heading expression.

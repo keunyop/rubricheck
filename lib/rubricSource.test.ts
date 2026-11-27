@@ -17,6 +17,48 @@ const lmsSource = [
   "Total Points: 40",
 ].join("\n");
 
+const weightageSource = [
+  "Criteria and rating levels",
+  "(0) Not shown", "(1) Starting", "(2) Developing", "(3) Meets", "(4) Weightage Marks Total Marks",
+  "1. Measurements", "Compare readings across both trials.", "3.5 0",
+  "2. Explanation", "Describe a plausible source of variation.", "2.5", "0",
+  "Total marks (/24 marks) 0",
+].join("\n");
+
+test("explicit 0–4 weightage columns produce exact maxima without model or stale cache", async () => {
+  const audit = auditRubricSource(weightageSource);
+  assert.equal(audit.kind, "scored");
+  assert.equal(audit.layout, "weightage");
+  assert.deepEqual(audit.rowMaxima, [14, 10]);
+  assert.deepEqual(audit.statedTotals, [24]);
+  const result = await structureRubric(weightageSource, {
+    cacheIdentity: {userIdType:"emailhash",userIdValue:"test"},
+    cacheRedisOverride: {
+      get: async () => { assert.fail("should not override an explicit table with a cached extraction"); },
+      set: async () => { assert.fail("should not cache an offline result"); },
+      incr: async () => {},
+    },
+    modelCaller: async () => { assert.fail("should not call the model"); },
+  });
+  assert.equal(result.total_score, 24);
+  assert.deepEqual(result.criteria.map(row => row.name), ["Measurements","Explanation"]);
+  assert.match(result.criteria[0].description,/Compare readings across both trials/);
+  assert.match(result.criteria[0].description,/Developing/);
+});
+
+test("weightage extraction defers tables without explicit columns or a coherent blank-score total", () => {
+  for (const variant of [
+    weightageSource.replace("Weightage Marks", "Marks"),
+    weightageSource.replace("(3) Meets", "(2) Meets"),
+    weightageSource.replace("/24 marks", "/28 marks"),
+    weightageSource.replace("3.5 0", "3.5 6"),
+    weightageSource.replace("2. Explanation", "3. Explanation"),
+    weightageSource + "\nLate submission: deduct 5 points.",
+  ]) {
+    assert.equal(auditRubricSource(variant).kind, "unknown");
+  }
+});
+
 test("LMS terminal Pts cells determine weights, preserving unscored ratings and supporting instructions", () => {
   const result = auditRubricSource(lmsSource);
   assert.equal(result.kind, "scored");

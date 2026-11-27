@@ -49,7 +49,7 @@ try {
       else if (url.pathname === "/api/trial") json = { used: false, pending: false, result: null };
       else if (url.pathname === "/api/evaluate") {
         attempts.push({ key: request.headers()["idempotency-key"], input: request.postDataJSON() });
-        status = ["RUBRIC_STRUCTURE_FAILED", "PROTECTED_FILE", "IMAGE_TOO_SMALL"].includes(nextCode) ? 400 : ["RUBRIC_MODEL_UNAVAILABLE", "OCR_UNAVAILABLE"].includes(nextCode) ? 503 : nextCode ? 500 : 200;
+        status = ["PROTECTED_FILE", "IMAGE_TOO_SMALL"].includes(nextCode) ? 400 : ["RUBRIC_STRUCTURE_FAILED", "RUBRIC_MODEL_UNAVAILABLE", "OCR_UNAVAILABLE"].includes(nextCode) ? 503 : nextCode ? 500 : 200;
         json = nextCode ? { code: nextCode, requestId: "browser-test" } : result;
       } else if (url.pathname.startsWith("/api/growth/")) json = { ok: true };
       else throw new Error("Unexpected API: " + url.pathname);
@@ -65,7 +65,7 @@ try {
     await assignment.fill("Schools should start later so students can get enough sleep and concentrate better.");
     const submit = page.getByRole("button", { name: locale === "en" ? "Grade my assignment" : "내 과제 채점하기", exact: true });
     for (const [code, message] of [
-      ["RUBRIC_STRUCTURE_FAILED", locale === "en" ? /We could not read the grading criteria/ : /채점 기준을 읽지 못했습니다/],
+      ["RUBRIC_STRUCTURE_FAILED", locale === "en" ? /Service is temporarily unavailable/ : /일시적으로 서비스를 이용할 수 없습니다/],
       ["RUBRIC_MODEL_UNAVAILABLE", locale === "en" ? /Service is temporarily unavailable/ : /일시적으로 서비스를 이용할 수 없습니다/],
       ["OCR_UNAVAILABLE", locale === "en" ? /Image OCR is temporarily unavailable/ : /현재 이미지의 글자를 읽을 수 없습니다/],
       ["PROTECTED_FILE", locale === "en" ? /encrypted or protected by your organization/ : /암호화되었거나 소속 기관에서 보호하고 있습니다/],
@@ -73,8 +73,12 @@ try {
       ["EVALUATION_FAILED", locale === "en" ? /We could not finish grading this assignment/ : /과제 채점을 완료하지 못했습니다/],
     ]) {
       nextCode = code;
+      const previousAttempts = attempts.length;
+      const response = page.waitForResponse(response => new URL(response.url()).pathname === "/api/evaluate");
       await submit.click();
+      await response;
       await page.getByText(message).waitFor();
+      assert.equal(attempts.length, previousAttempts + 1, "Only the explicit retry submits");
       assert.equal(await page.getByRole("button", { name: locale === "en" ? "Swap rubric and assignment" : "루브릭과 과제 서로 바꾸기", exact: true }).count(), 0,
         "technical failures must not suggest swapping inputs");
       assert.equal(await rubric.inputValue(), attempts[0].input.rubricText);

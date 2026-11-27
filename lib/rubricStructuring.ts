@@ -91,6 +91,9 @@ export async function structureRubric(rubricText: string, options: StructureRubr
   if (sourceAudit.kind === "incomplete" || sourceAudit.kind === "points_conflict") {
     throw new Error(sourceAudit.kind === "incomplete" ? "RUBRIC_INCOMPLETE" : "RUBRIC_POINTS_CONFLICT");
   }
+  if (sourceAudit.layout === "weightage") {
+    return RubricSchema.parse(sourceAudit.rubric);
+  }
   const cacheRedis = options.cacheRedisOverride === undefined ? getOptionalCacheRedisClient() : options.cacheRedisOverride;
   const { cacheIdentity = null, requestId } = options;
 
