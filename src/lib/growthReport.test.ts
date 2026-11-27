@@ -59,3 +59,25 @@ test("missing baselines and truncated reports never present a made-up conversion
   const r=report(Array.from({length:50001},()=>e("page_view","a",1)));
   assert.equal(r.complete,false);assert.ok(r.funnel.every(r=>r.rate===null));
 });
+
+test("one mature result cohort measures ordered checkout and first payment with a shared denominator", () => {
+  const views = (actor: string, day = 2, extra: Partial<GrowthEventRow> = {}) => [
+    e("evaluation_completed", actor, day, { attempt_id: actor, ...extra }),
+    e("evaluation_result_viewed", actor, day, { attempt_id: actor, ...extra }),
+  ];
+  const credit = (actor: string) => p({ account_key: actor, product: "credits", kind: "one_time" });
+  const r = report([
+    ...views("a"), e("checkout_started","a",2,{product:"credits",occurred_at:"2026-10-02T09:00:00Z"}),
+    ...views("b"), e("checkout_started","b",2,{product:"pro_annual",occurred_at:"2026-10-02T09:00:00Z"}),
+    ...views("c"), e("checkout_started","c",1,{product:"credits"}),
+    ...views("d"), e("checkout_started","d",2,{product:"credits",occurred_at:"2026-10-02T09:00:00Z"}),
+    ...views("e",2,{prior_payer:null}), ...views("f",20), ...views("g",2,{prior_payer:true}),
+    ...views("h"), e("checkout_started","h",2,{product:"pro_annual",occurred_at:"2026-10-02T09:00:00Z"}),
+  ], [credit("a"), p({account_key:"b"}), credit("c"), p({account_key:"d"}),
+    p({account_key:"h",kind:"subscription_renewal"})]);
+  assert.deepEqual(r.revenueCohort, {
+    eligible:5, checkoutStarted:4, firstPaymentMatched:2, firstPaymentUnmatched:3,
+    paid:{subscription:1,credit:1,lifetime:0}, pending:1, unknownHistory:1, priorPaid:1,
+    checkoutRate:4/5, firstPaymentRate:2/5,
+  });
+});

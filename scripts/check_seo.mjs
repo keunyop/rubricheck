@@ -51,7 +51,7 @@ try {
   assert.equal(sitemapResponse.status, 200);
   const sitemap = await sitemapResponse.text();
   const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => new URL(match[1]));
-  assert.equal(urls.length, 133, "Sitemap includes 16 public pages in seven languages plus twenty-one English blog routes");
+  assert.equal(urls.length, 134, "Sitemap includes 16 public pages in seven languages plus twenty-two English blog routes");
   assert.ok(urls.some(url => url.pathname === "/blog/paragraph-transition-examples"), "Paragraph transition guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/essay-conclusion-example"), "Essay conclusion guide is in the sitemap");
   assert.ok(urls.some(url => url.pathname === "/blog/topic-sentence-examples"), "Topic sentence guide is in the sitemap");
@@ -126,7 +126,14 @@ try {
       breadcrumb.itemListElement.forEach((item, index) => assert.equal(item.position, index + 1));
       assert.equal(breadcrumb.itemListElement[0].item, publicOrigin + homePath);
       assert.equal(breadcrumb.itemListElement.at(-1).item, url.href);
-      if (barePath === "/blog/paraphrasing-example") {
+      if (barePath === "/blog/integrating-a-quotation-example") {
+        const posting = schemas.find(item => item["@type"] === "BlogPosting");
+        assert.equal(posting?.datePublished, "2026-11-27");
+        assert.equal(posting?.dateModified, "2026-11-27");
+        assert.match(html, /<figure/);
+        assert.match(html, /<figcaption/);
+        assert.match(html, /from=blog-quotation-integration/);
+      } else if (barePath === "/blog/paraphrasing-example") {
         const posting = schemas.find(item => item["@type"] === "BlogPosting");
         assert.equal(posting?.datePublished, "2026-11-25");
         assert.match(html, /id="paraphrase-example"/);

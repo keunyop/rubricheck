@@ -42,6 +42,76 @@ function validResultViews(events: GrowthEventRow[]) {
   ));
 }
 
+const CHECKOUT_PRODUCTS = new Set(["credits", "pro_monthly", "pro_annual", "pro_lifetime"]);
+
+function firstPaymentCohort(
+  views: Set<GrowthEventRow>,
+  byActor: Map<string, GrowthEventRow[]>,
+  payments: GrowthPaymentRow[],
+  start: number,
+  end: number,
+  complete: boolean,
+) {
+  const paymentsByAccount = new Map<string, GrowthPaymentRow[]>();
+  for (const payment of payments) {
+    if (!payment.account_key) continue;
+    const rows = paymentsByAccount.get(payment.account_key) ?? [];
+    rows.push(payment);
+    paymentsByAccount.set(payment.account_key, rows);
+  }
+  const seen = new Set<string>();
+  let eligible = 0, checkoutStarted = 0, pending = 0, unknownHistory = 0, priorPaid = 0;
+  let firstPaymentUnmatched = 0;
+  const paid = { subscription: 0, credit: 0, lifetime: 0 };
+  for (const view of views) {
+    const at = Date.parse(view.occurred_at);
+    if (!view.actor || at < start || at >= end || seen.has(view.actor)) continue;
+    seen.add(view.actor);
+    const actorPayments = paymentsByAccount.get(view.actor) ?? [];
+    if (view.prior_payer === true || actorPayments.some(payment =>
+      Date.parse(payment.first_paid_at ?? payment.occurred_at) <= at
+    )) {
+      priorPaid++;
+      continue;
+    }
+    if (view.prior_payer !== false) { unknownHistory++; continue; }
+    const deadline = at + 7 * DAY;
+    if (deadline > end) { pending++; continue; }
+    eligible++;
+    const checkoutTimes = new Map<string, number>();
+    for (const event of byActor.get(view.actor) ?? []) {
+      if (event.event_name !== "checkout_started" || !CHECKOUT_PRODUCTS.has(event.product)) continue;
+      const startedAt = Date.parse(event.occurred_at);
+      if (startedAt > at && startedAt < deadline && !checkoutTimes.has(event.product)) {
+        checkoutTimes.set(event.product, startedAt);
+      }
+    }
+    if (checkoutTimes.size > 0) checkoutStarted++;
+    const firstPayments = actorPayments.filter(payment =>
+      Date.parse(payment.occurred_at) > at && Date.parse(payment.occurred_at) < deadline
+      && payment.prior_payer === false && payment.first_paid_at !== null
+      && Date.parse(payment.first_paid_at) === Date.parse(payment.occurred_at)
+    );
+    if (firstPayments.length === 0) continue;
+    const [payment] = firstPayments;
+    const checkoutAt = checkoutTimes.get(payment.product);
+    if (firstPayments.length !== 1 || checkoutAt === undefined || Date.parse(payment.occurred_at) <= checkoutAt) {
+      firstPaymentUnmatched++;
+      continue;
+    }
+    if (payment.kind === "subscription_initial" && ["pro_monthly", "pro_annual"].includes(payment.product)) paid.subscription++;
+    else if (payment.kind === "one_time" && payment.product === "credits") paid.credit++;
+    else if (payment.kind === "one_time" && payment.product === "pro_lifetime") paid.lifetime++;
+    else firstPaymentUnmatched++;
+  }
+  const firstPaymentMatched = paid.subscription + paid.credit + paid.lifetime;
+  return {
+    eligible, checkoutStarted, firstPaymentMatched, firstPaymentUnmatched, paid, pending, unknownHistory, priorPaid,
+    checkoutRate: complete && eligible > 0 ? checkoutStarted / eligible : null,
+    firstPaymentRate: complete && eligible > 0 ? firstPaymentMatched / eligible : null,
+  };
+}
+
 export function summarizeGrowth(data: GrowthSnapshot, from: string, to: string) {
   const start = Date.parse(from), end = Date.parse(to), cutoff = end - 7 * DAY;
   const complete = data.events.length <= 50000 && data.payments.length <= 50000;
@@ -51,6 +121,7 @@ export function summarizeGrowth(data: GrowthSnapshot, from: string, to: string) 
   const byActor = new Map<string, GrowthEventRow[]>();
   for (const e of events) { if (!e.actor) continue; const list = byActor.get(e.actor) ?? []; list.push(e); byActor.set(e.actor, list); }
   const firstPurchase = (p: GrowthPaymentRow) => p.prior_payer === false && p.first_paid_at !== null && Date.parse(p.first_paid_at) === Date.parse(p.occurred_at);
+  const revenueCohort = firstPaymentCohort(linkedViews, byActor, payments, start, Math.min(end, Date.parse(data.generatedAt)), complete);
   const funnel = STEPS.flatMap(([label, entry, destination]) => {
     const cohorts = new Map<string, GrowthEventRow>();
     for (const e of events) {
@@ -98,7 +169,7 @@ export function summarizeGrowth(data: GrowthSnapshot, from: string, to: string) 
   return {
     from,to,observationDays:7,complete,collectionStartedAt:data.collectionStartedAt,generatedAt:data.generatedAt,
     coverage:"Opted-in, observable journeys only. Signup is first verified account without a prior usage/billing footprint. A non-conversion is not proof of voluntary abandonment.",
-    funnel,acquisition:[...acquisition.values()].sort((a,b)=>b.firstPayingCustomers-a.firstPayingCustomers),
+    funnel,revenueCohort,acquisition:[...acquisition.values()].sort((a,b)=>b.firstPayingCustomers-a.firstPayingCustomers),
     paymentEvents:data.payments.length,firstPurchaseUnknown:payments.filter(p=>p.prior_payer===null || !p.account_key).length,
     subscriptionStarts:payments.filter(p=>p.kind==="subscription_initial").length,
     subscriptionCancellations:data.payments.filter(p=>p.kind==="subscription_canceled").length,

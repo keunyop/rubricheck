@@ -2,6 +2,25 @@
 import { useState } from "react";
 import type { GrowthReport } from "../../src/lib/growthReport";
 
+function rateText(rate: number | null) {
+  return rate === null ? "Unavailable" : (100 * rate).toFixed(1) + "%";
+}
+
+function FirstPaymentCohort({ cohort }: { cohort: GrowthReport["revenueCohort"] }) {
+  return <section className="space-y-2" aria-labelledby="first-payment-cohort">
+    <h3 id="first-payment-cohort" className="font-semibold">First result to first payment</h3>
+    <p>Both rates use the same users: the first linked result view in the period, known prior-payment history, no prior payment and seven days of follow-up.</p>
+    <dl className="grid gap-2 sm:grid-cols-3">
+      <div><dt>Mature eligible users</dt><dd>{cohort.eligible}</dd></div>
+      <div><dt>Observed checkout start</dt><dd>{cohort.checkoutStarted} ({rateText(cohort.checkoutRate)})</dd></div>
+      <div><dt>Matched first payment</dt><dd>{cohort.firstPaymentMatched} ({rateText(cohort.firstPaymentRate)})</dd></div>
+    </dl>
+    <p>Matched payments: {cohort.paid.subscription} initial subscriptions, {cohort.paid.credit} one-time credit purchases, {cohort.paid.lifetime} lifetime purchases.</p>
+    <p>Pending follow-up: {cohort.pending}. Unknown payment history: {cohort.unknownHistory}. Prior payers: {cohort.priorPaid}. Observed first payments without a qualifying match: {cohort.firstPaymentUnmatched}.</p>
+    <p>Payments come from Stripe billing records. The match uses account, product and event order. Checkout session identity and unobserved activity are unavailable in this report.</p>
+  </section>;
+}
+
 export function GrowthPanel() {
   const [days,setDays]=useState("30"),[report,setReport]=useState<GrowthReport|null>(null),[message,setMessage]=useState(""),[busy,setBusy]=useState(false);
   async function load() {
@@ -18,6 +37,7 @@ export function GrowthPanel() {
     {report && <div className="mt-4 space-y-4 text-sm">
       <p>{report.coverage} The result-to-checkout step uses the first observed view per person in this period with a matching successful evaluation or guest preview. First-purchase rates exclude known previous payers and accounts with unknown prior payment history.</p>
       {!report.complete && <p role="alert">Report exceeds 50,000 rows. Narrow the period; rates are withheld.</p>}
+      {report.revenueCohort && <FirstPaymentCohort cohort={report.revenueCohort} />}
       <p>Collection started: {report.collectionStartedAt ?? "No events collected"}. Failures: server {report.failures.server}, validation {report.failures.validation}, access {report.failures.access}, network {report.failures.network}.</p>
       <p>Validation reasons (new events only): input {report.validationReasons.validation_input}, file {report.validationReasons.validation_file}, rubric {report.validationReasons.validation_rubric}, pending retry {report.validationReasons.validation_pending}, other {report.validationReasons.validation_other}. Earlier validation events have no reason detail.</p>
       <div className="overflow-x-auto"><table className="w-full text-left"><caption className="sr-only">Conversion by journey, first source and country</caption><thead><tr>{["Step","Journey / source / country","Mature users","Converted","Pending","Rate"].map(h=><th className="p-2" key={h}>{h}</th>)}</tr></thead><tbody>{report.funnel.map((r,i)=><tr key={i} className="border-t"><td className="p-2">{r.step}</td><td className="p-2">{r.journey} / {r.source} / {r.country}</td><td className="p-2">{r.eligible}</td><td className="p-2">{r.converted}</td><td className="p-2">{r.pending}</td><td className="p-2">{r.rate===null?"Unavailable":(100*r.rate).toFixed(1)+"%"}</td></tr>)}</tbody></table></div>
