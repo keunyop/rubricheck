@@ -1,13 +1,26 @@
 // Synthetic PDFs only: no customer documents are checked into the test suite.
 export function makePdf(pageTexts: string[]): File {
+  return makePdfFromStreams(pageTexts.map(text => `BT /F1 12 Tf 50 700 Td (${escapeText(text)}) Tj ET`));
+}
+
+function escapeText(text: string) {
+  return text.replace(/[\\()]/g, "\\$&");
+}
+
+export function makePositionedPdf(items: {text:string; x:number; y:number}[]): File {
+  return makePdfFromStreams([items.map(({text,x,y}) =>
+    `BT /F1 12 Tf ${x} ${y} Td (${escapeText(text)}) Tj ET`
+  ).join("\n")]);
+}
+
+function makePdfFromStreams(pageStreams: string[]): File {
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    `<< /Type /Pages /Kids [${pageTexts.map((_, i) => `${4 + i * 2} 0 R`).join(" ")}] /Count ${pageTexts.length} >>`,
+    `<< /Type /Pages /Kids [${pageStreams.map((_, i) => `${4 + i * 2} 0 R`).join(" ")}] /Count ${pageStreams.length} >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
   ];
-  for (const text of pageTexts) {
+  for (const stream of pageStreams) {
     const contentId = objects.length + 2;
-    const stream = `BT /F1 12 Tf 50 700 Td (${text.replace(/[\\()]/g, "\\$&")}) Tj ET`;
     objects.push("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents " + contentId + " 0 R >>");
     objects.push(`<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`);
   }

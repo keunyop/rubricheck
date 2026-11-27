@@ -1,6 +1,7 @@
 import mammoth from "mammoth";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 import { createHash } from "node:crypto";
+import { auditRubricSource } from "./rubricSource";
 
 type ParsedField = "rubric" | "assignment";
 type VisionFeatureType = "DOCUMENT_TEXT_DETECTION" | "TEXT_DETECTION";
@@ -266,10 +267,26 @@ function assertPdfOcrResult(result: Record<string, unknown> | null, field: Parse
   }
 }
 
+type PdfTextItem = { str: string; transform: number[]; width: number };
 type PdfPage = {
   pageNumber: number;
-  getTextContent: (options: { normalizeWhitespace: boolean; disableCombineTextItems: boolean }) => Promise<{ items: { str: string; transform: number[] }[] }>;
+  getTextContent: (options: { normalizeWhitespace: boolean; disableCombineTextItems: boolean }) => Promise<{ items: PdfTextItem[] }>;
 };
+
+function pdfTextWithGaps(items: PdfTextItem[]): string {
+  let text = "";
+  let previous: PdfTextItem | undefined;
+  for (const item of items) {
+    if (!item.str.trim()) continue;
+    if (previous) {
+      if (previous.transform[5] !== item.transform[5]) text += "\n";
+      else if (item.transform[4] - previous.transform[4] - previous.width > 0.5) text += " ";
+    }
+    text += item.str;
+    previous = item;
+  }
+  return normalizeText(text);
+}
 
 function isPdfPageLabel(text: string): boolean {
   return /^(?:page\s*)?\d+(?:\s*(?:of|\/)\s*\d+)?$/i.test(text.trim());
@@ -277,6 +294,7 @@ function isPdfPageLabel(text: string): boolean {
 
 async function parsePdf(buffer: Buffer, fileName: string, field: ParsedField, requireMeaningfulText: boolean): Promise<string> {
   const nativePages = new Map<number, string>();
+  let spacedFirstPage: string | undefined;
   let pageCount: number;
   try {
     // PDF.js expects typed-array slice semantics; Node Buffer.slice() is a view.
@@ -290,6 +308,9 @@ async function parsePdf(buffer: Buffer, fileName: string, field: ParsedField, re
           lastY = item.transform[5];
         }
         nativePages.set(page.pageNumber, normalizeText(text));
+        if (field === "rubric" && page.pageNumber === 1) {
+          spacedFirstPage = pdfTextWithGaps(content.items);
+        }
         return text;
       },
     });
@@ -299,6 +320,14 @@ async function parsePdf(buffer: Buffer, fileName: string, field: ParsedField, re
     throw new FileParseValidationError(`Invalid or unreadable PDF file: ${fileName}`);
   }
   const pages = Array.from({ length: pageCount }, (_, index) => index + 1);
+  // PDF draws adjacent cells separately. The legacy renderer can join
+  // "Weightage" and "Marks" or a multiplier and a zero into a single token.
+  // Use the gap-aware text only for a complete, unambiguous one-page table.
+  if (pageCount === 1 && spacedFirstPage &&
+      auditRubricSource(spacedFirstPage).layout === "weightage" &&
+      auditRubricSource(nativePages.get(1) ?? "").kind === "unknown") {
+    nativePages.set(1, spacedFirstPage);
+  }
   const nativeText = normalizeText(pages.map(page => nativePages.get(page) ?? "").join("\n\n"));
   let needsFullOcr = false;
   if (requireMeaningfulText) {
